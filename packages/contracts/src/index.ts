@@ -4,6 +4,7 @@ export * from './identity/identity.js';
 export * from './audit/audit.js';
 export * from './observations/observations.js';
 export * from './telemetry/telemetry.js';
+export * from './validation/validation.js';
 export * from './network/network.js';
 
 export const healthStatusSchema = z.object({

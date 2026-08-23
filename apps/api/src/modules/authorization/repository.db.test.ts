@@ -350,16 +350,16 @@ test(
         cycleB,
         cycleA,
       ]);
-      const reciprocal = second.query(
-        'UPDATE territories SET parent_territory_id = $1 WHERE id = $2',
-        [cycleA, cycleB],
+      const reciprocalRejection = assert.rejects(
+        second.query('UPDATE territories SET parent_territory_id = $1 WHERE id = $2', [
+          cycleA,
+          cycleB,
+        ]),
+        (error: unknown) => (error as { code?: string }).code === '23514',
       );
       await new Promise((resolve) => setTimeout(resolve, 30));
       await first.query('COMMIT');
-      await assert.rejects(
-        reciprocal,
-        (error: unknown) => (error as { code?: string }).code === '23514',
-      );
+      await reciprocalRejection;
       await second.query('ROLLBACK');
     } finally {
       first.release();

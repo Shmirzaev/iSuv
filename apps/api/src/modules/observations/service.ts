@@ -19,7 +19,7 @@ export class ObservationError extends Error {
   }
 }
 
-interface ObservationRow {
+export interface ObservationRow {
   id: string;
   lineage_id: string;
   revision: number;
@@ -54,7 +54,7 @@ interface ObservationRow {
   rating_curve_ref: string | null;
 }
 
-function toObservation(row: ObservationRow): Observation {
+export function toObservation(row: ObservationRow): Observation {
   return {
     id: row.id,
     lineageId: row.lineage_id,
@@ -92,7 +92,7 @@ function toObservation(row: ObservationRow): Observation {
   };
 }
 
-const observationSelect = `
+export const observationSelect = `
  SELECT revision.id, revision.lineage_id, revision.revision, lineage.organization_id, lineage.territory_id,
         lineage.sensor_id, lineage.device_id, lineage.device_installation_id, lineage.station_id,
         lineage.measurement_kind, lineage.source_system, lineage.source_event_id,
@@ -335,6 +335,12 @@ export class PostgresObservationService implements ObservationIngestionPort<
   ): Promise<Observation> {
     try {
       return await this.transaction(async (client) => {
+        // Take the same per-lineage transaction lock as the append-only DB trigger
+        // before observing the current revision, so correction and validation
+        // serialize on the latest committed lineage state.
+        await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1::text, 2))', [
+          lineageId,
+        ]);
         const current = await client.query<ObservationRow>(
           `${observationSelect} WHERE lineage.id = $1 ORDER BY revision.revision DESC, revision.id DESC LIMIT 1 FOR UPDATE`,
           [lineageId],

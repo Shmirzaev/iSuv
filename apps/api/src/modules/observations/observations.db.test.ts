@@ -532,12 +532,9 @@ test(
         correction('8.100', 'review A'),
         correction('8.200', 'review B'),
       ]);
-      assert.ok(outcomes.filter((outcome) => outcome.status === 'fulfilled').length >= 1);
-      assert.ok(
-        outcomes.every(
-          (outcome) =>
-            outcome.status === 'fulfilled' || outcome.reason?.kind === 'VALIDATION_ERROR',
-        ),
+      assert.equal(
+        outcomes.every((outcome) => outcome.status === 'fulfilled'),
+        true,
       );
       const revisions = await pool.query<{ revision: number }>(
         'SELECT revision FROM observation_revisions WHERE lineage_id = $1 ORDER BY revision',
@@ -545,8 +542,15 @@ test(
       );
       assert.deepEqual(
         revisions.rows.map((item) => item.revision),
-        [1, 2],
+        [1, 2, 3],
       );
+      const audits = await pool.query<{ count: string }>(
+        `SELECT count(*)::text count FROM audit_events
+         WHERE action = 'observation.corrected'
+           AND resource_id IN (SELECT id FROM observation_revisions WHERE lineage_id = $1)`,
+        [created.observation.lineageId],
+      );
+      assert.equal(audits.rows[0]?.count, '2');
     } finally {
       await removeTestLineage(created.observation.lineageId);
     }

@@ -19,6 +19,8 @@ import { registerAdministrationRoutes } from './modules/administration/routes.js
 import { PostgresObservationService } from './modules/observations/service.js';
 import { registerObservationRoutes } from './modules/observations/routes.js';
 import { registerTelemetrySimulatorRoutes } from './modules/telemetry/routes.js';
+import { PostgresValidationService } from './modules/validation/service.js';
+import { registerValidationRoutes } from './modules/validation/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -30,6 +32,7 @@ export interface AppOptions {
   auditEventRepository?: PostgresAuditEventRepository;
   roleGrantAdministrationService?: PostgresRoleGrantAdministrationService;
   observationService?: PostgresObservationService;
+  validationService?: PostgresValidationService;
 }
 
 export function createApp(
@@ -126,6 +129,15 @@ export function createApp(
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     observationService:
       options.observationService ?? new PostgresObservationService(process.env.DATABASE_URL),
+  });
+  registerValidationRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    validationService:
+      options.validationService ?? new PostgresValidationService(process.env.DATABASE_URL),
   });
 
   return app;

@@ -25,9 +25,11 @@ export const territoryResources = [
   'network',
   'permission',
   'audit',
+  'validation_profile',
 ] as const;
 export type TerritoryResource = (typeof territoryResources)[number];
-export type AuthorizationAction = `${TerritoryResource}:${'read' | 'write'}` | 'telemetry:correct';
+export type AuthorizationAction =
+  `${TerritoryResource}:${'read' | 'write'}` | 'telemetry:correct' | 'validation_profile:approve';
 
 export interface EffectiveGrant {
   id: string;
@@ -68,6 +70,7 @@ const rolePermissions: Readonly<
     'incident:write',
     'water_balance:read',
     'report:read',
+    'validation_profile:read',
   ],
   district_operator: [
     'network:read',
@@ -88,6 +91,9 @@ const rolePermissions: Readonly<
     'water_balance:read',
     'water_balance:write',
     'report:read',
+    'validation_profile:read',
+    'validation_profile:write',
+    'validation_profile:approve',
   ],
   maintenance_engineer: [
     'network:read',

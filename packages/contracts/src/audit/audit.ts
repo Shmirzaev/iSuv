@@ -5,7 +5,7 @@ const utcTimestampSchema = z.string().datetime({ offset: true });
 const uuidSchema = z.uuid();
 
 export const auditDataClassificationSchema = z.enum(['synthetic', 'official']);
-export const auditResourceSchema = z.enum(['user_role_grant', 'observation']);
+export const auditResourceSchema = z.enum(['user_role_grant', 'observation', 'validation_profile']);
 export const auditActionSchema = z.enum([
   'user_role_grant.created',
   'user_role_grant.revoked',
@@ -13,6 +13,10 @@ export const auditActionSchema = z.enum([
   'observation.corrected',
   'observation.rejected',
   'observation.estimated',
+  'observation.automatically_validated',
+  'validation_profile.created',
+  'validation_profile_version.created',
+  'validation_profile_version.approved',
 ]);
 
 export const auditEventSchema = z.object({
