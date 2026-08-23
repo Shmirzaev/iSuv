@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Hold fast-moving transitive metadata/parsing packages at mature compatible
+# versions so clean installs keep the supply-chain minimum-release-age policy.
+overrides:
+  baseline-browser-mapping: 2.11.15
+  'ajv>fast-uri': 3.1.5
+  '@fastify/ajv-compiler>fast-uri': 4.1.2
+  'fast-json-stringify>fast-uri': 4.1.2

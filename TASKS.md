@@ -6,26 +6,30 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
 
 ## Phase 0 — Foundation
 
-- [ ] **P0-001 — Repository audit and baseline**  
-  Depends: none.  
+- [x] **P0-001 — Repository audit and baseline**
+  Depends: none.
   Exit: existing stack/features/tests are documented; Git baseline and risks recorded; no destructive rewrite started.
+  Evidence: `docs/BASELINE.md`; baseline commit `409668f`; read-only architecture and hydrology audits; Node/pnpm/Docker toolchain probes.
 
-- [ ] **P0-002 — Architecture ADRs and module boundaries**  
-  Depends: P0-001.  
+- [x] **P0-002 — Architecture ADRs and module boundaries**
+  Depends: P0-001.
   Exit: stack/deployment/data/API decisions are recorded with trade-offs and preserve useful existing code.
+  Evidence: accepted ADR-0001 through ADR-0003; ESLint import-boundary rules enforce shared-package and application dependency direction.
 
-- [ ] **P0-003 — Repeatable local environment**  
-  Depends: P0-002.  
+- [x] **P0-003 — Repeatable local environment**
+  Depends: P0-002.
   Exit: documented startup, `.env.example`, persistent services, health checks, migrations, and seed command work from a clean checkout.
+  Evidence: Compose config passes; PostGIS 17/PostGIS 3.5 reports healthy; migration twice and seed twice succeed; API live/readiness/metrics return 200 against the database; Vite shell smoke returns 200; startup and local backup/restore commands are documented.
 
-- [ ] **P0-004 — Verification pipeline**  
-  Depends: P0-003.  
+- [x] **P0-004 — Verification pipeline**
+  Depends: P0-003.
   Exit: format/lint/type/test/build commands and CI or one local verification script pass.
+  Evidence: clean frozen dependency install and `pnpm verify` pass; CI runs the same verification plus repeated PostGIS migration/seed; production API/web builds pass; dependency audit reports no known vulnerabilities.
 
 ## Phase 1 — Identity, topology, and master data
 
-- [ ] **P1-001 — Organizations, territories, roles, and authorization skeleton**  
-  Depends: P0-003.  
+- [~] **P1-001 — Organizations, territories, roles, and authorization skeleton**
+  Depends: P0-003.
   Exit: core roles and territory scope are modeled; cross-territory denial tests exist.
 
 - [ ] **P1-002 — Water-network and asset schema**  
