@@ -16,6 +16,8 @@ import { PostgresAuditEventRepository } from './modules/audit/repository.js';
 import { registerAuditRoutes } from './modules/audit/routes.js';
 import { PostgresRoleGrantAdministrationService } from './modules/administration/service.js';
 import { registerAdministrationRoutes } from './modules/administration/routes.js';
+import { PostgresObservationService } from './modules/observations/service.js';
+import { registerObservationRoutes } from './modules/observations/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -26,6 +28,7 @@ export interface AppOptions {
   networkReadRepository?: NetworkReadRepository;
   auditEventRepository?: PostgresAuditEventRepository;
   roleGrantAdministrationService?: PostgresRoleGrantAdministrationService;
+  observationService?: PostgresObservationService;
 }
 
 export function createApp(
@@ -104,6 +107,15 @@ export function createApp(
     service:
       options.roleGrantAdministrationService ??
       new PostgresRoleGrantAdministrationService(process.env.DATABASE_URL),
+  });
+  registerObservationRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    observationService:
+      options.observationService ?? new PostgresObservationService(process.env.DATABASE_URL),
   });
 
   return app;

@@ -27,7 +27,7 @@ export const territoryResources = [
   'audit',
 ] as const;
 export type TerritoryResource = (typeof territoryResources)[number];
-export type AuthorizationAction = `${TerritoryResource}:${'read' | 'write'}`;
+export type AuthorizationAction = `${TerritoryResource}:${'read' | 'write'}` | 'telemetry:correct';
 
 export interface EffectiveGrant {
   id: string;
@@ -83,6 +83,7 @@ const rolePermissions: Readonly<
     'network:read',
     'telemetry:read',
     'telemetry:write',
+    'telemetry:correct',
     'allocation_plan:read',
     'water_balance:read',
     'water_balance:write',

@@ -1,7 +1,7 @@
 export const auditClassifications = ['synthetic', 'official'] as const;
 export type AuditClassification = (typeof auditClassifications)[number];
 
-export const auditResources = ['user_role_grant'] as const;
+export const auditResources = ['user_role_grant', 'observation'] as const;
 export type AuditResource = (typeof auditResources)[number];
 
 export interface AuditEvent {

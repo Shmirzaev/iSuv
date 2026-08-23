@@ -5,9 +5,9 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 ## Current state
 
 - Current phase: Phase 2 — Telemetry and data quality
-- Active task: P2-001 — Observation schema and revision model
-- Last verified commit: `Make privileged role changes auditable` (current P1-004 slice commit)
-- Overall MVP status: Phase 0 through P1-004 verified; 8 of 31 task-graph items complete
+- Active task: P2-002 — Telemetry adapter and simulator
+- Last verified commit: `Preserve immutable water observation history` (current P2-001 slice commit)
+- Overall MVP status: Phase 0 through P2-001 verified; 9 of 31 task-graph items complete
 
 ## Entries
 
@@ -21,6 +21,7 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 | 2026-08-23 | P1-002 | Verified territory-aware PostGIS network/asset registry with one authoritative section DAG, constrained measurement channels, effective-dated device installations, and read-only control-structure boundary. | `0003_water_network_assets.sql`; network contracts/domain/API/tests; ADR-0004; P1-002 slice commit | `pnpm verify` pass (16 API/unit tests); migration x2 and seed x2 pass; DB tests 7/7 pass; dependency audit clean; Compose config and diff checks pass | QA/reviewer approved after boundary-redaction and WGS84-bound fixes; D-006 accepted; B-001–B-004 unchanged | P1-003 |
 | 2026-08-23 | P1-003 | Verified atomic, deterministic 83-hotspot synthetic seed across five connected basin DAGs with full station/device/canonical-sensor coverage. | synthetic network generator, seed integration, unit/DB tests; P1-003 slice commit | `pnpm verify` pass (17 API/unit tests); existing-volume seed x2 pass; DB tests 8/8 pass; dependency audit and Compose/diff checks pass | Persistent-state QA found/fixed territory reconciliation; hydrology/QA/reviewer approved; D-006 clarified; B-001–B-004 unchanged | P1-004 |
 | 2026-08-23 | P1-004 | Verified append-only, territory-searchable audit and atomic effective-dated role-grant create/revoke/cancel administration with fail-closed authorization. | `0004_audit_foundation.sql`; audit/administration contracts, domain, API, and tests; ADR-0005; P1-004 slice commit | `pnpm verify` pass (22 API/unit tests); migration x2 and seed x2 pass; DB tests 12/12 pass; dependency audit, Compose, and diff checks pass | QA fixed user enumeration and timestamp integrity; reviewer found/fixed scheduled-grant reversibility and DB-clock boundaries; D-007 accepted; B-001–B-004 unchanged | P2-001 |
+| 2026-08-23 | P2-001 | Verified immutable, revision-aware observation storage with exact quantity/unit semantics, historical installation provenance, territory authorization, and audited corrections. | `0005_observation_revisions.sql`; observation contracts/domain/API/tests; P2-001 slice commit | Fresh migration x2 and seed x2 pass; `pnpm verify` pass (27 API/unit tests plus contract/domain tests); DB tests 15/15 pass; dependency audit, Compose, and diff checks pass | QA/reviewer fixed enumeration, cross-org audit attribution, app/DB timestamp precision, historical-territory TOCTOU, and raw usability; hydrology/reviewer approved; D-008 accepted; B-001–B-004 unchanged | P2-002 |
 
 ## Resume protocol
 

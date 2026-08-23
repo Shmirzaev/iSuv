@@ -107,6 +107,40 @@ test('allows an ancestor territory role and keeps auditors read-only', async () 
   );
 });
 
+test('reserves telemetry corrections for hydrologists and senior administrators', async () => {
+  const territoryGrant = (role: EffectiveGrant['role']): EffectiveGrant => ({
+    id: 'a4000000-0000-4000-8000-000000000009',
+    role,
+    scope: 'territory',
+    territoryId: districtA,
+    coversTargetTerritory: true,
+  });
+  for (const role of ['district_operator', 'basin_dispatcher'] as const) {
+    const decision = await authorizeTerritoryAction(
+      {
+        async findEffectiveGrantsForTarget() {
+          return [territoryGrant(role)];
+        },
+      },
+      'operator',
+      'telemetry:correct',
+      districtA,
+    );
+    assert.equal(decision.allowed, false);
+  }
+  const hydrologist = await authorizeTerritoryAction(
+    {
+      async findEffectiveGrantsForTarget() {
+        return [territoryGrant('hydrologist')];
+      },
+    },
+    'hydrologist',
+    'telemetry:correct',
+    districtA,
+  );
+  assert.equal(hydrologist.allowed, true);
+});
+
 test('fails closed for no effective grant and malformed elevated scope grants', async () => {
   const noGrantRepository = {
     async findEffectiveGrantsForTarget(): Promise<EffectiveGrant[]> {

@@ -50,11 +50,13 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
 
 ## Phase 2 — Telemetry and data quality
 
-- [~] **P2-001 — Observation schema and revision model**
+- [x] **P2-001 — Observation schema and revision model**
   Depends: P1-002.  
   Exit: explicit quantity/unit, timestamps, quality, provenance, raw/validated/corrected states, and immutable revision history exist.
+  Required evidence: database/contracts reject cross-quantity units and preserve decimal values; server receipt time is distinct from device observation time; observation-time installation resolution snapshots station/device/sensor provenance; concurrent source duplicates are idempotent; revisions are append-only and linear; correction leaves the source revision intact and atomically writes audit evidence; current/as-of/history reads are territory-authorized; no-data and unreliable observations cannot be consumed as normal; accumulated-volume readings remain totalizer counters rather than derived interval delivery.
+  Evidence: migration-backed immutable lineages and linear revisions preserve exact decimal values and microsecond UTC observation/receipt instants; contracts and DB enforce stage→m, discharge→m³/s, accumulated_volume→m³, raw-quality, method, uncertainty, classification, and totalizer invariants; ingestion resolves and transactionally rechecks the installation/territory effective at observation time; source identity is vendor-neutral and concurrently idempotent; correction/rejection/estimation require `telemetry:correct`, preserve source evidence, and atomically append audit; current/as-of/history use exact keyset boundaries; 27 API/unit and 15 real-DB tests pass; hydrology, QA/security, and reviewer approve.
 
-- [ ] **P2-002 — Telemetry adapter and simulator**  
+- [~] **P2-002 — Telemetry adapter and simulator**
   Depends: P2-001, P1-003.  
   Exit: normal/over/under/offline/stale/spike/frozen/fault scenarios stream through an adapter into storage.
 
