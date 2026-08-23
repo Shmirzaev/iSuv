@@ -35,9 +35,16 @@ test('denies a cross-district mutation and allows a same-scope mutation', async 
     'telemetry:write',
     districtB,
   );
+  const networkRead = await authorizeTerritoryAction(
+    repository,
+    'user-a',
+    'network:read',
+    districtA,
+  );
 
   assert.deepEqual(sameScope, { allowed: true, grantId: grant.id, role: 'district_operator' });
   assert.deepEqual(crossDistrict, { allowed: false, reason: 'OUTSIDE_TERRITORY_SCOPE' });
+  assert.deepEqual(networkRead, { allowed: true, grantId: grant.id, role: 'district_operator' });
 });
 
 test('allows an ancestor territory role and keeps auditors read-only', async () => {

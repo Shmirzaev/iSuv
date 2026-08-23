@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export * from './identity/identity.js';
+export * from './network/network.js';
 
 export const healthStatusSchema = z.object({
   status: z.literal('ok'),

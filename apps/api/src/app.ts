@@ -7,12 +7,19 @@ import type { IdentityProvider } from './modules/identity/provider.js';
 import { PostgresIdentitySessionRepository } from './modules/identity/repository.js';
 import type { IdentitySessionRepository } from './modules/identity/repository.js';
 import { registerIdentityRoutes } from './modules/identity/routes.js';
+import { PostgresTerritoryAuthorizationRepository } from './modules/authorization/service.js';
+import type { TerritoryAuthorizationRepository } from './modules/authorization/service.js';
+import { PostgresNetworkReadRepository } from './modules/network/repository.js';
+import type { NetworkReadRepository } from './modules/network/repository.js';
+import { registerNetworkRoutes } from './modules/network/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
 export interface AppOptions {
   identityProvider?: IdentityProvider;
   identitySessionRepository?: IdentitySessionRepository;
+  territoryAuthorizationRepository?: TerritoryAuthorizationRepository;
+  networkReadRepository?: NetworkReadRepository;
 }
 
 export function createApp(
@@ -58,11 +65,23 @@ export function createApp(
     return '# HELP isuv_api_up API process liveness\n# TYPE isuv_api_up gauge\nisuv_api_up 1\n';
   });
 
+  const identityProvider = options.identityProvider ?? createLocalDevelopmentIdentityProvider();
+  const identitySessionRepository =
+    options.identitySessionRepository ??
+    new PostgresIdentitySessionRepository(process.env.DATABASE_URL);
+
   registerIdentityRoutes(app, {
-    identityProvider: options.identityProvider ?? createLocalDevelopmentIdentityProvider(),
-    sessionRepository:
-      options.identitySessionRepository ??
-      new PostgresIdentitySessionRepository(process.env.DATABASE_URL),
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+  });
+  registerNetworkRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    networkRepository:
+      options.networkReadRepository ?? new PostgresNetworkReadRepository(process.env.DATABASE_URL),
   });
 
   return app;

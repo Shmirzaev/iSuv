@@ -22,6 +22,7 @@ export const territoryResources = [
   'device',
   'report',
   'territory',
+  'network',
 ] as const;
 export type TerritoryResource = (typeof territoryResources)[number];
 export type AuthorizationAction = `${TerritoryResource}:${'read' | 'write'}`;
@@ -56,6 +57,7 @@ const rolePermissions: Readonly<
   national_admin: 'all',
   regional_director: 'all',
   basin_dispatcher: [
+    'network:read',
     'telemetry:read',
     'telemetry:write',
     'alarm:read',
@@ -66,6 +68,7 @@ const rolePermissions: Readonly<
     'report:read',
   ],
   district_operator: [
+    'network:read',
     'telemetry:read',
     'telemetry:write',
     'alarm:read',
@@ -75,6 +78,7 @@ const rolePermissions: Readonly<
     'water_balance:read',
   ],
   hydrologist: [
+    'network:read',
     'telemetry:read',
     'telemetry:write',
     'allocation_plan:read',
@@ -83,6 +87,7 @@ const rolePermissions: Readonly<
     'report:read',
   ],
   maintenance_engineer: [
+    'network:read',
     'telemetry:read',
     'device:read',
     'device:write',

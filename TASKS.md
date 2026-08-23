@@ -33,12 +33,13 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
   Exit: core roles and territory scope are modeled; cross-territory denial tests exist.
   Evidence: migration-backed organizations, hierarchical territories, eight core roles, effective-dated grants, and fail-closed local identity adapter; unit/API tests cover same/ancestor/cross-territory and read-only auditor behavior; real PostGIS tests cover organization isolation, inactive/unknown targets, UTC boundaries, non-overlapping re-grants, and concurrency-safe cycle prevention; full verification and security/reviewer gates pass.
 
-- [~] **P1-002 — Water-network and asset schema**
-  Depends: P0-002, P0-003.  
+- [x] **P1-002 — Water-network and asset schema**
+  Depends: P0-002, P0-003.
   Exit: region/basin/waterway/junction/section/control/station/device/sensor entities, migrations, validation, and APIs exist.
+  Evidence: accepted ADR-0004; typed PostGIS master-data migration and territory-authorized read APIs; single authoritative section DAG supports branches/merges and rejects direct/concurrent cycles; cross-boundary identifiers are redacted; effective-dated device installations preserve provenance; DB/contracts enforce entity geometry and WGS84 bounds plus stage→m, discharge→m³/s, accumulated volume→m³; 16 API/unit and 7 real-DB tests pass; QA and reviewer approve.
 
-- [ ] **P1-003 — Synthetic 83-hotspot topology seed**  
-  Depends: P1-002.  
+- [~] **P1-003 — Synthetic 83-hotspot topology seed**
+  Depends: P1-002.
   Exit: 83 labeled synthetic top-level nodes with realistic branches and station/device coverage load reproducibly; topology validation passes.
 
 - [ ] **P1-004 — Audit foundation**  
