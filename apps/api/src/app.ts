@@ -12,6 +12,10 @@ import type { TerritoryAuthorizationRepository } from './modules/authorization/s
 import { PostgresNetworkReadRepository } from './modules/network/repository.js';
 import type { NetworkReadRepository } from './modules/network/repository.js';
 import { registerNetworkRoutes } from './modules/network/routes.js';
+import { PostgresAuditEventRepository } from './modules/audit/repository.js';
+import { registerAuditRoutes } from './modules/audit/routes.js';
+import { PostgresRoleGrantAdministrationService } from './modules/administration/service.js';
+import { registerAdministrationRoutes } from './modules/administration/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -20,6 +24,8 @@ export interface AppOptions {
   identitySessionRepository?: IdentitySessionRepository;
   territoryAuthorizationRepository?: TerritoryAuthorizationRepository;
   networkReadRepository?: NetworkReadRepository;
+  auditEventRepository?: PostgresAuditEventRepository;
+  roleGrantAdministrationService?: PostgresRoleGrantAdministrationService;
 }
 
 export function createApp(
@@ -82,6 +88,22 @@ export function createApp(
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     networkRepository:
       options.networkReadRepository ?? new PostgresNetworkReadRepository(process.env.DATABASE_URL),
+  });
+  registerAuditRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    auditRepository:
+      options.auditEventRepository ?? new PostgresAuditEventRepository(process.env.DATABASE_URL),
+  });
+  registerAdministrationRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    service:
+      options.roleGrantAdministrationService ??
+      new PostgresRoleGrantAdministrationService(process.env.DATABASE_URL),
   });
 
   return app;

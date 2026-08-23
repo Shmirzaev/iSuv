@@ -43,13 +43,14 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
   Exit: 83 labeled synthetic top-level nodes with realistic branches and station/device coverage load reproducibly; topology validation passes.
   Evidence: atomic deterministic seed creates exactly 83 labeled entry roots across five compact synthetic basin DAGs with pairwise merge collectors and five outlets; 493 junctions, 571 sections, 83 monitoring-only control structures/stations/devices/installations, and 249 canonical sensors load reproducibly; PostGIS tests prove containment, endpoint alignment, root-to-outlet reachability, cross-territory continuity, classification, and persistent-state reconciliation; seed x2, 17 unit/API tests, and 8 DB tests pass; hydrology, QA, and reviewer gates approve.
 
-- [~] **P1-004 — Audit foundation**
+- [x] **P1-004 — Audit foundation**
   Depends: P1-001.
   Exit: privileged changes create searchable old/new/reason/actor/time audit records.
+  Evidence: accepted ADR-0005; typed v1 role-grant create/revoke/cancel APIs write the grant change and append-only audit event atomically with actor and target organizations, territory, old/new state, reason, request ID, provenance, classification, and UTC time; conservative strictly-higher role delegation prevents self/peer escalation; explicit DB-authoritative scheduled cancellation preserves history and cannot cross the effective boundary; scoped audit reads use bounded filters and composite keyset cursors; 22 API/unit and 12 real-DB tests pass; QA/security and final reviewer approve.
 
 ## Phase 2 — Telemetry and data quality
 
-- [ ] **P2-001 — Observation schema and revision model**  
+- [~] **P2-001 — Observation schema and revision model**
   Depends: P1-002.  
   Exit: explicit quantity/unit, timestamps, quality, provenance, raw/validated/corrected states, and immutable revision history exist.
 

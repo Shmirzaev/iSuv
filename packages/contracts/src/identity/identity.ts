@@ -55,6 +55,7 @@ export const authorizationGrantSchema = z
     territoryId: z.uuid().nullable(),
     effectiveFrom: utcTimestampSchema,
     effectiveUntil: utcTimestampSchema.nullable(),
+    cancelledAt: utcTimestampSchema.nullable(),
   })
   .superRefine((grant, context) => {
     const territoryRequired = grant.scope === 'territory';
@@ -86,7 +87,7 @@ export type CurrentGrantsResponse = z.infer<typeof currentGrantsResponseSchema>;
 
 export const apiErrorSchema = z.object({
   error: z.object({
-    code: z.enum(['UNAUTHENTICATED', 'FORBIDDEN', 'NOT_FOUND', 'VALIDATION_ERROR']),
+    code: z.enum(['UNAUTHENTICATED', 'FORBIDDEN', 'NOT_FOUND', 'VALIDATION_ERROR', 'CONFLICT']),
     message: z.string(),
     requestId: z.string().min(1),
   }),

@@ -34,6 +34,8 @@ interface GrantInput {
   territoryId: string | null;
   effectiveFrom: string;
   effectiveUntil?: string | null;
+  cancelledAt?: string | null;
+  createdAt?: string;
 }
 
 async function clearFixtures(): Promise<void> {
@@ -54,8 +56,8 @@ async function clearFixtures(): Promise<void> {
 async function insertGrant(input: GrantInput): Promise<void> {
   await pool.query(
     `INSERT INTO user_role_grants
-       (id, user_id, organization_id, role, scope, territory_id, effective_from, effective_until)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (id, user_id, organization_id, role, scope, territory_id, effective_from, effective_until, cancelled_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       input.id,
       input.userId,
@@ -65,6 +67,8 @@ async function insertGrant(input: GrantInput): Promise<void> {
       input.territoryId,
       input.effectiveFrom,
       input.effectiveUntil ?? null,
+      input.cancelledAt ?? null,
+      input.createdAt ?? new Date().toISOString(),
     ],
   );
 }
@@ -175,6 +179,17 @@ before(async () => {
       effectiveFrom: '2026-03-01T00:00:00.000Z',
       effectiveUntil: '2026-03-02T00:00:00.000Z',
     }),
+    insertGrant({
+      id: 'b4000000-0000-4000-8000-000000000011',
+      userId: userTimed,
+      organizationId: organizationA,
+      role: 'hydrologist',
+      scope: 'territory',
+      territoryId: districtA,
+      effectiveFrom: '2027-01-01T00:00:00.000Z',
+      cancelledAt: '2026-01-02T00:00:00.000Z',
+      createdAt: '2025-01-01T00:00:00.000Z',
+    }),
   ]);
 });
 
@@ -225,6 +240,11 @@ test(
     );
     assert.equal(
       (await authorizeTerritoryAction(repository, userNational, 'allocation_plan:write', rootB, at))
+        .allowed,
+      false,
+    );
+    assert.equal(
+      (await authorizeTerritoryAction(repository, userTimed, 'water_balance:write', districtA, at))
         .allowed,
       false,
     );

@@ -27,6 +27,7 @@ interface GrantRow {
   territory_id: string | null;
   effective_from: Date;
   effective_until: Date | null;
+  cancelled_at: Date | null;
 }
 
 function isoUtc(value: Date): string {
@@ -59,9 +60,10 @@ export class PostgresIdentitySessionRepository implements IdentitySessionReposit
       if (!userRow) return null;
 
       const grantResult = await pool.query<GrantRow>(
-        `SELECT id, user_id, organization_id, role, scope, territory_id, effective_from, effective_until
+        `SELECT id, user_id, organization_id, role, scope, territory_id, effective_from, effective_until, cancelled_at
          FROM user_role_grants
          WHERE user_id = $1
+           AND cancelled_at IS NULL
            AND effective_from <= $2
            AND (effective_until IS NULL OR effective_until > $2)
          ORDER BY effective_from, id`,
@@ -91,6 +93,7 @@ export class PostgresIdentitySessionRepository implements IdentitySessionReposit
         territoryId: grant.territory_id,
         effectiveFrom: isoUtc(grant.effective_from),
         effectiveUntil: grant.effective_until ? isoUtc(grant.effective_until) : null,
+        cancelledAt: grant.cancelled_at ? isoUtc(grant.cancelled_at) : null,
       }));
       return { user, organization, currentGrants, resolvedAt: isoUtc(resolvedAt) };
     });

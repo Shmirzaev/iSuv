@@ -59,6 +59,7 @@ export class PostgresTerritoryAuthorizationRepository implements TerritoryAuthor
          JOIN active_user ON true
          JOIN target ON g.scope = 'system' OR target.organization_id = g.organization_id
          WHERE g.user_id = $1
+           AND g.cancelled_at IS NULL
            AND g.effective_from <= $3
            AND (g.effective_until IS NULL OR g.effective_until > $3)`,
         [userId, targetTerritoryId, evaluatedAt],

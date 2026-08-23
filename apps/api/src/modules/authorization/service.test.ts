@@ -96,6 +96,15 @@ test('allows an ancestor territory role and keeps auditors read-only', async () 
   assert.equal(ancestorWrite.allowed, true);
   assert.deepEqual(auditorWrite, { allowed: false, reason: 'ROLE_READ_ONLY' });
   assert.equal(auditorRead.allowed, true);
+  assert.equal(
+    (await authorizeTerritoryAction(auditorRepository, 'auditor', 'telemetry:read', districtA))
+      .allowed,
+    true,
+  );
+  assert.deepEqual(
+    await authorizeTerritoryAction(auditorRepository, 'auditor', 'audit:write', districtA),
+    { allowed: false, reason: 'ROLE_READ_ONLY' },
+  );
 });
 
 test('fails closed for no effective grant and malformed elevated scope grants', async () => {

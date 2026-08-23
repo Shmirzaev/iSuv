@@ -23,6 +23,8 @@ export const territoryResources = [
   'report',
   'territory',
   'network',
+  'permission',
+  'audit',
 ] as const;
 export type TerritoryResource = (typeof territoryResources)[number];
 export type AuthorizationAction = `${TerritoryResource}:${'read' | 'write'}`;
@@ -95,6 +97,8 @@ const rolePermissions: Readonly<
     'incident:read',
     'incident:write',
   ],
+  // Auditors retain their existing read-only authority, including the newly
+  // introduced audit resource, but never receive a write capability.
   auditor: 'read_all',
 };
 
