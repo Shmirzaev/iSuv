@@ -1,1 +1,0 @@
-Resume autonomously from `TASKS.md` and `docs/EXECUTION_LEDGER.md`; verify Git state, delegate the next independent work to the project subagents, implement and test the highest-priority unblocked task, update the ledger, commit the verified slice, and continue until the MVP completion rule in `AGENTS.md` is met.
