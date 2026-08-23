@@ -7,6 +7,7 @@ export * from './telemetry/telemetry.js';
 export * from './device-health/device-health.js';
 export * from './validation/validation.js';
 export * from './network/network.js';
+export * from './allocation-plans/allocation-plans.js';
 
 export const healthStatusSchema = z.object({
   status: z.literal('ok'),

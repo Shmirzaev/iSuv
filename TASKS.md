@@ -76,10 +76,11 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
 
 ## Phase 3 — Allocation and accounting
 
-- [~] **P3-001 — Versioned allocation plans and approvals**
+- [x] **P3-001 — Versioned allocation plans and approvals**
   Depends: P1-001, P1-002, P1-004.  
   Exit: effective-dated plan versions, requester/approver/reason/reference, and historical lookup are implemented and tested.
   Required evidence: immutable plan versions are scoped to organization/territory and an explicit delivery interval/quantity unit; draft/request/approve/supersede transitions require authorized distinct actors and effective non-overlap; changes preserve reason, legal/reference metadata, requester, approver, approval time, and audit event in one transaction; absent official plans remain visibly synthetic and cannot be used as official compliance; current/as-of/history reads and mutations enforce role plus territory with concurrency and non-enumeration tests.
+  Evidence: one immutable plan identity per active water section carries synthetic-only authority and immutable versions/entries represent exact half-open whole-interval targets in m³ without discharge, stage, actual-delivery, tolerance, or physical-control claims; database-authorized draft/request/approve/supersede transitions use active effective role-plus-territory grants, distinct actors, database-authored times, advisory serialization, and deferred non-overlap while exact known-time projection preserves later-discovered supersession; plan, version, and entry rows carry actor/reason/request provenance and atomically emit database-owned append-only audits containing each planned-volume commitment; schedule gaps remain distinct from explicit zero and from no approved plan; contracts expose declared versus governed validity, synthetic non-authority, opaque history cursors, and typed unavailable states; API routes fail closed with non-enumerating role/territory authorization. Fresh migrations and repeat seed pass; `pnpm verify` passes (45 API, 11 domain, 4 contract tests); deterministic full DB tests pass 27/27 including raw-DML bypass, bitemporal microseconds, concurrency, rollback, and audit completeness; dependency audit is clean; hydrology, QA/security, and final reviewer approve.
 
 - [ ] **P3-002 — Quantity conversion and volume integration boundary**  
   Depends: P2-001.  

@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P2-004 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Device health ships no official cadence/freshness, heartbeat, fault-clear, power/signal unit, or vendor status policy; those fields remain explicitly unconfigured/unknown and synthetic status events remain non-authoritative. No new blocker prevents synthetic allocation-plan governance work.
+Last reviewed after P3-001 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Allocation plans are therefore synthetic-only, explicitly ineligible for official compliance, and contain no invented tolerance or legal authority. No new blocker prevents synthetic quantity-conversion and volume-integration work.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

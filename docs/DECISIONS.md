@@ -17,4 +17,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed after P2-004 on 2026-08-24. D-010 records the durable health/live delivery and independent-state boundary; D-001–D-009 remain unchanged.
+Last reviewed after P3-001 on 2026-08-24. P3-001 applies D-004 effective/known-time history and D-007 database-atomic audit to allocation identities, versions, and m³ schedule entries; no new architectural decision or official allocation policy was introduced. D-001–D-010 remain unchanged.
