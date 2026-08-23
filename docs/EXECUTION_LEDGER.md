@@ -4,10 +4,10 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 
 ## Current state
 
-- Current phase: Phase 2 — Telemetry and data quality
-- Active task: P2-004 — Device health and live delivery API
-- Last verified commit: `Validate observations through governed profiles` (current P2-003 slice commit)
-- Overall MVP status: Phase 0 through P2-003 verified; 11 of 31 task-graph items complete
+- Current phase: Phase 3 — Allocation and accounting
+- Active task: P3-001 — Versioned allocation plans and approvals
+- Last verified commit: `Project durable device health and live delivery` (P2-004 slice commit)
+- Overall MVP status: Phase 0 through P2-004 verified; 12 of 31 task-graph items complete
 
 ## Entries
 
@@ -24,6 +24,7 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 | 2026-08-23 | P2-001 | Verified immutable, revision-aware observation storage with exact quantity/unit semantics, historical installation provenance, territory authorization, and audited corrections. | `0005_observation_revisions.sql`; observation contracts/domain/API/tests; P2-001 slice commit | Fresh migration x2 and seed x2 pass; `pnpm verify` pass (27 API/unit tests plus contract/domain tests); DB tests 15/15 pass; dependency audit, Compose, and diff checks pass | QA/reviewer fixed enumeration, cross-org audit attribution, app/DB timestamp precision, historical-territory TOCTOU, and raw usability; hydrology/reviewer approved; D-008 accepted; B-001–B-004 unchanged | P2-002 |
 | 2026-08-23 | P2-002 | Verified deterministic, production-disabled synthetic telemetry simulation and vendor-neutral ingestion/replay across every seeded monitoring channel. | telemetry contracts/domain/adapter/routes/tests; P2-002 slice commit | Migration x2 and seed x2 pass; `pnpm verify` pass (36 API, 5 domain, 2 contract tests); DB tests 17/17 pass including 83 devices/249 sensors, replay idempotency/conflict and offline absence; dependency audit, Compose health/config, no-control scan, and diff checks pass | Hydrology found/fixed microsecond truncation, flat normal signals, and counter-profile gaps; QA/security added identity/input/idempotency regressions; reviewer approved; D-005/D-008 unchanged; B-001–B-004 remain external | P2-003 |
 | 2026-08-24 | P2-003 | Verified governed, append-only validation profiles and conservative automatic observation validation without implicit trust or hydrological policy invention. | `0006_observation_validation.sql`; validation contracts/domain/API/tests; ADR-0006; P2-003 slice commit | Fresh migration 0001–0006 x2 and seed x2 pass; `pnpm verify` pass (38 API, 9 domain, 3 contract tests); DB tests 21/21 pass including governance bypass, exact effective selection, retry/correction concurrency and cross-org system scope; dependency audit, Compose health/config, and diff checks pass | Hydrology/QA/reviewer fixed insufficient-context trust, prior-revision quality, counter semantics, coverage claims, audit schema, shared locks, and system-scope consistency; D-009 accepted; B-001–B-004 remain external | P2-004 |
+| 2026-08-24 | P2-004 | Verified durable, territory-scoped device health and restart-resumable live delivery without conflating communication, numerical trust, fault evidence, or water quantities. | `0007_device_health_live.sql`; device-health contracts/domain/API/tests; observation/validation/simulator handoff; ADR-0007; P2-004 slice commit | Fresh migration 0001–0007 and repeat migration/seed pass; raw 0007 replay x2 passes; `pnpm verify` passes (40 API, 9 domain, 3 contract tests); DB tests 25/25 pass including source races, revision-one receipt, immutable installation relocation, fault priority, classification, keyset and scoped replay; dependency audit clean; Compose healthy; built API live/ready/metrics 200; diff checks pass | Hydrology/QA/reviewer found and fixed correction-as-liveness, missing states, implicit fault clear, classification upgrade, relocation authorization, cursor/race, degraded-DB, and migration replay defects; D-010 accepted; B-001–B-004 remain external | P3-001 |
 
 ## Resume protocol
 

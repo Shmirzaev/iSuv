@@ -14,12 +14,14 @@ import {
 import type { IdentityProvider } from '../identity/provider.js';
 import type { IdentitySessionRepository } from '../identity/repository.js';
 import type { PostgresObservationService } from '../observations/service.js';
+import type { PostgresDeviceHealthService } from '../device-health/service.js';
 
 interface TelemetryRoutesOptions {
   identityProvider: IdentityProvider;
   sessionRepository: IdentitySessionRepository;
   authorizationRepository: TerritoryAuthorizationRepository;
   observationService: PostgresObservationService;
+  deviceHealthService?: PostgresDeviceHealthService;
   now?: () => Date;
 }
 
@@ -150,17 +152,25 @@ export function registerTelemetrySimulatorRoutes(
     );
     if (!territories)
       return reply.code(404).send(apiError('NOT_FOUND', 'Simulator was not found.', request.id));
+    const batch = await ingestSyntheticBatch(
+      options.observationService,
+      parsed.data.seed,
+      parsed.data.at,
+      parsed.data.step,
+      parsed.data.scenario,
+      territories,
+    );
+    if (options.deviceHealthService) {
+      for (const status of batch.statusEvents)
+        await options.deviceHealthService.ingestSyntheticStatus(
+          status,
+          territories.get(status.sourceEventId),
+        );
+    }
     return {
       version: 'v1',
       classification: 'synthetic',
-      result: await ingestSyntheticBatch(
-        options.observationService,
-        parsed.data.seed,
-        parsed.data.at,
-        parsed.data.step,
-        parsed.data.scenario,
-        territories,
-      ),
+      result: batch,
     };
   });
 }

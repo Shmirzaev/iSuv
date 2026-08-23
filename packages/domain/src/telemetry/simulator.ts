@@ -38,9 +38,10 @@ export interface SyntheticTelemetryStatus {
   deviceId: string;
   observedAt: string;
   sourceEventId: string;
-  status: 'offline';
-  scenario: 'offline';
+  status: 'offline' | 'device_fault';
+  scenario: 'offline' | 'device_fault';
   provenance: 'synthetic';
+  faultCode: string | null;
 }
 
 export interface SyntheticTelemetryEnvelope {
@@ -117,7 +118,7 @@ export function simulateTelemetryEnvelope(
   const generatedAt = canonicalUtc(at);
   const staleAt = shiftCanonicalUtc(generatedAt, -15 * 60);
   const statuses: SyntheticTelemetryStatus[] =
-    scenario === 'offline'
+    scenario === 'offline' || scenario === 'device_fault'
       ? Array.from({ length: 83 }, (_, index) => {
           const hotspot = index + 1;
           return {
@@ -126,10 +127,11 @@ export function simulateTelemetryEnvelope(
             observedAt: generatedAt,
             // The scenario clock is part of event identity: a later simulator
             // run is a new source event, while exact replay remains idempotent.
-            sourceEventId: `synthetic:${seed}:${generatedAt}:offline:${step}:${hotspot}:status`,
-            status: 'offline',
-            scenario: 'offline',
+            sourceEventId: `synthetic:${seed}:${generatedAt}:${scenario}:${step}:${hotspot}:status`,
+            status: scenario,
+            scenario,
             provenance: 'synthetic',
+            faultCode: scenario === 'device_fault' ? 'SYNTHETIC_DEVICE_FAULT' : null,
           };
         })
       : [];

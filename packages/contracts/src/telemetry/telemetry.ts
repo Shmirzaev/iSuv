@@ -31,15 +31,39 @@ export const simulatorPreviewRequestSchema = simulatorRequestSchema.extend({
   limit: z.coerce.number().int().min(1).max(249).default(249),
 });
 export type SimulatorPreviewRequest = z.infer<typeof simulatorPreviewRequestSchema>;
-export const telemetryStatusSchema = z.object({
-  hotspot: z.number().int().min(1).max(83),
-  deviceId: z.uuid(),
-  status: z.literal('offline'),
-  observedAt: utcTimestampSchema,
-  sourceEventId: z.string().min(1).max(256),
-  scenario: z.literal('offline'),
-  provenance: z.literal('synthetic'),
-});
+export const telemetryStatusSchema = z
+  .object({
+    hotspot: z.number().int().min(1).max(83),
+    deviceId: z.uuid(),
+    /** A raw device-status fact, not a water-data quality or compliance outcome. */
+    status: z.enum(['offline', 'device_fault']),
+    observedAt: utcTimestampSchema,
+    sourceEventId: z.string().min(1).max(256),
+    scenario: z.enum(['offline', 'device_fault']),
+    provenance: z.literal('synthetic'),
+    faultCode: z.string().min(1).max(128).nullable(),
+  })
+  .superRefine((value, context) => {
+    if (value.status !== value.scenario)
+      context.addIssue({
+        code: 'custom',
+        path: ['scenario'],
+        message: 'status and scenario must match',
+      });
+    if (value.status === 'offline' && value.faultCode !== null)
+      context.addIssue({
+        code: 'custom',
+        path: ['faultCode'],
+        message: 'offline status cannot carry a fault code',
+      });
+    if (value.status === 'device_fault' && value.faultCode === null)
+      context.addIssue({
+        code: 'custom',
+        path: ['faultCode'],
+        message: 'device fault status requires a fault code',
+      });
+  });
+export type TelemetryStatus = z.infer<typeof telemetryStatusSchema>;
 export const syntheticTelemetryPointSchema = z.object({
   hotspot: z.number().int().min(1).max(83),
   deviceId: z.uuid(),

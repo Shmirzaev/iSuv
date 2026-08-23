@@ -21,6 +21,8 @@ import { registerObservationRoutes } from './modules/observations/routes.js';
 import { registerTelemetrySimulatorRoutes } from './modules/telemetry/routes.js';
 import { PostgresValidationService } from './modules/validation/service.js';
 import { registerValidationRoutes } from './modules/validation/routes.js';
+import { PostgresDeviceHealthService } from './modules/device-health/service.js';
+import { registerDeviceHealthRoutes } from './modules/device-health/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -33,6 +35,7 @@ export interface AppOptions {
   roleGrantAdministrationService?: PostgresRoleGrantAdministrationService;
   observationService?: PostgresObservationService;
   validationService?: PostgresValidationService;
+  deviceHealthService?: PostgresDeviceHealthService;
 }
 
 export function createApp(
@@ -82,6 +85,8 @@ export function createApp(
   const identitySessionRepository =
     options.identitySessionRepository ??
     new PostgresIdentitySessionRepository(process.env.DATABASE_URL);
+  const deviceHealthService =
+    options.deviceHealthService ?? new PostgresDeviceHealthService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -129,6 +134,7 @@ export function createApp(
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     observationService:
       options.observationService ?? new PostgresObservationService(process.env.DATABASE_URL),
+    ...(options.deviceHealthService || process.env.DATABASE_URL ? { deviceHealthService } : {}),
   });
   registerValidationRoutes(app, {
     identityProvider,
@@ -138,6 +144,14 @@ export function createApp(
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     validationService:
       options.validationService ?? new PostgresValidationService(process.env.DATABASE_URL),
+  });
+  registerDeviceHealthRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: deviceHealthService,
   });
 
   return app;

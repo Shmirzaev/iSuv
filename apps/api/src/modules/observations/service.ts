@@ -9,6 +9,7 @@ import type {
 import type { ObservationIngestionPort } from '@isuv/domain';
 import type { PoolClient } from 'pg';
 import { withDatabase } from '../../db/client.js';
+import { PostgresDeviceHealthService } from '../device-health/service.js';
 
 export class ObservationError extends Error {
   public constructor(
@@ -318,7 +319,11 @@ export class PostgresObservationService implements ObservationIngestionPort<
           `${observationSelect} WHERE revision.id = $1`,
           [revision.rows[0]?.id],
         );
-        return { observation: toObservation(inserted.rows[0]!), idempotent: false };
+        const observation = toObservation(inserted.rows[0]!);
+        await new PostgresDeviceHealthService(this.databaseUrl, client).ingestAcceptedObservation(
+          observation,
+        );
+        return { observation, idempotent: false };
       });
     } catch (error) {
       if ((error as { code?: string }).code === '23514')
@@ -407,6 +412,9 @@ export class PostgresObservationService implements ObservationIngestionPort<
         );
         if (audit.rowCount !== 1)
           throw new ObservationError('NOT_FOUND', 'The observation was not found.');
+        await new PostgresDeviceHealthService(this.databaseUrl, client).ingestAcceptedObservation(
+          observation,
+        );
         return observation;
       });
     } catch (error) {

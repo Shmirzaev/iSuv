@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P2-003 on 2026-08-24: B-001–B-004 remain external rollout dependencies. The validation engine accepts only governed effective profiles and ships no official station bounds, cadence/freshness policy, calibration, reset/rollover rule, rating curve, or production device payload; synthetic bounded bootstrap remains visibly non-authoritative.
+Last reviewed after P2-004 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Device health ships no official cadence/freshness, heartbeat, fault-clear, power/signal unit, or vendor status policy; those fields remain explicitly unconfigured/unknown and synthetic status events remain non-authoritative. No new blocker prevents synthetic allocation-plan governance work.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

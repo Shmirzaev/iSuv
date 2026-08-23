@@ -10,6 +10,7 @@ import { coverageState, evaluateObservationValidation, type ValidationRules } fr
 import type { PoolClient } from 'pg';
 import { withDatabase } from '../../db/client.js';
 import { observationSelect, toObservation, type ObservationRow } from '../observations/service.js';
+import { PostgresDeviceHealthService } from '../device-health/service.js';
 
 function auditObservation(observation: Observation): Record<string, unknown> {
   return {
@@ -568,6 +569,9 @@ export class PostgresValidationService {
         classification: observation.dataClassification,
         provenance: 'observation_validation_v1',
       });
+      await new PostgresDeviceHealthService(this.databaseUrl, client).ingestAcceptedObservation(
+        observation,
+      );
       return {
         outcome: 'applied',
         deferReason: null,

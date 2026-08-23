@@ -9,4 +9,5 @@ export * from './audit/model.js';
 export * from './network/model.js';
 export * from './observations/model.js';
 export * from './telemetry/simulator.js';
+export * from './device-health/model.js';
 export * from './validation/model.js';

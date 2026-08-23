@@ -87,7 +87,14 @@ export type CurrentGrantsResponse = z.infer<typeof currentGrantsResponseSchema>;
 
 export const apiErrorSchema = z.object({
   error: z.object({
-    code: z.enum(['UNAUTHENTICATED', 'FORBIDDEN', 'NOT_FOUND', 'VALIDATION_ERROR', 'CONFLICT']),
+    code: z.enum([
+      'UNAUTHENTICATED',
+      'FORBIDDEN',
+      'NOT_FOUND',
+      'VALIDATION_ERROR',
+      'CONFLICT',
+      'UNAVAILABLE',
+    ]),
     message: z.string(),
     requestId: z.string().min(1),
   }),
