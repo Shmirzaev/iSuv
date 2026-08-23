@@ -17,4 +17,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed after P3-002 on 2026-08-24. P3-002 applies D-002 quantity separation, D-004 reproducible known/effective-time derivation, and D-007 database-atomic governance/audit to synthetic rating curves and coverage policies. Explicit sensor/installation selection and conservative read-time deferral fit the accepted architecture; no new ADR or official hydrological policy was introduced. D-001–D-010 remain unchanged.
+Last reviewed after P3-003 on 2026-08-24. P3-003 applies D-002 quantity separation, D-004 reproducible known/effective-time derivation, and D-007 database-atomic governance/audit to immutable plan-entry measurement bindings and bounded synthetic tolerance versions. Exact read-time variance and conservative unassessable outcomes fit the accepted architecture; no new ADR, legal tolerance, alarm policy, balance model, or official compliance claim was introduced. D-001–D-010 remain unchanged.

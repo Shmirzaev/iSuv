@@ -27,6 +27,8 @@ import { PostgresAllocationPlanService } from './modules/allocation-plans/servic
 import { registerAllocationPlanRoutes } from './modules/allocation-plans/routes.js';
 import { PostgresQuantityDerivationService } from './modules/quantity-derivation/service.js';
 import { registerQuantityDerivationRoutes } from './modules/quantity-derivation/routes.js';
+import { PostgresAllocationDeviationService } from './modules/allocation-deviation/service.js';
+import { registerAllocationDeviationRoutes } from './modules/allocation-deviation/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -42,6 +44,7 @@ export interface AppOptions {
   deviceHealthService?: PostgresDeviceHealthService;
   allocationPlanService?: PostgresAllocationPlanService;
   quantityDerivationService?: PostgresQuantityDerivationService;
+  allocationDeviationService?: PostgresAllocationDeviationService;
 }
 
 export function createApp(
@@ -98,6 +101,9 @@ export function createApp(
   const quantityDerivationService =
     options.quantityDerivationService ??
     new PostgresQuantityDerivationService(process.env.DATABASE_URL);
+  const allocationDeviationService =
+    options.allocationDeviationService ??
+    new PostgresAllocationDeviationService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -179,6 +185,14 @@ export function createApp(
       options.territoryAuthorizationRepository ??
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     service: quantityDerivationService,
+  });
+  registerAllocationDeviationRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: allocationDeviationService,
   });
 
   return app;

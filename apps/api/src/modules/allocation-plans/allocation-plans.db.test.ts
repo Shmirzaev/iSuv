@@ -1,11 +1,58 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import { PostgresAllocationPlanService } from './service.js';
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required for database integration tests');
 const pool = new Pool({ connectionString: databaseUrl });
 after(async () => pool.end());
+
+async function bindVersionEntries(
+  database: Pick<PoolClient, 'query'>,
+  versionId: string,
+  actorUserId: string,
+  requestId: string,
+) {
+  const fixtures = await database.query<{
+    entry_id: string;
+    station_id: string;
+    sensor_id: string;
+    installation_id: string;
+  }>(
+    `SELECT DISTINCT ON (entry_row.id) entry_row.id entry_id,station.id station_id,
+       sensor.id sensor_id,installation.id installation_id
+     FROM allocation_plan_entries entry_row
+     JOIN allocation_plan_versions version_row ON version_row.id=entry_row.plan_version_id
+     JOIN allocation_plans plan_row ON plan_row.id=version_row.plan_id
+     JOIN water_sections section_row ON section_row.id=plan_row.water_section_id
+     JOIN monitoring_stations station ON station.junction_id=section_row.upstream_junction_id
+       AND station.organization_id=plan_row.organization_id AND station.territory_id=plan_row.territory_id
+     JOIN telemetry_device_installations installation ON installation.station_id=station.id
+       AND installation.effective_from<=entry_row.interval_start
+       AND (installation.effective_until IS NULL OR installation.effective_until>=entry_row.interval_end)
+     JOIN telemetry_sensors sensor ON sensor.device_id=installation.device_id
+       AND sensor.measurement_kind='discharge' AND sensor.unit='m3/s'
+     WHERE version_row.id=$1 ORDER BY entry_row.id,sensor.id`,
+    [versionId],
+  );
+  assert.ok(fixtures.rows.length > 0, 'allocation test section must have governed meter fixtures');
+  for (const fixture of fixtures.rows)
+    await database.query(
+      `INSERT INTO allocation_plan_entry_measurement_bindings(
+         entry_id,station_id,sensor_id,device_installation_id,method,reference_plane,purpose,
+         data_classification,provenance,created_by_user_id,creation_reason,created_request_id)
+       VALUES($1,$2,$3,$4,'direct_discharge','upstream','section_delivery','synthetic',
+         'synthetic:allocation-plan-regression-binding',$5,'bind allocation regression entry',$6)`,
+      [
+        fixture.entry_id,
+        fixture.station_id,
+        fixture.sensor_id,
+        fixture.installation_id,
+        actorUserId,
+        requestId,
+      ],
+    );
+}
 test(
   'approved m3 plans preserve microseconds, separate known/effective time, and leave gaps no_plan',
   { concurrency: false },
@@ -15,7 +62,13 @@ test(
     try {
       const section = (
         await client.query<{ id: string; organization_id: string; territory_id: string }>(
-          "SELECT id,organization_id,territory_id FROM water_sections WHERE lifecycle='active' ORDER BY id LIMIT 1",
+          `SELECT DISTINCT section_row.id,section_row.organization_id,section_row.territory_id
+           FROM water_sections section_row
+           JOIN monitoring_stations station ON station.junction_id=section_row.upstream_junction_id
+             AND station.organization_id=section_row.organization_id AND station.territory_id=section_row.territory_id
+           JOIN telemetry_device_installations installation ON installation.station_id=station.id AND installation.effective_until IS NULL
+           JOIN telemetry_sensors sensor ON sensor.device_id=installation.device_id AND sensor.measurement_kind='discharge' AND sensor.unit='m3/s'
+           WHERE section_row.lifecycle='active' ORDER BY section_row.id LIMIT 1`,
         )
       ).rows[0]!;
       await client.query("UPDATE water_sections SET data_classification='official' WHERE id=$1", [
@@ -152,6 +205,12 @@ test(
         ).resolution,
         'no_plan',
       );
+      await bindVersionEntries(
+        client,
+        draft.id,
+        'a3000000-0000-4000-8000-000000000001',
+        'allocation-db-test-binding',
+      );
       await service.request(
         draft.planId,
         1,
@@ -238,6 +297,12 @@ test(
         /lifecycle|approved/i,
       );
       await client.query('ROLLBACK TO SAVEPOINT direct_supersession_rejection');
+      await bindVersionEntries(
+        client,
+        successor.id,
+        'a3000000-0000-4000-8000-000000000001',
+        'allocation-db-test-successor-binding',
+      );
       await service.request(
         draft.planId,
         2,
@@ -325,6 +390,12 @@ test(
         'a3000000-0000-4000-8000-000000000001',
         'allocation-db-test',
       );
+      await bindVersionEntries(
+        client,
+        sameAuthor.id,
+        'a3000000-0000-4000-8000-000000000001',
+        'allocation-db-test-same-author-binding',
+      );
       await service.request(
         draft.planId,
         sameAuthor.version,
@@ -383,7 +454,12 @@ test(
   async () => {
     const section = (
       await pool.query<{ id: string }>(
-        "SELECT id FROM water_sections WHERE lifecycle='active' ORDER BY id OFFSET 1 LIMIT 1",
+        `SELECT DISTINCT section_row.id FROM water_sections section_row
+         JOIN monitoring_stations station ON station.junction_id=section_row.upstream_junction_id
+           AND station.organization_id=section_row.organization_id AND station.territory_id=section_row.territory_id
+         JOIN telemetry_device_installations installation ON installation.station_id=station.id AND installation.effective_until IS NULL
+         JOIN telemetry_sensors sensor ON sensor.device_id=installation.device_id AND sensor.measurement_kind='discharge' AND sensor.unit='m3/s'
+         WHERE section_row.lifecycle='active' ORDER BY section_row.id OFFSET 1 LIMIT 1`,
       )
     ).rows[0]!;
     const service = new PostgresAllocationPlanService(databaseUrl);
@@ -405,6 +481,12 @@ test(
       { ...base, waterSectionId: section.id },
       'a3000000-0000-4000-8000-000000000001',
       'allocation-race',
+    );
+    await bindVersionEntries(
+      pool,
+      initial.id,
+      'a3000000-0000-4000-8000-000000000001',
+      'allocation-race-base-binding',
     );
     await service.request(
       initial.planId,
@@ -452,6 +534,13 @@ test(
       candidates.map((candidate) => candidate.version).sort((left, right) => left - right),
       [2, 3],
     );
+    for (const candidate of candidates)
+      await bindVersionEntries(
+        pool,
+        candidate.id,
+        'a3000000-0000-4000-8000-000000000001',
+        `allocation-race-binding-${candidate.version}`,
+      );
     for (const candidate of candidates)
       await service.request(
         initial.planId,
