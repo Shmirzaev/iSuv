@@ -38,12 +38,13 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
   Exit: region/basin/waterway/junction/section/control/station/device/sensor entities, migrations, validation, and APIs exist.
   Evidence: accepted ADR-0004; typed PostGIS master-data migration and territory-authorized read APIs; single authoritative section DAG supports branches/merges and rejects direct/concurrent cycles; cross-boundary identifiers are redacted; effective-dated device installations preserve provenance; DB/contracts enforce entity geometry and WGS84 bounds plus stage→m, discharge→m³/s, accumulated volume→m³; 16 API/unit and 7 real-DB tests pass; QA and reviewer approve.
 
-- [~] **P1-003 — Synthetic 83-hotspot topology seed**
+- [x] **P1-003 — Synthetic 83-hotspot topology seed**
   Depends: P1-002.
   Exit: 83 labeled synthetic top-level nodes with realistic branches and station/device coverage load reproducibly; topology validation passes.
+  Evidence: atomic deterministic seed creates exactly 83 labeled entry roots across five compact synthetic basin DAGs with pairwise merge collectors and five outlets; 493 junctions, 571 sections, 83 monitoring-only control structures/stations/devices/installations, and 249 canonical sensors load reproducibly; PostGIS tests prove containment, endpoint alignment, root-to-outlet reachability, cross-territory continuity, classification, and persistent-state reconciliation; seed x2, 17 unit/API tests, and 8 DB tests pass; hydrology, QA, and reviewer gates approve.
 
-- [ ] **P1-004 — Audit foundation**  
-  Depends: P1-001.  
+- [~] **P1-004 — Audit foundation**
+  Depends: P1-001.
   Exit: privileged changes create searchable old/new/reason/actor/time audit records.
 
 ## Phase 2 — Telemetry and data quality

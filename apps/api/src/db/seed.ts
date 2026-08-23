@@ -1,11 +1,15 @@
 import { withDatabase } from './client.js';
+import { seedSyntheticNetwork } from './syntheticNetworkSeed.js';
 
 export async function seedSystemMetadata(databaseUrl: string | undefined): Promise<void> {
   await withDatabase(databaseUrl, async (pool) => {
-    await pool.query(
-      "INSERT INTO system_metadata (key, value) VALUES ('seed_classification', 'synthetic') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
-    );
-    await pool.query(`
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        "INSERT INTO system_metadata (key, value) VALUES ('seed_classification', 'synthetic') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+      );
+      await client.query(`
       INSERT INTO organizations (id, code, name, data_classification)
       VALUES ('a1000000-0000-4000-8000-000000000001', 'UZ-WATER-SYNTH', 'Synthetic Uzbekistan Water Authority', 'synthetic')
       ON CONFLICT (code) DO UPDATE SET
@@ -13,7 +17,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
         data_classification = EXCLUDED.data_classification,
         updated_at = now()
     `);
-    await pool.query(`
+      await client.query(`
       INSERT INTO territories (id, organization_id, parent_territory_id, code, name, kind, data_classification)
       VALUES
         ('a2000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', NULL, 'UZ-SYNTH', 'Synthetic national scope', 'national', 'synthetic'),
@@ -28,7 +32,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
         data_classification = EXCLUDED.data_classification,
         updated_at = now()
     `);
-    await pool.query(`
+      await client.query(`
       INSERT INTO identity_users (id, organization_id, external_subject, display_name, is_active, data_classification)
       VALUES
         ('a3000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'synthetic:system-admin', 'Synthetic system administrator', true, 'synthetic'),
@@ -45,7 +49,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
         data_classification = EXCLUDED.data_classification,
         updated_at = now()
     `);
-    await pool.query(`
+      await client.query(`
       INSERT INTO user_role_grants (id, user_id, organization_id, role, scope, territory_id, effective_from)
       VALUES
         ('a4000000-0000-4000-8000-000000000001', 'a3000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'system_admin', 'system', NULL, '2026-01-01T00:00:00.000Z'),
@@ -66,14 +70,23 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
         effective_until = NULL,
         updated_at = now()
     `);
-    console.info(
-      JSON.stringify({
-        level: 'info',
-        event: 'seed_complete',
-        classification: 'synthetic',
-        seededIdentityUsers: 8,
-        seededTerritories: 5,
-      }),
-    );
+      const syntheticNetwork = await seedSyntheticNetwork(client);
+      await client.query('COMMIT');
+      console.info(
+        JSON.stringify({
+          level: 'info',
+          event: 'seed_complete',
+          classification: 'synthetic',
+          seededIdentityUsers: 8,
+          seededTerritories: 5,
+          syntheticNetwork,
+        }),
+      );
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 }

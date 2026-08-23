@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P1-002 on 2026-08-23: B-001–B-004 remain external rollout dependencies; none blocks synthetic topology implementation.
+Last reviewed after P1-003 on 2026-08-23: B-001–B-004 remain external rollout dependencies; the verified synthetic 83-hotspot topology does not claim to replace them.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

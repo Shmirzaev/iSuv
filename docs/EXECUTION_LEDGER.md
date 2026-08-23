@@ -5,9 +5,9 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 ## Current state
 
 - Current phase: Phase 1 — Identity, topology, and master data
-- Active task: P1-003 — Synthetic 83-hotspot topology seed
-- Last verified commit: `Model the governed water network and assets` (current P1-002 slice commit)
-- Overall MVP status: Phase 0 through P1-002 verified; 6 of 31 task-graph items complete
+- Active task: P1-004 — Audit foundation
+- Last verified commit: `Seed 83 governed synthetic hotspot networks` (current P1-003 slice commit)
+- Overall MVP status: Phase 0 through P1-003 verified; 7 of 31 task-graph items complete
 
 ## Entries
 
@@ -19,6 +19,7 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 | 2026-08-23 | P0-004 | Local/CI verification pipeline, dependency controls, package boundaries, and Phase 0 QA/review fixes pass. | `pnpm-lock.yaml`, ESLint/Prettier/TypeScript config, CI workflow; foundation slice commit | Frozen install pass under release-age policy; `pnpm verify` pass; 5 API tests; API/web production builds; `pnpm audit --prod --audit-level critical` no vulnerabilities; `git diff --check` pass | Configured QA/reviewer roles were unavailable on this account; fallback agents found no remaining critical/high defect | P1-001 |
 | 2026-08-23 | P1-001 | Territory-aware identity and authorization foundation verified with effective-dated grants, fail-closed local identity, organization isolation, and concurrency-safe hierarchy validation. | `0002_identity_territory.sql`; identity/authorization contracts, domain policy, API repository/routes/tests; P1-001 slice commit | `pnpm verify` pass (12 API tests); migration x2 and seed x2 pass; DB authorization tests 3/3 pass; production dependency audit clean; Compose config and `git diff --check` pass | Security and final reviewer gates approved; D-003–D-005 and B-001–B-004 unchanged | P1-002 |
 | 2026-08-23 | P1-002 | Verified territory-aware PostGIS network/asset registry with one authoritative section DAG, constrained measurement channels, effective-dated device installations, and read-only control-structure boundary. | `0003_water_network_assets.sql`; network contracts/domain/API/tests; ADR-0004; P1-002 slice commit | `pnpm verify` pass (16 API/unit tests); migration x2 and seed x2 pass; DB tests 7/7 pass; dependency audit clean; Compose config and diff checks pass | QA/reviewer approved after boundary-redaction and WGS84-bound fixes; D-006 accepted; B-001–B-004 unchanged | P1-003 |
+| 2026-08-23 | P1-003 | Verified atomic, deterministic 83-hotspot synthetic seed across five connected basin DAGs with full station/device/canonical-sensor coverage. | synthetic network generator, seed integration, unit/DB tests; P1-003 slice commit | `pnpm verify` pass (17 API/unit tests); existing-volume seed x2 pass; DB tests 8/8 pass; dependency audit and Compose/diff checks pass | Persistent-state QA found/fixed territory reconciliation; hydrology/QA/reviewer approved; D-006 clarified; B-001–B-004 unchanged | P1-004 |
 
 ## Resume protocol
 

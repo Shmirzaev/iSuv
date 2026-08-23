@@ -14,6 +14,8 @@ Use `network_junctions` as hydraulic nodes and `water_sections` as the single au
 
 Keep hydraulic membership separate from the administrative `territories` authorization hierarchy. Every record has a responsible territory, but same-organization sections may connect junctions with different responsible territories. Territory-scoped reads redact foreign endpoint identifiers and expose only non-identifying boundary flags.
 
+The boundary-redacted topology is an external/UI read model, not a calculation source. Later travel-time, water-balance, and allocation services must query the canonical section graph through a separately authorized internal repository so a valid cross-territory network is never treated as disconnected.
+
 Use WGS84 PostGIS geometry with entity-specific types: `Point` for junctions/stations/control structures, `LineString` for waterways/sections, and `MultiPolygon` for regions/basins. Geometry must be non-empty, valid, and contain only longitude/latitude coordinates within WGS84 bounds. Topological relationships remain authoritative even where geometries cross or touch.
 
 Control structures are monitoring and decision-support metadata only. Device-to-station installations are effective-dated so later relocation does not rewrite historical provenance. Sensor master data constrains stage to metres, discharge to m³/s, and accumulated volume to m³; rating curves and observations remain separate versioned boundaries.
