@@ -23,6 +23,16 @@ pnpm dev
 
 The API listens on `http://127.0.0.1:3000`; the operator shell is served by Vite at `http://127.0.0.1:5173`. The shell is intentionally and visibly marked as synthetic data. Stop local services with `docker compose down`; its named volume keeps database state. To remove that state intentionally, run `docker compose down --volumes`.
 
+The synthetic telemetry simulator is deliberately disabled by default and always refused when `NODE_ENV=production`. For an explicit local demonstration, enable both local identity and the simulator before starting the API (PowerShell example):
+
+```powershell
+$env:ISUV_ENABLE_LOCAL_IDENTITY = 'true'
+$env:ISUV_ENABLE_SYNTHETIC_SIMULATOR = 'true'
+pnpm dev
+```
+
+Authenticated `GET /api/v1/telemetry/simulator/preview` and `POST /api/v1/telemetry/simulator/run` requests accept a bounded scenario request. The seeded system administrator ID is `a3000000-0000-4000-8000-000000000001` and is supplied locally through `x-isuv-user-id`. All simulator output is synthetic, raw, and unsuitable for accounting until the governed validation workflow approves it.
+
 ## Verification and smoke checks
 
 ```sh

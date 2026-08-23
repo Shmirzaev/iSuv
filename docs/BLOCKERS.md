@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P2-001 on 2026-08-23: B-001–B-004 remain external rollout dependencies; the verified synthetic observation/revision model does not claim official calibration, device identity/reset behavior, quality policy, or production telemetry.
+Last reviewed after P2-002 on 2026-08-23: B-001–B-004 remain external rollout dependencies; the verified simulator/adapter uses fictional profiles and a bounded local replay boundary, and does not claim official calibration, device identity/reset behavior, payload protocols, quality policy, durable device-health delivery, or production telemetry.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

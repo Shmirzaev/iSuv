@@ -14,3 +14,5 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 | D-008 | 2026-08-23 | Treat raw telemetry as unreliable until a governed validation revision, and separate `telemetry:correct` from operational ingestion authority. | Device claims must not become accounting truth before validation, and district/basin ingestion authority must not imply expert correction authority. | Treat adapter `valid` as immediately usable; reuse `telemetry:write` for corrections; mutate raw rows after validation. | Only valid automatic/expert/corrected revisions are usable by default; raw and estimated data remain visible but unreliable; hydrologists and senior in-scope administrators may create audited human revisions; P2-003 supplies validation rules/transitions. | Accepted |
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
+
+Last reviewed after P2-002 on 2026-08-23. The simulator's opt-in non-production route, territory authorization, deterministic synthetic envelope, and bounded replay behavior implement D-005 and D-008; no new architectural decision or ADR was required.

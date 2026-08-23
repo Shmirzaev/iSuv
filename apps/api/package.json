@@ -7,8 +7,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -b",
     "start": "node dist/server.js",
-    "test": "tsx --test src/app.test.ts src/db/syntheticNetworkSeed.test.ts src/modules/identity/routes.test.ts src/modules/authorization/service.test.ts src/modules/network/contract.test.ts src/modules/network/routes.test.ts src/modules/audit/routes.test.ts src/modules/administration/routes.test.ts src/modules/observations/routes.test.ts",
-    "test:db": "tsx --test src/modules/authorization/repository.db.test.ts src/modules/network/repository.db.test.ts src/db/syntheticNetworkSeed.db.test.ts src/modules/audit/audit.db.test.ts src/modules/observations/observations.db.test.ts"
+    "test": "tsx --test src/app.test.ts src/db/syntheticNetworkSeed.test.ts src/modules/identity/routes.test.ts src/modules/authorization/service.test.ts src/modules/network/contract.test.ts src/modules/network/routes.test.ts src/modules/audit/routes.test.ts src/modules/administration/routes.test.ts src/modules/observations/routes.test.ts src/modules/telemetry/adapter.test.ts src/modules/telemetry/routes.test.ts",
+    "test:db": "tsx --test src/modules/authorization/repository.db.test.ts src/modules/network/repository.db.test.ts src/db/syntheticNetworkSeed.db.test.ts src/modules/audit/audit.db.test.ts src/modules/observations/observations.db.test.ts src/modules/telemetry/telemetry.db.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",

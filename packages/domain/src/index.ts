@@ -8,3 +8,4 @@ export * from './authorization/policy.js';
 export * from './audit/model.js';
 export * from './network/model.js';
 export * from './observations/model.js';
+export * from './telemetry/simulator.js';
