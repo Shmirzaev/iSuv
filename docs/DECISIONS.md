@@ -17,4 +17,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed after P3-001 on 2026-08-24. P3-001 applies D-004 effective/known-time history and D-007 database-atomic audit to allocation identities, versions, and m³ schedule entries; no new architectural decision or official allocation policy was introduced. D-001–D-010 remain unchanged.
+Last reviewed after P3-002 on 2026-08-24. P3-002 applies D-002 quantity separation, D-004 reproducible known/effective-time derivation, and D-007 database-atomic governance/audit to synthetic rating curves and coverage policies. Explicit sensor/installation selection and conservative read-time deferral fit the accepted architecture; no new ADR or official hydrological policy was introduced. D-001–D-010 remain unchanged.

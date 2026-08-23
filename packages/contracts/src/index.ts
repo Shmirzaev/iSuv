@@ -8,6 +8,7 @@ export * from './device-health/device-health.js';
 export * from './validation/validation.js';
 export * from './network/network.js';
 export * from './allocation-plans/allocation-plans.js';
+export * from './quantity-derivation/quantity-derivation.js';
 
 export const healthStatusSchema = z.object({
   status: z.literal('ok'),

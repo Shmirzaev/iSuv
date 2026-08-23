@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P3-001 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Allocation plans are therefore synthetic-only, explicitly ineligible for official compliance, and contain no invented tolerance or legal authority. No new blocker prevents synthetic quantity-conversion and volume-integration work.
+Last reviewed after P3-002 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Rating curves, coverage policies, and derived volumes are therefore synthetic-only, visibly estimated where model-derived, and explicitly ineligible for official compliance. Exact monotonic counter deltas are allowed only by the synthetic governed policy; reset/rollover conversion remains deferred without official meter modulus and reset semantics. No new blocker prevents planned-vs-actual synthetic decision-support work.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

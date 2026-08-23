@@ -10,6 +10,7 @@ export const auditResourceSchema = z.enum([
   'observation',
   'validation_profile',
   'allocation_plan',
+  'quantity_model',
 ]);
 export const auditActionSchema = z.enum([
   'user_role_grant.created',
@@ -28,6 +29,10 @@ export const auditActionSchema = z.enum([
   'allocation_plan_version.approved',
   'allocation_plan_version.superseded',
   'allocation_plan_entry.created',
+  'rating_curve.created',
+  'rating_curve_version.approved',
+  'integration_coverage_policy.created',
+  'integration_coverage_policy_version.approved',
 ]);
 
 export const auditEventSchema = z.object({
