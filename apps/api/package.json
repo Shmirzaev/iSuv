@@ -7,11 +7,13 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -b",
     "start": "node dist/server.js",
-    "test": "tsx --test src/app.test.ts"
+    "test": "tsx --test src/app.test.ts src/modules/identity/routes.test.ts src/modules/authorization/service.test.ts",
+    "test:db": "tsx --test src/modules/authorization/repository.db.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
     "@isuv/contracts": "workspace:*",
+    "@isuv/domain": "workspace:*",
     "fastify": "^5.5.0",
     "pg": "^8.16.3"
   },

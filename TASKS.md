@@ -28,11 +28,12 @@ The primary agent may split tasks further. It must preserve IDs/dependencies, ad
 
 ## Phase 1 — Identity, topology, and master data
 
-- [~] **P1-001 — Organizations, territories, roles, and authorization skeleton**
+- [x] **P1-001 — Organizations, territories, roles, and authorization skeleton**
   Depends: P0-003.
   Exit: core roles and territory scope are modeled; cross-territory denial tests exist.
+  Evidence: migration-backed organizations, hierarchical territories, eight core roles, effective-dated grants, and fail-closed local identity adapter; unit/API tests cover same/ancestor/cross-territory and read-only auditor behavior; real PostGIS tests cover organization isolation, inactive/unknown targets, UTC boundaries, non-overlapping re-grants, and concurrency-safe cycle prevention; full verification and security/reviewer gates pass.
 
-- [ ] **P1-002 — Water-network and asset schema**  
+- [~] **P1-002 — Water-network and asset schema**
   Depends: P0-002, P0-003.  
   Exit: region/basin/waterway/junction/section/control/station/device/sensor entities, migrations, validation, and APIs exist.
 

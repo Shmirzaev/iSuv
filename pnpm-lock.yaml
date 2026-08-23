@@ -50,6 +50,9 @@ importers:
       '@isuv/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@isuv/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       fastify:
         specifier: ^5.5.0
         version: 5.12.1

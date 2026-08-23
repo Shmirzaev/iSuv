@@ -2,12 +2,23 @@ import cors from '@fastify/cors';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import { healthStatusSchema } from '@isuv/contracts';
 import { checkDatabase } from './db/client.js';
+import { createLocalDevelopmentIdentityProvider } from './modules/identity/provider.js';
+import type { IdentityProvider } from './modules/identity/provider.js';
+import { PostgresIdentitySessionRepository } from './modules/identity/repository.js';
+import type { IdentitySessionRepository } from './modules/identity/repository.js';
+import { registerIdentityRoutes } from './modules/identity/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
+
+export interface AppOptions {
+  identityProvider?: IdentityProvider;
+  identitySessionRepository?: IdentitySessionRepository;
+}
 
 export function createApp(
   readinessCheck: ReadinessCheck = () => checkDatabase(process.env.DATABASE_URL),
   logger: boolean | FastifyBaseLogger = true,
+  options: AppOptions = {},
 ): FastifyInstance {
   const app = Fastify({
     logger,
@@ -45,6 +56,13 @@ export function createApp(
   app.get('/metrics', async (_request, reply) => {
     reply.type('text/plain; version=0.0.4; charset=utf-8');
     return '# HELP isuv_api_up API process liveness\n# TYPE isuv_api_up gauge\nisuv_api_up 1\n';
+  });
+
+  registerIdentityRoutes(app, {
+    identityProvider: options.identityProvider ?? createLocalDevelopmentIdentityProvider(),
+    sessionRepository:
+      options.identitySessionRepository ??
+      new PostgresIdentitySessionRepository(process.env.DATABASE_URL),
   });
 
   return app;

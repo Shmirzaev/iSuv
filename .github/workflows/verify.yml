@@ -40,3 +40,5 @@ jobs:
       - run: pnpm verify
       - name: Verify repeatable database setup
         run: pnpm db:migrate && pnpm db:migrate && pnpm db:seed && pnpm db:seed
+      - name: Run database authorization integration tests
+        run: corepack pnpm --filter @isuv/api test:db
