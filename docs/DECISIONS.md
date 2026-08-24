@@ -19,4 +19,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed during P6-001 on 2026-08-24. D-012/ADR-0009 narrowly resolves the synthetic seed-time conflict without changing ordinary/API approval or falsifying knowledge time. P6 analytics otherwise follows the existing governed temporal, quantity, topology, authorization/audit, and OT boundaries. Official allocation, cadence, uncertainty, and accounting policy remain external.
+Last reviewed during P6-002 on 2026-08-24. No new architecture decision is required: D-004/ADR-0002 already requires immutable report snapshots, while D-002/D-005/D-007 govern quantity separation, OT isolation, and atomic audit. Reports freeze canonical typed payloads and deterministic fingerprints at exact cutoffs, remain generated-but-unapproved, and expose audited CSV plus print/PDF representations without adding policy or control behavior. Official allocation, cadence, uncertainty, accounting, alarm, and incident authority remain external.

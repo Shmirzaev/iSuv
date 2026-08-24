@@ -176,6 +176,120 @@ main:focus-visible {
 .analytics-workspace {
   margin-block: 1rem;
 }
+.reports-workspace {
+  margin-block: 1rem;
+  min-width: 0;
+}
+.reports-intro,
+.reports-metadata {
+  display: grid;
+  gap: 0.75rem;
+}
+.reports-metadata {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.reports-metadata div {
+  border-top: 1px solid #cbd5e1;
+  min-width: 0;
+  padding-top: 0.45rem;
+}
+.reports-metadata dd {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+}
+.reports-template-form {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.45rem;
+  margin-block: 1rem;
+  padding: 0.8rem;
+}
+.reports-template-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.reports-template-form legend {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 0;
+}
+.reports-template-form__grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-block: 0.7rem;
+}
+.reports-template-form label {
+  display: grid;
+  font-weight: 700;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.reports-template-form select,
+.reports-template-form input {
+  background: #fff;
+  border: 1px solid #64748b;
+  border-radius: 0.25rem;
+  min-width: 0;
+  padding: 0.45rem;
+}
+.reports-template-form small,
+.reports-template-form__note {
+  color: #475569;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.reports-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.reports-table-scroll table {
+  min-width: 52rem;
+}
+.reports-status {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 750;
+  gap: 0.35rem;
+}
+.reports-authority {
+  background: #fffbeb;
+  border-left: 4px solid #a16207;
+  font-weight: 750;
+  padding: 0.55rem 0.7rem;
+}
+.reports-source,
+.reports-payload {
+  border-top: 1px solid #cbd5e1;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+.reports-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+.reports-actions a,
+.reports-actions button {
+  border: 2px solid #064e86;
+  border-radius: 0.3rem;
+  font-weight: 750;
+  padding: 0.55rem 0.7rem;
+}
+.reports-actions a {
+  background: #fff;
+}
+.reports-actions button {
+  background: #064e86;
+  color: #fff;
+}
+.reports-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
 .analytics-intro,
 .analytics-intro dl,
 .analytics-windows,
@@ -1041,6 +1155,10 @@ footer {
     grid-template-columns: 1fr;
   }
   .analytics-coverage {
+    grid-template-columns: 1fr;
+  }
+  .reports-metadata,
+  .reports-template-form__grid {
     grid-template-columns: 1fr;
   }
   .analytics-intro,

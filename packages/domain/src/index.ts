@@ -23,3 +23,4 @@ export * from './live-operations/model.js';
 export * from './map-network/model.js';
 export * from './alarm-incident-center/model.js';
 export * from './analytics/model.js';
+export * from './reports/model.js';
