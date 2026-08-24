@@ -40,8 +40,9 @@ type Row = {
   generated_by_user_id: string;
   generated_at: string;
 };
-function toSnapshot(row: Row): ReportSnapshot {
-  return {
+type SummaryRow = Omit<Row, 'payload'>;
+function toSummary(row: SummaryRow): ReportSummary {
+  return reportSummarySchema.parse({
     id: row.id,
     organizationId: row.organization_id,
     territoryId: row.territory_id,
@@ -71,10 +72,16 @@ function toSnapshot(row: Row): ReportSnapshot {
       sourceRevisionPolicy: row.source_revision_policy,
     },
     fingerprint: row.fingerprint,
-    payload: row.payload,
-  };
+  });
 }
-const columns = `id,organization_id,territory_id,kind,version,period,facet,facet_id,incident_id,${ts('reference_at')} reference_at,${ts('known_at')} known_at,presentation_time_zone,method_id,method_version,quality_state,approval_status,analytics_scenario_id,analytics_scenario_version,source_revision_policy,payload,caveats,fingerprint,provenance,generated_by_user_id,${ts('generated_at')} generated_at`;
+
+function toSnapshot(row: Row): ReportSnapshot {
+  return { ...toSummary(row), payload: row.payload };
+}
+const columnsBeforePayload = `id,organization_id,territory_id,kind,version,period,facet,facet_id,incident_id,${ts('reference_at')} reference_at,${ts('known_at')} known_at,presentation_time_zone,method_id,method_version,quality_state,approval_status,analytics_scenario_id,analytics_scenario_version,source_revision_policy`;
+const columnsAfterPayload = `caveats,fingerprint,provenance,generated_by_user_id,${ts('generated_at')} generated_at`;
+const columns = `${columnsBeforePayload},payload,${columnsAfterPayload}`;
+const summaryColumns = `${columnsBeforePayload},${columnsAfterPayload}`;
 
 export class ReportError extends Error {
   constructor(
@@ -152,11 +159,11 @@ export class PostgresReportService {
   ): Promise<ReportSummary[]> {
     return this.read(async (c) =>
       (
-        await c.query<Row>(
-          `SELECT ${columns} FROM report_snapshots WHERE territory_id=$1 ${kind ? 'AND kind=$2' : ''} ORDER BY generated_at DESC,id DESC LIMIT $${kind ? '3' : '2'}`,
+        await c.query<SummaryRow>(
+          `SELECT ${summaryColumns} FROM report_snapshots WHERE territory_id=$1 ${kind ? 'AND kind=$2' : ''} ORDER BY generated_at DESC,id DESC LIMIT $${kind ? '3' : '2'}`,
           kind ? [territoryId, kind, limit] : [territoryId, limit],
         )
-      ).rows.map((x) => reportSummarySchema.parse(toSnapshot(x))),
+      ).rows.map(toSummary),
     );
   }
   async get(id: string): Promise<ReportSnapshot | null> {

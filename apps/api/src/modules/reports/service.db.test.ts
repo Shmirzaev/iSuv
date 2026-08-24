@@ -24,6 +24,12 @@ test(
       'p6-report-db-retry',
     );
     assert.equal(first.id, second.id);
+    const summaries = await service.list(territory);
+    assert.equal(
+      summaries.some((summary) => summary.id === first.id),
+      true,
+    );
+    assert.equal('payload' in summaries[0]!, false);
     assert.equal(
       first.payload.limitations.measurementUncertainty,
       'measurement_uncertainty_unavailable',

@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @isuv/web test:e2e",
     "build": "pnpm -r build",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "db:migrate": "tsx scripts/migrate.ts",
