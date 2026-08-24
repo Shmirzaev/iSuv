@@ -46,14 +46,14 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
       'alarm-rule-create',
     );
     const unconfigured = await rules.evaluate(rule.id, {
-      effectiveAt: '2030-01-01T00:00:00.000000Z',
+      effectiveAt: '2040-01-01T00:00:00.000000Z',
       knownAt: '2025-01-01T00:00:00.000000Z',
     });
     assert.equal(unconfigured.state, 'deferred');
     assert.equal(unconfigured.reason, 'unconfigured_rule');
     assert.deepEqual(
       await rules.evaluate(rule.id, {
-        effectiveAt: '2030-01-01T00:00:00.000000Z',
+        effectiveAt: '2040-01-01T00:00:00.000000Z',
         knownAt: '2025-01-01T00:00:00.000000Z',
       }),
       unconfigured,
@@ -61,8 +61,8 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
     const requested = await rules.request(
       rule.id,
       {
-        effectiveFrom: '2030-01-01T00:00:00.000000Z',
-        effectiveUntil: '2030-01-02T00:00:00.000000Z',
+        effectiveFrom: '2040-01-01T00:00:00.000000Z',
+        effectiveUntil: '2040-01-02T00:00:00.000000Z',
         condition: {
           kind: 'observation_threshold',
           sensorId: fixture.sensor_id,
@@ -135,28 +135,62 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
       );
     }
 
-    const first = await stage('2030-01-01T00:00:00.000000Z', '11', true);
+    const first = await stage('2040-01-01T00:00:00.000000Z', '11', true);
     const pending = await rules.evaluate(rule.id, {
-      effectiveAt: '2030-01-01T00:00:00.000000Z',
+      effectiveAt: '2040-01-01T00:00:00.000000Z',
       knownAt: first.ingestedAt,
     });
     assert.equal(pending.state, 'pending_activation');
     await rules.evaluate(rule.id, {
-      effectiveAt: '2030-01-01T00:00:00.000000Z',
+      effectiveAt: '2040-01-01T00:00:00.000000Z',
       knownAt: first.ingestedAt,
     });
-    const second = await stage('2030-01-01T00:00:00.000010Z', '11', true);
+    const second = await stage('2040-01-01T00:00:00.000010Z', '11', true);
     const active = await rules.evaluate(rule.id, {
-      effectiveAt: '2030-01-01T00:00:00.000010Z',
+      effectiveAt: '2040-01-01T00:00:00.000010Z',
       knownAt: second.ingestedAt,
     });
     assert.equal(active.state, 'active');
     assert.equal(active.qualifyingFactCount, 2);
     assert.equal(active.qualifyingDurationMicroseconds, '10');
+    const activeRunId = (
+      await client.query<{ id: string }>(
+        `SELECT id FROM alarm_rule_evaluation_runs
+         WHERE rule_id=$1 AND effective_at='2040-01-01T00:00:00.000010Z'::timestamptz
+           AND state='active'`,
+        [rule.id],
+      )
+    ).rows[0]!.id;
 
-    const invalidLate = await stage('2030-01-01T00:00:00.000005Z', '57', false);
+    const stale = await rules.evaluate(rule.id, {
+      effectiveAt: '2040-01-01T00:00:00.000100Z',
+      knownAt: second.ingestedAt,
+    });
+    assert.equal(stale.state, 'deferred');
+    assert.equal(stale.reason, 'gap_exceeded');
+    assert.equal(stale.qualifyingFactCount, 0);
+    const staleProjection = (
+      await client.query<{ state: string; evaluation_run_id: string }>(
+        'SELECT state,evaluation_run_id FROM alarm_rule_current_signals WHERE rule_id=$1',
+        [rule.id],
+      )
+    ).rows[0]!;
+    assert.equal(staleProjection.state, 'deferred');
+    assert.notEqual(staleProjection.evaluation_run_id, activeRunId);
+    assert.equal(
+      (
+        await client.query<{ state: string }>(
+          'SELECT state FROM alarm_rule_evaluation_runs WHERE id=$1',
+          [activeRunId],
+        )
+      ).rows[0]!.state,
+      'active',
+      'the earlier active evaluation remains immutable history',
+    );
+
+    const invalidLate = await stage('2040-01-01T00:00:00.000005Z', '57', false);
     const recalculated = await rules.evaluate(rule.id, {
-      effectiveAt: '2030-01-01T00:00:00.000010Z',
+      effectiveAt: '2040-01-01T00:00:00.000010Z',
       knownAt: invalidLate.ingestedAt,
     });
     assert.equal(recalculated.state, 'deferred');
@@ -169,7 +203,7 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
     );
     assert.deepEqual(runs.rows, [
       { state: 'active', count: '1' },
-      { state: 'deferred', count: '2' },
+      { state: 'deferred', count: '3' },
       { state: 'pending_activation', count: '1' },
     ]);
     const projection = (
@@ -212,7 +246,7 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
         `INSERT INTO alarm_rule_versions(
           rule_id,version,status,effective_from,effective_until,condition,provenance,
           requested_by_user_id,request_reason,requested_request_id,approval_reason
-        ) VALUES($1,2,'requested','2030-01-03Z','2030-01-04Z',$2,'synthetic:forged',$3,'forged','forged','forged approval')`,
+        ) VALUES($1,2,'requested','2040-01-03Z','2040-01-04Z',$2,'synthetic:forged',$3,'forged','forged','forged approval')`,
         [
           rule.id,
           {

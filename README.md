@@ -50,23 +50,17 @@ pnpm db:migrate && pnpm db:seed && pnpm db:seed
 
 ## Persistence, backup, and restore
 
-The Compose `postgres-data` named volume is explicit local persistence. Create a portable backup while the service is running:
+The Compose `postgres-data` named volume is explicit local persistence. Run the noninteractive backup/restore drill below to make a timestamp-and-GUID-specific binary archive, restore it into a distinct database, and verify migrations, 83 synthetic stations/devices, and immutable audit evidence. It refuses existing archive/restore targets and never overwrites the source database or removes a volume.
 
-```sh
-docker compose --env-file .env exec -T postgres pg_dump -U isuv_app -d isuv -Fc > isuv-local.dump
+```powershell
+pwsh -File scripts/backup-restore-smoke.ps1 -Cleanup
 ```
 
-Restore only into a deliberately disposable local database:
-
-```sh
-Get-Content isuv-local.dump -AsByteStream | docker compose --env-file .env exec -T postgres pg_restore -U isuv_app -d isuv --clean --if-exists
-```
-
-Backups may contain operational records in later phases; encrypt and retain them under the applicable policy. Restore overwrites matching objects, so never use it against an environment containing authoritative data.
+See [local operations and recovery](docs/OPERATIONS.md) for the retained-target option, recovery expectations, and failure boundaries. Backups may contain operational records; encrypt and retain them under applicable policy and never use this local procedure against authoritative data.
 
 ## Failure modes and boundaries
 
-- `/health/live` reports process liveness; `/health/ready` reports database connectivity and returns 503 when PostgreSQL is unavailable.
+- `/health/live` reports process liveness; `/health/ready` reports database connectivity and returns 503 when PostgreSQL is unavailable. An explicit local `200 -> 503 -> 200` recovery drill is documented in [OPERATIONS.md](docs/OPERATIONS.md).
 - Fastify assigns each API request an ID, preserves a supplied `x-request-id`, returns it in the response, and includes it in structured request logs.
 - Migrations are tracked transactionally; rerunning migration and seed is safe.
 - API health and metrics bind locally by default. Compose binds PostgreSQL only to loopback. This MVP has no OT adapter or command route.

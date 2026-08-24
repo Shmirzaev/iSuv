@@ -52,12 +52,67 @@ test('readiness is unavailable when its dependency fails', async () => {
   await app.close();
 });
 
-test('metrics exposes liveness and a request id', async () => {
-  const app = createApp(async () => undefined, false);
+test('metrics exposes low-cardinality operational liveness, health, and deferred-rule states', async () => {
+  const app = createApp(async () => undefined, false, {
+    operationalMetricsRepository: {
+      async snapshot() {
+        return {
+          databaseUp: true,
+          scrapedAtEpochSeconds: 1_800,
+          telemetry: {
+            acceptedLineagesTotal: 12,
+            rejectedRevisionsTotal: 2,
+            latestReceivedAtEpochSeconds: 1_700,
+            latestObservedAtEpochSeconds: 1_650,
+          },
+          deviceHealth: {
+            connectionCounts: { communicating: 3, offline: 2, unknown: 1, unconfigured: 0 },
+            faultCounts: { reported: 1, none: 3, unknown: 2, unconfigured: 0 },
+            dataConditionCounts: {
+              current: 2,
+              stale: 1,
+              unreliable: 1,
+              unknown: 0,
+              no_data: 1,
+              unconfigured: 1,
+            },
+          },
+          alarmRules: {
+            evaluationCounts: {
+              inactive: 1,
+              pending_activation: 2,
+              active: 3,
+              pending_clear: 4,
+            },
+            deferredTotal: 5,
+          },
+        };
+      },
+    },
+  });
   const response = await app.inject({ method: 'GET', url: '/metrics' });
   assert.equal(response.statusCode, 200);
   assert.match(response.body, /isuv_api_up 1/);
+  assert.match(response.body, /isuv_database_ready 1/);
+  assert.match(response.body, /data_condition="stale"/);
+  assert.match(response.body, /isuv_alarm_rule_evaluation_deferred_total 5/);
+  assert.doesNotMatch(response.body, /device_id|sensor_id|territory_id/i);
   assert.ok(response.headers['x-request-id']);
+  await app.close();
+});
+
+test('metrics report database degradation with an explicit 503 and no fabricated values', async () => {
+  const app = createApp(async () => undefined, false, {
+    operationalMetricsRepository: {
+      async snapshot() {
+        throw new Error('metrics database unavailable');
+      },
+    },
+  });
+  const response = await app.inject({ method: 'GET', url: '/metrics' });
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body, /operational metrics database unavailable/);
+  assert.doesNotMatch(response.body, /^isuv_/m);
   await app.close();
 });
 

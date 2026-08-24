@@ -139,7 +139,17 @@ function stableState(result: ConditionEvaluation, prior: ConditionState): Condit
 }
 
 /** Invalid facts split continuity but do not silently clear a previously active condition. */
-function evaluateSegments(condition: DomainCondition, facts: AlarmConditionFact[]) {
+function evaluateSegments(
+  condition: DomainCondition,
+  facts: AlarmConditionFact[],
+  effectiveAt: string,
+) {
+  // The domain evaluator owns the exact terminal-horizon rule. Check it once
+  // across the complete source sequence before splitting invalid evidence into
+  // historical segments; individual segments must not mistake the horizon for
+  // a source fact.
+  const horizon = evaluateAlarmCondition(condition, facts.map(domainFact), 'inactive', effectiveAt);
+  if (horizon.state === 'deferred' && horizon.reason === 'gap_exceeded') return horizon;
   let prior: ConditionState = 'inactive';
   let group: AlarmConditionFact[] = [];
   let deferredResult: ConditionEvaluation | null = null;
@@ -617,7 +627,7 @@ export class PostgresAlarmRuleService {
           condition.kind === 'observation_threshold'
             ? await this.observationFacts(client, selected, condition, input.effectiveAt, knownAt)
             : await this.allocationFacts(client, selected, input.effectiveAt, knownAt);
-        const result = evaluateSegments(domainCondition(condition), facts);
+        const result = evaluateSegments(domainCondition(condition), facts, input.effectiveAt);
         const evaluation = alarmRuleEvaluationSchema.parse({
           ruleId,
           versionId: selected.versionId,

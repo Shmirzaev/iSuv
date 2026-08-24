@@ -49,6 +49,12 @@ import { PostgresAnalyticsService } from './modules/analytics/service.js';
 import { registerAnalyticsRoutes } from './modules/analytics/routes.js';
 import { PostgresReportService } from './modules/reports/service.js';
 import { registerReportRoutes } from './modules/reports/routes.js';
+import {
+  PostgresOperationalMetricsRepository,
+  renderOperationalMetrics,
+  type OperationalMetricsRepository,
+} from './modules/observability/metrics.js';
+import { InProcessOperationalMetricsRegistry } from './modules/observability/registry.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -77,6 +83,7 @@ export interface AppOptions {
   alarmIncidentCenterService?: PostgresAlarmIncidentCenterService;
   analyticsService?: PostgresAnalyticsService;
   reportService?: PostgresReportService;
+  operationalMetricsRepository?: OperationalMetricsRepository;
 }
 
 export function createApp(
@@ -94,12 +101,14 @@ export function createApp(
     connectionTimeout: 10_000,
     requestTimeout: 30_000,
   });
+  const processMetrics = new InProcessOperationalMetricsRegistry();
 
   void app.register(cors, { origin: false });
   app.addHook('onRequest', async (request) => {
     if (!/^[A-Za-z0-9._:-]{1,128}$/.test(request.id)) request.id = crypto.randomUUID();
   });
-  app.addHook('onSend', async (request, reply) => {
+  app.addHook('onSend', async (request, reply, payload) => {
+    processMetrics.recordResponse(request.routeOptions?.url, reply.statusCode, payload);
     reply.header('x-request-id', request.id);
     reply.header('x-content-type-options', 'nosniff');
     reply.header('x-frame-options', 'DENY');
@@ -149,9 +158,22 @@ export function createApp(
     }
   });
 
+  const operationalMetricsRepository =
+    options.operationalMetricsRepository ??
+    new PostgresOperationalMetricsRepository(process.env.DATABASE_URL);
   app.get('/metrics', async (_request, reply) => {
     reply.type('text/plain; version=0.0.4; charset=utf-8');
-    return '# HELP isuv_api_up API process liveness\n# TYPE isuv_api_up gauge\nisuv_api_up 1\n';
+    try {
+      return renderOperationalMetrics(
+        await operationalMetricsRepository.snapshot(),
+        processMetrics.snapshot(),
+      );
+    } catch (error) {
+      // Do not manufacture zero-valued operational evidence during a database
+      // outage. Liveness remains available separately at /health/live.
+      app.log.warn({ err: error }, 'operational metrics database query failed');
+      return reply.code(503).send('# isuv operational metrics database unavailable\n');
+    }
   });
 
   const identityProvider = options.identityProvider ?? createLocalDevelopmentIdentityProvider();

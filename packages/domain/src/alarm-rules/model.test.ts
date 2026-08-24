@@ -108,6 +108,36 @@ test('sustained exact high threshold activation needs two contiguous facts and p
   assert.equal(active.evidence.facts[0]?.dataClassification, 'synthetic');
 });
 
+test('a terminal source gap to the requested UTC horizon is deferred and cannot clear stale alarms', () => {
+  const staleActivation = evaluateAlarmCondition(
+    threshold,
+    [observation(t0, 11n), observation(t10, 11n)],
+    'inactive',
+    t100,
+  );
+  assert.equal(staleActivation.state, 'deferred');
+  assert.equal(staleActivation.reason, 'gap_exceeded');
+  assert.equal(staleActivation.evidence.gapBroken, true);
+  assert.equal(staleActivation.evidence.qualifyingFactCount, 0);
+
+  const staleClear = evaluateAlarmCondition(
+    threshold,
+    [observation(t0, 8n), observation(t10, 8n)],
+    'active',
+    t100,
+  );
+  assert.equal(staleClear.state, 'deferred');
+  assert.equal(staleClear.reason, 'gap_exceeded');
+
+  const atMaximumGap = evaluateAlarmCondition(
+    threshold,
+    [observation(t0, 11n), observation(t10, 11n)],
+    'inactive',
+    '2030-01-01T00:00:00.000030Z',
+  );
+  assert.equal(atMaximumGap.state, 'active');
+});
+
 test('upper hysteresis, persisted clear, chatter, and a max-gap reset are deterministic', () => {
   assert.equal(
     evaluateAlarmCondition(threshold, [observation(t0, 9n)], 'active').state,

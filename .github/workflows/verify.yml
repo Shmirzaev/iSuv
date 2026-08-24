@@ -44,6 +44,16 @@ jobs:
       - run: pnpm verify
       - name: Verify repeatable database setup
         run: pnpm db:migrate && pnpm db:migrate && pnpm db:seed && pnpm db:seed
+      - name: Verify portable local backup and isolated restore
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PORT=.*/POSTGRES_PORT=55432/' .env
+          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgres://isuv_app:change-me-local-only@localhost:55432/isuv|' .env
+          export DATABASE_URL=postgres://isuv_app:change-me-local-only@localhost:55432/isuv
+          docker compose --env-file .env up -d postgres
+          pnpm db:migrate
+          pnpm db:seed
+          pwsh -NoProfile -File scripts/backup-restore-smoke.ps1 -Cleanup
       - name: Run database authorization integration tests
         run: corepack pnpm --filter @isuv/api test:db
       - name: Run browser smoke tests

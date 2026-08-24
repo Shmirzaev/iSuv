@@ -148,6 +148,27 @@ function evidence(candidate: Candidate | null, gapBroken: boolean): ConditionEvi
 function deferred(reason: EvaluationReason, facts: readonly ConditionFact[]): ConditionEvaluation {
   return { state: 'deferred', reason, evidence: emptyEvidence(facts) };
 }
+function staleHorizon(
+  condition: AlarmCondition,
+  facts: readonly ConditionFact[],
+  effectiveAt: string | undefined,
+): ConditionEvaluation | null {
+  if (effectiveAt === undefined || !facts.length) return null;
+  try {
+    const horizon = utcMicros(effectiveAt);
+    const terminal = utcMicros(facts.at(-1)!.observedAt);
+    if (horizon < terminal) return deferred('invalid_fact', facts);
+    if (horizon - terminal > condition.maxGapMicroseconds)
+      return {
+        state: 'deferred',
+        reason: 'gap_exceeded',
+        evidence: emptyEvidence(facts, true),
+      };
+    return null;
+  } catch {
+    return deferred('invalid_fact', facts);
+  }
+}
 function nonnegative(value: Rational) {
   return compare(value, rational(0n)) >= 0;
 }
@@ -291,6 +312,11 @@ export function evaluateAlarmCondition(
   condition: AlarmCondition,
   facts: readonly ConditionFact[],
   priorState: ConditionState = 'inactive',
+  /**
+   * Exact UTC evaluation horizon. A stale terminal fact is deferred rather than
+   * being treated as continuing evidence for activation, persistence, or clear.
+   */
+  effectiveAt?: string,
 ): ConditionEvaluation {
   if (!conditionIsWellFormed(condition)) return deferred('invalid_fact', facts);
   if (!facts.length) return deferred('missing_fact', facts);
@@ -308,6 +334,8 @@ export function evaluateAlarmCondition(
     const reason = factReason(condition, fact);
     if (reason) return deferred(reason, facts);
   }
+  const stale = staleHorizon(condition, facts, effectiveAt);
+  if (stale) return stale;
 
   let active = priorState === 'active' || priorState === 'pending_clear';
   let candidate: Candidate | null = null;
