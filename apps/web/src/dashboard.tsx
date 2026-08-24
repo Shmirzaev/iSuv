@@ -1,5 +1,5 @@
 import type { DashboardPeriod, DashboardResponse } from '@isuv/contracts';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
 
@@ -21,6 +21,7 @@ interface DashboardWorkspaceProps {
   state: 'loading' | 'ready' | 'unauthenticated' | 'forbidden' | 'unavailable';
   onPeriodChange: (period: DashboardPeriod) => void;
   onRetry: () => void;
+  initialView?: 'simple' | 'advanced';
 }
 
 function StatusLabel({
@@ -429,6 +430,145 @@ function Comparison({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
   );
 }
 
+function SimpleDashboard({ locale, dashboard }: { locale: Locale; dashboard: DashboardResponse }) {
+  const t = (key: TranslationKey) => translate(locale, key);
+  const stationAttention =
+    dashboard.scope.dataStates.noData + dashboard.scope.dataStates.unreliable;
+  const deviceAttention =
+    dashboard.scope.deviceConnectivity.offline + dashboard.scope.deviceConnectivity.unknown;
+  const alarmCount = dashboard.kpis.activeCriticalAlarms.count;
+  const topItems = dashboard.deviations.slice(0, 3);
+  return (
+    <div className="simple-dashboard">
+      <section aria-labelledby="guide-heading" className="simple-guide">
+        <div>
+          <p className="eyebrow">{t('dashboardSimpleIntro')}</p>
+          <h2 id="guide-heading">{t('dashboardGuideHeading')}</h2>
+          <p>{t('dashboardGuideDetail')}</p>
+        </div>
+        <ol>
+          <li>
+            <strong>{t('dashboardGuideStep1')}</strong>
+            <span>{t('dashboardGuideStep1Detail')}</span>
+          </li>
+          <li>
+            <strong>{t('dashboardGuideStep2')}</strong>
+            <span>{t('dashboardGuideStep2Detail')}</span>
+          </li>
+          <li>
+            <strong>{t('dashboardGuideStep3')}</strong>
+            <span>{t('dashboardGuideStep3Detail')}</span>
+          </li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="at-a-glance-heading">
+        <h2 id="at-a-glance-heading">{t('dashboardAtGlance')}</h2>
+        <div className="simple-metric-grid">
+          <article
+            className={`simple-metric ${alarmCount === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
+          >
+            <span aria-hidden="true" className="simple-metric__icon">
+              {alarmCount === 0 ? '✓' : '!'}
+            </span>
+            <div>
+              <h3>{t('activeCriticalAlarms')}</h3>
+              <p className="simple-metric__value">{alarmCount ?? t('notAvailable')}</p>
+              <a href="#alarms">{t('dashboardOpenAlarms')}</a>
+            </div>
+          </article>
+          <article
+            className={`simple-metric ${stationAttention === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
+          >
+            <span aria-hidden="true" className="simple-metric__icon">
+              {stationAttention === 0 ? '✓' : '!'}
+            </span>
+            <div>
+              <h3>{t('dashboardStationAttention')}</h3>
+              <p className="simple-metric__value">{stationAttention}</p>
+              <p>{`${dashboard.scope.dataStates.noData} ${t('noDataCount')} · ${dashboard.scope.dataStates.unreliable} ${t('unreliableCount')}`}</p>
+            </div>
+          </article>
+          <article
+            className={`simple-metric ${deviceAttention === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
+          >
+            <span aria-hidden="true" className="simple-metric__icon">
+              {deviceAttention === 0 ? '✓' : '!'}
+            </span>
+            <div>
+              <h3>{t('dashboardDeviceAttention')}</h3>
+              <p className="simple-metric__value">{deviceAttention}</p>
+              <p>{`${dashboard.scope.deviceConnectivity.offline} ${t('deviceOfflineCount')} · ${dashboard.scope.deviceConnectivity.unknown} ${t('deviceUnknownCount')}`}</p>
+            </div>
+          </article>
+          <article className="simple-metric simple-metric--information">
+            <span aria-hidden="true" className="simple-metric__icon">
+              ↔
+            </span>
+            <div>
+              <h3>{t('dashboardDeliverySummary')}</h3>
+              <dl className="simple-delivery-values">
+                <div>
+                  <dt>{t('comparisonActual')}</dt>
+                  <dd>
+                    <ExactValue locale={locale} unit="m3" value={dashboard.comparison.actualM3} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('comparisonPlanned')}</dt>
+                  <dd>
+                    <ExactValue locale={locale} unit="m3" value={dashboard.comparison.plannedM3} />
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="simple-attention-heading" className="simple-attention panel">
+        <div className="simple-attention__heading">
+          <div>
+            <h2 id="simple-attention-heading">{t('dashboardNeedsAttention')}</h2>
+            <p>{t('dashboardNeedsAttentionDetail')}</p>
+          </div>
+          <a className="action-link" href="#operations">
+            {t('openLiveOperations')}
+          </a>
+        </div>
+        {topItems.length === 0 ? (
+          <p className="metric-unavailable">{t('noDeviations')}</p>
+        ) : (
+          <ol className="simple-attention-list">
+            {topItems.map((item) => {
+              const isUnder = BigInt(item.signedM3.numerator) < 0n;
+              return (
+                <li key={item.stationId}>
+                  <div>
+                    <strong>{item.hotspotCode}</strong>
+                    <span>{item.territoryName}</span>
+                  </div>
+                  <span
+                    className={`simple-attention-list__status ${isUnder ? 'is-under' : 'is-over'}`}
+                  >
+                    <span aria-hidden="true">{isUnder ? '↓' : '↑'}</span>
+                    {t(isUnder ? 'dashboardUnderPlan' : 'dashboardOverPlan')}
+                  </span>
+                  <ExactValue locale={locale} unit="m3" value={item.absoluteM3} />
+                  <div className="simple-attention-list__actions">
+                    <a href={item.liveTarget}>{t('openLiveOperations')}</a>
+                    <a href={item.mapTarget}>{t('openMap')}</a>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function Deviations({ locale, dashboard }: { locale: Locale; dashboard: DashboardResponse }) {
   const t = (key: TranslationKey) => translate(locale, key);
   return (
@@ -518,7 +658,9 @@ export function DashboardWorkspace({
   state,
   onPeriodChange,
   onRetry,
+  initialView = 'simple',
 }: DashboardWorkspaceProps) {
+  const [view, setView] = useState<'simple' | 'advanced'>(initialView);
   const t = (key: TranslationKey) => translate(locale, key);
   const responseMatchesPeriod = response?.scenario.period === period;
   const displayState = state === 'ready' && !responseMatchesPeriod ? 'unavailable' : state;
@@ -530,41 +672,66 @@ export function DashboardWorkspace({
           <h2 id="dashboard-heading">{t('dashboardHeading')}</h2>
           <p>{t('dashboardDetail')}</p>
         </div>
-        <fieldset className="period-picker">
-          <legend>{t('period')}</legend>
-          <div>
-            {dashboardPeriods.map((option) => (
+        <div className="dashboard-controls">
+          <fieldset className="view-picker">
+            <legend>{t('dashboardView')}</legend>
+            <div>
               <button
-                aria-pressed={period === option}
-                key={option}
-                onClick={() => onPeriodChange(option)}
+                aria-pressed={view === 'simple'}
+                onClick={() => setView('simple')}
                 type="button"
               >
-                {t(periodKey(option))}
+                {t('dashboardSimpleView')}
               </button>
-            ))}
-          </div>
-        </fieldset>
+              <button
+                aria-pressed={view === 'advanced'}
+                onClick={() => setView('advanced')}
+                type="button"
+              >
+                {t('dashboardAdvancedView')}
+              </button>
+            </div>
+          </fieldset>
+          <fieldset className="period-picker">
+            <legend>{t('period')}</legend>
+            <div>
+              {dashboardPeriods.map((option) => (
+                <button
+                  aria-pressed={period === option}
+                  key={option}
+                  onClick={() => onPeriodChange(option)}
+                  type="button"
+                >
+                  {t(periodKey(option))}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
       </div>
       {displayState === 'ready' && response ? (
-        <>
-          <ScenarioRecord dashboard={response} locale={locale} />
-          <Definitions dashboard={response} locale={locale} />
-          <dl className="dashboard-windows">
-            <div>
-              <dt>{t('selectedPeriod')}</dt>
-              <dd>{`${formatDashboardTimestamp(response.windows.selected.start)} — ${formatDashboardTimestamp(response.windows.selected.end)}`}</dd>
-            </div>
-            <div>
-              <dt>{t('priorPeriod')}</dt>
-              <dd>{`${formatDashboardTimestamp(response.windows.prior.start)} — ${formatDashboardTimestamp(response.windows.prior.end)}`}</dd>
-            </div>
-          </dl>
-          <Coverage dashboard={response} locale={locale} />
-          <Kpis dashboard={response} locale={locale} />
-          <Comparison dashboard={response} locale={locale} />
-          <Deviations dashboard={response} locale={locale} />
-        </>
+        view === 'simple' ? (
+          <SimpleDashboard dashboard={response} locale={locale} />
+        ) : (
+          <>
+            <ScenarioRecord dashboard={response} locale={locale} />
+            <Definitions dashboard={response} locale={locale} />
+            <dl className="dashboard-windows">
+              <div>
+                <dt>{t('selectedPeriod')}</dt>
+                <dd>{`${formatDashboardTimestamp(response.windows.selected.start)} — ${formatDashboardTimestamp(response.windows.selected.end)}`}</dd>
+              </div>
+              <div>
+                <dt>{t('priorPeriod')}</dt>
+                <dd>{`${formatDashboardTimestamp(response.windows.prior.start)} — ${formatDashboardTimestamp(response.windows.prior.end)}`}</dd>
+              </div>
+            </dl>
+            <Coverage dashboard={response} locale={locale} />
+            <Kpis dashboard={response} locale={locale} />
+            <Comparison dashboard={response} locale={locale} />
+            <Deviations dashboard={response} locale={locale} />
+          </>
+        )
       ) : (
         <DashboardNotice
           kind={displayState === 'ready' ? 'loading' : displayState}

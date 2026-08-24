@@ -129,6 +129,7 @@ const dashboard: DashboardResponse = {
 test('dashboard exposes synthetic provenance, all periods, units, statuses, and drill links', () => {
   const markup = renderToStaticMarkup(
     <DashboardWorkspace
+      initialView="advanced"
       locale="en"
       onPeriodChange={() => undefined}
       onRetry={() => undefined}
@@ -171,6 +172,32 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /data-label="Exact duration \(microseconds\)"/);
   assert.match(markup, /href="#map\?stationId=b2000000/);
   assert.match(markup, /href="#operations\?deviceId=c2000000/);
+});
+
+test('dashboard defaults to a plain-language guided overview while retaining advanced access', () => {
+  const markup = renderToStaticMarkup(
+    <DashboardWorkspace
+      locale="en"
+      onPeriodChange={() => undefined}
+      onRetry={() => undefined}
+      period="today"
+      response={dashboard}
+      state="ready"
+    />,
+  );
+  assert.match(markup, /What should I do\?/);
+  assert.match(markup, /Check urgent alarms/);
+  assert.match(markup, /At a glance/);
+  assert.match(markup, /Stations needing attention[^]*?>2</);
+  assert.match(markup, /Devices needing attention[^]*?>3</);
+  assert.match(markup, /Delivery versus plan/);
+  assert.match(markup, /Largest delivery differences/);
+  assert.match(markup, /Over plan/);
+  assert.match(markup, /href="#alarms"/);
+  assert.match(markup, /aria-pressed="true"[^>]*>Simple<\/button>/);
+  assert.match(markup, /aria-pressed="false"[^>]*>Detailed<\/button>/);
+  assert.doesNotMatch(markup, /Scenario identifier/);
+  assert.doesNotMatch(markup, /Exact duration \(microseconds\)/);
 });
 
 test('unavailable and unauthenticated dashboard views do not render values as normal data', () => {

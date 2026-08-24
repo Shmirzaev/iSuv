@@ -26,6 +26,17 @@ test('seeded synthetic operational surfaces remain navigable, explicit, and resp
   await expect(
     page.getByText(/Synthetic demonstration data — not government telemetry/),
   ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What should I do?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'At a glance' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Simple' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByText('Scenario identifier')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Detailed' }).click();
+  await expect(page.getByText('Scenario identifier')).toBeVisible();
+  await page.getByRole('button', { name: 'Simple' }).click();
+  await expect(page.getByRole('heading', { name: 'What should I do?' })).toBeVisible();
   await expect(page.getByText('metres (m)', { exact: true })).toBeVisible();
   await expect(page.getByText('cubic metres per second (m³/s)', { exact: true })).toBeVisible();
   await expect(page.getByText('cubic metres (m³)', { exact: true })).toBeVisible();
