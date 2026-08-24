@@ -16,6 +16,7 @@ test('domain audit vocabulary stays aligned with governed operational resources'
     'alarm',
     'incident',
     'escalation_policy',
+    'maintenance_record',
     'report',
   ]);
 });

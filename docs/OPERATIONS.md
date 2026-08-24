@@ -4,7 +4,7 @@ This is a local, synthetic-data MVP. The procedures here are deliberately limite
 
 ## Local persistence and recovery drill
 
-`postgres-data` is the only named local persistence volume. Copy `.env.example` to `.env`, set a unique local-only password, and start PostgreSQL before running a drill. The following command creates a PostgreSQL custom-format archive, restores it into a new database, compares migration and synthetic inventory counts, and compares a stable fingerprint of immutable audit records. It never drops or overwrites the source database or an existing archive.
+`postgres-data` is the only named local persistence volume. Copy `.env.example` to `.env`, set a unique local-only password in both `POSTGRES_PASSWORD` and the matching password segment of `DATABASE_URL`, and start PostgreSQL before running a drill. The following command creates a PostgreSQL custom-format archive, restores it into a new database, compares migration and synthetic inventory counts, and compares a stable fingerprint of immutable audit records. It never drops or overwrites the source database or an existing archive.
 
 ```powershell
 pwsh -File scripts/backup-restore-smoke.ps1 -Cleanup

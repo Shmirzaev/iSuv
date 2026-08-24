@@ -216,6 +216,63 @@ test('audit list resolves a deterministic authorized default scope and details r
   await app.close();
 });
 
+test('audit API searches and parses synthetic maintenance-record evidence', async () => {
+  const maintenanceEvent = {
+    ...fullEvent,
+    action: 'maintenance_record.created' as const,
+    resource: 'maintenance_record' as const,
+    resourceId: 'da100000-0000-4000-8000-000000000001',
+    newState: { status: 'completed', dataClassification: 'synthetic' },
+    provenance: 'synthetic maintenance fixture',
+  };
+  const app = Fastify();
+  registerAuditRoutes(app, {
+    identityProvider: {
+      async resolve() {
+        return { userId: actorUserId, provider: 'local-development' as const };
+      },
+    },
+    sessionRepository: {
+      async findCurrentSession() {
+        return session;
+      },
+    },
+    authorizationRepository: {
+      async findEffectiveGrantsForTarget() {
+        return [grant(true)];
+      },
+    },
+    auditRepository: {
+      async list(query: { action?: string; resource?: string }) {
+        assert.equal(query.action, 'maintenance_record.created');
+        assert.equal(query.resource, 'maintenance_record');
+        const summary = Object.fromEntries(
+          Object.entries(maintenanceEvent).filter(
+            ([key]) => key !== 'oldState' && key !== 'newState',
+          ),
+        );
+        return { events: [auditEventSummarySchema.parse(summary)], nextCursor: null };
+      },
+      async findById() {
+        return maintenanceEvent;
+      },
+    } as never,
+  });
+  const list = await app.inject({
+    method: 'GET',
+    url: `/api/v1/audit/events?territoryId=${territoryId}&action=maintenance_record.created&resource=maintenance_record`,
+  });
+  assert.equal(list.statusCode, 200, list.body);
+  assert.equal(list.json().events[0].action, 'maintenance_record.created');
+  const detail = await app.inject({
+    method: 'GET',
+    url: `/api/v1/audit/events/${eventId}?territoryId=${territoryId}`,
+  });
+  assert.equal(detail.statusCode, 200, detail.body);
+  assert.equal(detail.json().event.resource, 'maintenance_record');
+  await app.close();
+});
+
 test('audit detail hides an absent or out-of-scope event with the same 404', async () => {
   const app = Fastify();
   registerAuditRoutes(app, {

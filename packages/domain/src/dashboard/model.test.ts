@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { classifyDashboardDataState, dashboardWindows, exactDashboardDeviation } from './model.js';
+import {
+  classifyDashboardDataState,
+  dashboardIntervalDurationMicroseconds,
+  dashboardWindows,
+  exactDashboardDeviation,
+} from './model.js';
 
 test('dashboard windows preserve microseconds, Tashkent day boundaries, and exact prior duration', () => {
   const result = dashboardWindows('today', '2026-08-24T07:34:56.123456Z');
@@ -12,6 +17,16 @@ test('dashboard windows preserve microseconds, Tashkent day boundaries, and exac
     start: '2026-08-23T06:25:03.876544Z',
     end: '2026-08-23T19:00:00.000000Z',
   });
+  assert.equal(dashboardIntervalDurationMicroseconds(result.selected), '45296123456');
+  assert.equal(dashboardIntervalDurationMicroseconds(result.prior), '45296123456');
+  assert.throws(
+    () =>
+      dashboardIntervalDurationMicroseconds({
+        start: result.selected.end,
+        end: result.selected.start,
+      }),
+    /positive/,
+  );
 });
 
 test('dashboard week, month, season, and year use Asia/Tashkent calendar starts', () => {

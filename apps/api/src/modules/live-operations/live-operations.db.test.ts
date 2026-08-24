@@ -266,6 +266,24 @@ test('live operations is stable, bitemporal, scoped, and preserves canonical evi
     inspector.trend.every((point) => Date.parse(point.at) <= Date.parse(inspector.referenceAt)),
   );
   assert.equal(inspector.healthHistory.state, 'unconfigured');
+  assert.equal(inspector.maintenance.state, 'synthetic_history');
+  if (inspector.maintenance.state === 'synthetic_history') {
+    assert.equal(inspector.maintenance.records.length, 1);
+    const maintenance = inspector.maintenance.records[0]!;
+    assert.equal(maintenance.id, 'da100000-0000-4000-8000-000000000001');
+    assert.equal(maintenance.deviceId, target.device_id);
+    assert.equal(maintenance.type, 'calibration');
+    assert.equal(maintenance.status, 'completed');
+    assert.equal(maintenance.dataClassification, 'synthetic');
+    assert.equal(maintenance.officialRecord, false);
+    const audit = await pool.query<{ count: string }>(
+      `SELECT count(*)::text count FROM audit_events
+       WHERE id=$1 AND resource::text='maintenance_record'
+         AND action::text='maintenance_record.created' AND resource_id=$2`,
+      [maintenance.auditEventId, maintenance.id],
+    );
+    assert.equal(audit.rows[0]?.count, '1');
+  }
 
   const scopedLive = await service.live(target.organization_id, null, [target.territory_id]);
   assert.equal(scopedLive.reset, false);
@@ -293,5 +311,47 @@ test('live operations is stable, bitemporal, scoped, and preserves canonical evi
       "UPDATE live_operations_synthetic_rows SET data_state='reported' WHERE ctid=(SELECT ctid FROM live_operations_synthetic_rows LIMIT 1)",
     ),
     /immutable/,
+  );
+  await assert.rejects(
+    pool.query(`UPDATE maintenance_records SET status='cancelled'
+      WHERE id='da100000-0000-4000-8000-000000000001'`),
+    /immutable/,
+  );
+  const tamperedRecordId = 'da100000-0000-4000-8000-000000000003';
+  const tamperedAuditId = 'da100000-0000-4000-8000-000000000004';
+  await pool.query(
+    `INSERT INTO audit_events(
+       id,organization_id,territory_id,actor_user_id,actor_organization_id,action,resource,resource_id,
+       old_state,new_state,reason,request_id,occurred_at,data_classification,provenance
+     ) VALUES (
+       $1,$2,$3,'a3000000-0000-4000-8000-000000000001','a1000000-0000-4000-8000-000000000001',
+       'maintenance_record.created','maintenance_record',$4,NULL,jsonb_build_object('synthetic',true),
+       'tampered linkage test','tampered-linkage','2026-08-22T09:00:00.000000Z','synthetic',
+       'synthetic: tampered maintenance audit linkage test'
+     ) ON CONFLICT (id) DO NOTHING`,
+    [tamperedAuditId, target.organization_id, target.territory_id, tamperedRecordId],
+  );
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO maintenance_records(
+         id,organization_id,territory_id,device_id,maintenance_type,status,
+         scheduled_start_at,scheduled_end_at,recorded_at,created_at,created_by_user_id,
+         creation_reason,created_request_id,audit_event_id,provenance
+       ) VALUES (
+         $1,$2,$3,$4,'inspection','planned',
+         '2026-08-23T06:00:00.000000Z','2026-08-23T07:00:00.000000Z',
+         '2026-08-22T09:00:00.000000Z','2026-08-22T08:30:00.000000Z',
+         'a3000000-0000-4000-8000-000000000002','tampered linkage test','tampered-linkage',$5,
+         'synthetic: tampered maintenance audit linkage test'
+       )`,
+      [
+        tamperedRecordId,
+        target.organization_id,
+        target.territory_id,
+        target.device_id,
+        tamperedAuditId,
+      ],
+    ),
+    /matching immutable audit event/,
   );
 });

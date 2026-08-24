@@ -47,6 +47,14 @@ function validDashboard() {
       descendantTerritoryIds: [ids.territory],
       stationDenominator: 1,
       deviceDenominator: 1,
+      deviceConnectivity: {
+        denominator: 1,
+        online: 1,
+        offline: 0,
+        unknown: 0,
+        source: 'synthetic_scenario' as const,
+        reason: null,
+      },
       reportedStationCount: 1,
       dataStates: { reported: 1, noData: 0, unreliable: 0, unconfigured: 0 },
     },
@@ -120,6 +128,7 @@ function validDashboard() {
         dataState: 'reported' as const,
         quality: 'valid' as const,
         assessedInterval: { ...selected },
+        durationMicroseconds: '45296123456',
         signedM3: m3('-1'),
         absoluteM3: m3('1'),
         mapTarget: `#map?stationId=${ids.station}`,
@@ -164,6 +173,14 @@ test('dashboard response refuses official claims and unit conflation', () => {
       descendantTerritoryIds: ['12000000-0000-4000-8000-000000000002'],
       stationDenominator: 1,
       deviceDenominator: 1,
+      deviceConnectivity: {
+        denominator: 1,
+        online: 1,
+        offline: 0,
+        unknown: 0,
+        source: 'synthetic_scenario',
+        reason: null,
+      },
       reportedStationCount: 1,
       dataStates: { reported: 1, noData: 0, unreliable: 0, unconfigured: 0 },
     },
@@ -199,4 +216,10 @@ test('dashboard response enforces KPI provenance, comparison state, and exact de
   const badMagnitude = structuredClone(valid);
   badMagnitude.deviations[0]!.absoluteM3 = m3('2');
   assert.equal(dashboardResponseSchema.safeParse(badMagnitude).success, false);
+  const badConnectivity = structuredClone(valid);
+  badConnectivity.scope.deviceConnectivity.online = 0;
+  assert.equal(dashboardResponseSchema.safeParse(badConnectivity).success, false);
+  const roundedDuration = structuredClone(valid);
+  roundedDuration.deviations[0]!.durationMicroseconds = '45.296';
+  assert.equal(dashboardResponseSchema.safeParse(roundedDuration).success, false);
 });

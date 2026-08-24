@@ -9,6 +9,7 @@ import {
   dashboardPeriods,
   dashboardQualityKey,
   formatDashboardTimestamp,
+  formatExactDurationMicroseconds,
   formatExactRational,
   periodKey,
 } from './dashboard-model.js';
@@ -278,6 +279,12 @@ function Coverage({ locale, dashboard }: { locale: Locale; dashboard: DashboardR
     ['unreliableCount', states.unreliable, 'unreliable'],
     ['unconfiguredCount', states.unconfigured, 'unconfigured'],
   ];
+  const connectivity = dashboard.scope.deviceConnectivity;
+  const deviceCounts: readonly [TranslationKey, number, string][] = [
+    ['deviceOnlineCount', connectivity.online, 'online'],
+    ['deviceOfflineCount', connectivity.offline, 'offline'],
+    ['deviceUnknownCount', connectivity.unknown, 'unknown'],
+  ];
   return (
     <section aria-labelledby="coverage-heading" className="panel dashboard-coverage">
       <h2 id="coverage-heading">{t('dashboardScope')}</h2>
@@ -296,6 +303,24 @@ function Coverage({ locale, dashboard }: { locale: Locale; dashboard: DashboardR
           );
         })}
       </ul>
+      <section aria-labelledby="device-connectivity-heading" className="device-connectivity">
+        <h3 id="device-connectivity-heading">{t('deviceConnectivity')}</h3>
+        <p className="supporting-text">
+          {`${t('deviceConnectivityDenominator')}: ${connectivity.denominator}. ${t('deviceConnectivityDetail')}`}
+        </p>
+        <ul aria-label={t('deviceConnectivity')} className="coverage-state-list">
+          {deviceCounts.map(([label, count, state]) => (
+            <li className={`coverage-state-list__${state}`} key={state}>
+              <span aria-hidden="true">
+                {state === 'online' ? '↔' : state === 'offline' ? '⊘' : '?'}
+              </span>
+              <strong>{t(label)}</strong>
+              <span>{count}</span>
+            </li>
+          ))}
+        </ul>
+        <SourceLabel locale={locale} source={connectivity.source} />
+      </section>
     </section>
   );
 }
@@ -414,13 +439,14 @@ function Deviations({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
         <p className="metric-unavailable">{t('noDeviations')}</p>
       ) : (
         <div className="table-scroll">
-          <table>
+          <table className="deviations-table">
             <caption className="visually-hidden">{t('topDeviations')}</caption>
             <thead>
               <tr>
                 <th scope="col">{t('hotspot')}</th>
                 <th scope="col">{t('territory')}</th>
                 <th scope="col">{t('assessedInterval')}</th>
+                <th scope="col">{t('durationMicroseconds')}</th>
                 <th scope="col">{t('deviation')}</th>
                 <th scope="col">{t('absoluteDeviation')}</th>
                 <th scope="col">{t('dataState')}</th>
@@ -435,33 +461,43 @@ function Deviations({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
                 const state = dashboardDataStatePresentation(item.dataState);
                 return (
                   <tr key={item.stationId}>
-                    <th scope="row">{item.hotspotCode}</th>
-                    <td>
+                    <th data-label={t('hotspot')} scope="row">
+                      {item.hotspotCode}
+                    </th>
+                    <td data-label={t('territory')}>
                       <strong>{item.territoryName}</strong>
                       <br />
                       <span className="stable-identifier">{`${t('territoryIdentifier')}: ${item.territoryId}`}</span>
                     </td>
-                    <td>{`${formatDashboardTimestamp(item.assessedInterval.start)} — ${formatDashboardTimestamp(item.assessedInterval.end)}`}</td>
-                    <td>
+                    <td data-label={t('assessedInterval')}>
+                      {`${formatDashboardTimestamp(item.assessedInterval.start)} — ${formatDashboardTimestamp(item.assessedInterval.end)}`}
+                    </td>
+                    <td data-label={t('durationMicroseconds')}>
+                      <data value={item.durationMicroseconds}>
+                        {formatExactDurationMicroseconds(item.durationMicroseconds)}
+                      </data>{' '}
+                      µs
+                    </td>
+                    <td data-label={t('deviation')}>
                       <ExactValue locale={locale} unit="m3" value={item.signedM3} />
                     </td>
-                    <td>
+                    <td data-label={t('absoluteDeviation')}>
                       <ExactValue locale={locale} unit="m3" value={item.absoluteM3} />
                     </td>
-                    <td>
+                    <td data-label={t('dataState')}>
                       <span className="table-status">
                         <span aria-hidden="true">{state.icon}</span>
                         {t(state.label)}
                       </span>
                     </td>
-                    <td>{t(dashboardQualityKey(item.quality))}</td>
-                    <td>
+                    <td data-label={t('dataQuality')}>{t(dashboardQualityKey(item.quality))}</td>
+                    <td data-label={t('source')}>
                       <SourceLabel locale={locale} source={item.source} />
                     </td>
-                    <td>
+                    <td data-label={t('openMap')}>
                       <a href={item.mapTarget}>{t('openMap')}</a>
                     </td>
-                    <td>
+                    <td data-label={t('openLiveOperations')}>
                       <a href={item.liveTarget}>{t('openLiveOperations')}</a>
                     </td>
                   </tr>

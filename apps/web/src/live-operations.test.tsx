@@ -1,7 +1,10 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
 
-import type { LiveOperationsResponse } from '@isuv/contracts';
+import type {
+  LiveOperationsInspector as LiveOperationsInspectorResponse,
+  LiveOperationsResponse,
+} from '@isuv/contracts';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { LiveOperationsContent, LiveOperationsInspector } from './live-operations.js';
@@ -272,7 +275,7 @@ test('a valid empty filtered result retains the filters and clear action', () =>
 });
 
 test('persistent inspector gives the heading focus target, raw/validated trend table, and explicit placeholders', () => {
-  const inspector = {
+  const inspector: LiveOperationsInspectorResponse = {
     referenceAt: response.referenceAt,
     knownAt: response.knownAt,
     current: {
@@ -338,12 +341,39 @@ test('persistent inspector gives the heading focus target, raw/validated trend t
       },
     ],
     healthHistory: unconfigured,
+    maintenance: {
+      state: 'synthetic_history',
+      source: 'synthetic_scenario',
+      reason: null,
+      records: [
+        {
+          id: 'c2000000-0000-4000-8000-000000000012',
+          version: 1,
+          organizationId: id.territory,
+          territoryId: id.territory,
+          deviceId: id.device,
+          type: 'calibration',
+          status: 'completed',
+          scheduledInterval: {
+            start: '2026-08-22T07:00:00.000000Z',
+            end: '2026-08-22T08:00:00.000000Z',
+          },
+          startedAt: '2026-08-22T07:05:00.000000Z',
+          completedAt: '2026-08-22T07:45:00.000000Z',
+          recordedAt: '2026-08-22T08:00:00.000000Z',
+          createdAt: '2026-08-22T06:00:00.000000Z',
+          auditEventId: 'c2000000-0000-4000-8000-000000000013',
+          provenance: 'synthetic seeded maintenance history',
+          dataClassification: 'synthetic',
+          officialRecord: false,
+        },
+      ],
+    },
     placeholders: {
       plan: 'unconfigured' as const,
       intervalVariance: 'unconfigured' as const,
       alarms: 'unconfigured' as const,
       incidents: 'unconfigured' as const,
-      maintenance: 'unconfigured' as const,
       firmware: 'unconfigured' as const,
       documents: 'unconfigured' as const,
     },
@@ -362,5 +392,46 @@ test('persistent inspector gives the heading focus target, raw/validated trend t
   assert.match(markup, /Non-official source/);
   assert.match(markup, /Revision 1; 1\.20 m; Workflow: raw/);
   assert.match(markup, /Revision 2; 1\.25 m; Workflow: automatically_validated/);
+  assert.match(markup, /Not configured/);
+  assert.match(markup, /Maintenance history/);
+  assert.match(markup, /Calibration — Completed/);
+  assert.match(markup, /Scheduled interval/);
+  assert.match(markup, /Actual start \/ completion/);
+  assert.match(markup, /Recorded at/);
+  assert.match(markup, /Audit evidence identifier/);
+  assert.match(markup, /c2000000-0000-4000-8000-000000000013/);
+  assert.match(markup, /synthetic seeded maintenance history/);
+  assert.match(markup, /Synthetic, non-official maintenance record/);
+  assert.doesNotMatch(markup, /work order|control device/i);
+});
+
+test('unconfigured maintenance is visibly distinct from an empty synthetic history', () => {
+  const inspector: LiveOperationsInspectorResponse = {
+    referenceAt: response.referenceAt,
+    knownAt: response.knownAt,
+    current: response.rows[0]!,
+    trend: [],
+    revisions: [],
+    healthHistory: unconfigured,
+    maintenance: {
+      state: 'unconfigured',
+      records: [],
+      source: 'unconfigured',
+      reason: 'No synthetic maintenance history is configured for this device.',
+    },
+    placeholders: {
+      plan: 'unconfigured',
+      intervalVariance: 'unconfigured',
+      alarms: 'unconfigured',
+      incidents: 'unconfigured',
+      firmware: 'unconfigured',
+      documents: 'unconfigured',
+    },
+  };
+  const markup = renderToStaticMarkup(
+    <LiveOperationsInspector locale="en" inspector={inspector} onClose={() => undefined} />,
+  );
+  assert.match(markup, /Maintenance history/);
+  assert.match(markup, /No synthetic maintenance history is configured for this device\./);
   assert.match(markup, /Not configured/);
 });

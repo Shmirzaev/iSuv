@@ -31,4 +31,4 @@ services:
 
 volumes:
   postgres-data:
-    name: isuv-postgres-data
+    name: ${POSTGRES_VOLUME_NAME:-isuv-postgres-data}

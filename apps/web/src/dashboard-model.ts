@@ -98,6 +98,15 @@ export function formatExactRational(value: { numerator: string; denominator: str
   return `${sign}${whole.toString()}${fraction ? `.${fraction}` : ''}`;
 }
 
+/**
+ * Format the server's integer duration without ever converting it to Number.
+ * Dashboard intervals can be longer than JavaScript's safe integer range.
+ */
+export function formatExactDurationMicroseconds(value: string): string {
+  const exact = BigInt(value).toString();
+  return exact.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 export function formatDashboardTimestamp(value: string): string {
   // The authoritative API supplies the presentation zone and microsecond timestamp.
   // Do not send it through Date, which drops microseconds and localizes unpredictably.

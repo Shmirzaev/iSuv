@@ -14,6 +14,7 @@ export * from './water-balance/water-balance.js';
 export * from './alarm-rules/alarm-rules.js';
 export * from './alarms/alarms.js';
 export * from './incidents/incidents.js';
+export * from './maintenance/maintenance.js';
 export * from './dashboard/dashboard.js';
 export * from './live-operations/live-operations.js';
 export * from './map-network/map-network.js';

@@ -9,6 +9,7 @@ import {
   dashboardPath,
   dashboardPeriods,
   formatDashboardTimestamp,
+  formatExactDurationMicroseconds,
   formatExactRational,
   periodKey,
 } from './dashboard-model.js';
@@ -46,5 +47,9 @@ test('exact volume and percentage values are not rounded through Number', () => 
   assert.equal(
     formatDashboardTimestamp('2026-08-24T07:34:56.123456Z'),
     '2026-08-24 07:34:56.123456 UTC',
+  );
+  assert.equal(
+    formatExactDurationMicroseconds('900719925474099312345678'),
+    '900,719,925,474,099,312,345,678',
   );
 });

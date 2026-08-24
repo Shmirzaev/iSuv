@@ -20,6 +20,7 @@ export const auditResources = [
   'alarm',
   'incident',
   'escalation_policy',
+  'maintenance_record',
   'report',
 ] as const;
 export type AuditResource = (typeof auditResources)[number];

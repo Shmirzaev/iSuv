@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { maintenanceHistorySchema } from '../maintenance/maintenance.js';
 
 const uuid = z.uuid();
 const timestamp = z
@@ -405,13 +406,13 @@ export const liveOperationsInspectorSchema = z
         reason: z.string(),
       })
       .strict(),
+    maintenance: maintenanceHistorySchema,
     placeholders: z
       .object({
         plan: z.literal('unconfigured'),
         intervalVariance: z.literal('unconfigured'),
         alarms: z.literal('unconfigured'),
         incidents: z.literal('unconfigured'),
-        maintenance: z.literal('unconfigured'),
         firmware: z.literal('unconfigured'),
         documents: z.literal('unconfigured'),
       })

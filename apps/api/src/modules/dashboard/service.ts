@@ -1,6 +1,7 @@
 import type { DashboardPeriod, DashboardResponse } from '@isuv/contracts';
 import {
   dashboardWindows,
+  dashboardIntervalDurationMicroseconds,
   exactDashboardDeviation,
   parseExactDecimal,
   rational,
@@ -42,6 +43,9 @@ interface DashboardRow {
   version: number;
   station_denominator: string;
   device_denominator: string;
+  online_devices: string;
+  offline_devices: string;
+  unknown_devices: string;
   reported: string;
   no_data: string;
   unreliable: string;
@@ -105,11 +109,21 @@ export class PostgresDashboardService {
            ), scenario AS (
              SELECT * FROM dashboard_synthetic_scenarios WHERE id='d5000000-0000-4000-8000-000000000001'
            ), rows AS (
-             SELECT row.* FROM dashboard_synthetic_reporting_rows row JOIN descendants d ON d.id=row.territory_id
+             SELECT row.*,COALESCE(device_state.connection_state,'unknown') device_connection_state
+             FROM dashboard_synthetic_reporting_rows row
+             JOIN descendants d ON d.id=row.territory_id
+             LEFT JOIN dashboard_synthetic_device_states device_state
+               ON device_state.scenario_id=row.scenario_id AND device_state.period=row.period
+                 AND device_state.device_id=row.device_id
+                 AND device_state.territory_id=row.territory_id
+                 AND device_state.organization_id=(SELECT organization_id FROM scenario)
              WHERE row.scenario_id='d5000000-0000-4000-8000-000000000001' AND row.period=$2
            )
            SELECT ${ts('scenario.reference_at')} reference_at, ${ts('scenario.known_at')} known_at, scenario.provenance, scenario.version,
              count(rows.station_id)::text station_denominator, count(rows.device_id)::text device_denominator,
+             count(*) FILTER(WHERE rows.device_connection_state='online')::text online_devices,
+             count(*) FILTER(WHERE rows.device_connection_state='offline')::text offline_devices,
+             count(*) FILTER(WHERE rows.device_connection_state='unknown')::text unknown_devices,
              count(*) FILTER(WHERE rows.data_state='reported')::text reported,
              count(*) FILTER(WHERE rows.data_state='no_data')::text no_data,
              count(*) FILTER(WHERE rows.data_state='unreliable')::text unreliable,
@@ -218,6 +232,14 @@ export class PostgresDashboardService {
           descendantTerritoryIds,
           stationDenominator: Number(row.station_denominator),
           deviceDenominator: Number(row.device_denominator),
+          deviceConnectivity: {
+            denominator: Number(row.device_denominator),
+            online: Number(row.online_devices),
+            offline: Number(row.offline_devices),
+            unknown: Number(row.unknown_devices),
+            source: 'synthetic_scenario',
+            reason: null,
+          },
           reportedStationCount: Number(row.reported),
           dataStates: {
             reported: Number(row.reported),
@@ -305,6 +327,7 @@ export class PostgresDashboardService {
             dataState: item.data_state,
             quality: item.quality,
             assessedInterval: windows.selected,
+            durationMicroseconds: dashboardIntervalDurationMicroseconds(windows.selected),
             signedM3: exact(deviation.signed),
             absoluteM3: exact(deviation.absolute),
             mapTarget: `#map?stationId=${item.station_id}`,

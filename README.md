@@ -13,9 +13,10 @@ This repository is the local, synthetic-data MVP for regional water monitoring a
 corepack enable
 pnpm install --frozen-lockfile
 cp .env.example .env # PowerShell: Copy-Item .env.example .env
-# replace the local-only placeholder password in .env
-docker compose --env-file .env up -d postgres
+# replace both POSTGRES_PASSWORD and its matching DATABASE_URL password in .env
+docker compose --env-file .env up -d --wait postgres
 docker compose ps
+pnpm build
 pnpm db:migrate
 pnpm db:seed
 pnpm dev
@@ -40,13 +41,15 @@ The `x-isuv-user-id` identity adapter is local/test tooling only and is uncondit
 
 ```sh
 pnpm verify
+pnpm --filter @isuv/api test:db
+pnpm test:e2e
 curl http://127.0.0.1:3000/health/live
 curl http://127.0.0.1:3000/health/ready
 curl http://127.0.0.1:3000/metrics
 pnpm db:migrate && pnpm db:seed && pnpm db:seed
 ```
 
-`pnpm verify` runs formatting, linting, TypeScript project checks, unit tests, and production builds. The `POSTGRES_PASSWORD` in `.env` is local-only and must never be used outside a developer machine.
+`pnpm build` creates the workspace package outputs required by the seed and runtime in a clean checkout. `pnpm verify` runs formatting, linting, TypeScript project checks, unit tests, and production builds. The serial database suite requires the migrated PostgreSQL service and `DATABASE_URL`; the Chromium smoke additionally starts the built API and Vite web service against that database. The `POSTGRES_PASSWORD` in `.env` is local-only, must match the password embedded in `DATABASE_URL`, and must never be used outside a developer machine.
 
 ## Persistence, backup, and restore
 
@@ -57,6 +60,8 @@ pwsh -File scripts/backup-restore-smoke.ps1 -Cleanup
 ```
 
 See [local operations and recovery](docs/OPERATIONS.md) for the retained-target option, recovery expectations, and failure boundaries. Backups may contain operational records; encrypt and retain them under applicable policy and never use this local procedure against authoritative data.
+
+The durable [software MVP acceptance evidence](docs/ACCEPTANCE_EVIDENCE.md) maps every required criterion to implementation and verification paths and separates completed software scope from official rollout dependencies.
 
 ## Failure modes and boundaries
 

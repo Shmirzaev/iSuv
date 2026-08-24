@@ -50,6 +50,14 @@ const dashboard: DashboardResponse = {
     descendantTerritoryIds: ['a2000000-0000-4000-8000-000000000001'],
     stationDenominator: 83,
     deviceDenominator: 83,
+    deviceConnectivity: {
+      denominator: 83,
+      online: 80,
+      offline: 2,
+      unknown: 1,
+      source: 'synthetic_scenario',
+      reason: null,
+    },
     reportedStationCount: 80,
     dataStates: { reported: 80, noData: 1, unreliable: 1, unconfigured: 1 },
   },
@@ -108,6 +116,7 @@ const dashboard: DashboardResponse = {
         start: '2026-08-23T19:00:00.000000Z',
         end: '2026-08-24T07:34:56.123456Z',
       },
+      durationMicroseconds: '900719925474099312345678',
       signedM3: { numerator: '200', denominator: '1', unit: 'm3' },
       absoluteM3: { numerator: '200', denominator: '1', unit: 'm3' },
       mapTarget: '#map?stationId=b2000000-0000-4000-8000-000000000001',
@@ -147,9 +156,19 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /Unconfigured/);
   assert.match(markup, /Source: <\/strong>Synthetic scenario fixture/);
   assert.match(markup, /Source: <\/strong>Not configured/);
+  assert.match(markup, /Device connectivity/);
+  assert.match(markup, /Devices assessed for connectivity: 83/);
+  assert.match(markup, /Online devices[^]*?80/);
+  assert.match(markup, /Offline devices[^]*?2/);
+  assert.match(markup, /Devices with unknown connection[^]*?1/);
   assert.match(markup, /Synthetic Zarafshan District/);
   assert.match(markup, /Territory identifier: a2000000-0000-4000-8000-000000000001/);
   assert.match(markup, /2026-08-23 19:00:00\.000000 UTC — 2026-08-24 07:34:56\.123456 UTC/);
+  assert.match(
+    markup,
+    /<data value="900719925474099312345678">900,719,925,474,099,312,345,678<\/data> µs/,
+  );
+  assert.match(markup, /data-label="Exact duration \(microseconds\)"/);
   assert.match(markup, /href="#map\?stationId=b2000000/);
   assert.match(markup, /href="#operations\?deviceId=c2000000/);
 });

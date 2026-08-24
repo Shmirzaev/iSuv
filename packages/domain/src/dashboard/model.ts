@@ -59,6 +59,13 @@ export interface DashboardWindow {
   end: string;
 }
 
+/** Exact elapsed duration for an already-assessed half-open UTC interval. */
+export function dashboardIntervalDurationMicroseconds(window: DashboardWindow): string {
+  const duration = utcMicros(window.end) - utcMicros(window.start);
+  if (duration <= 0n) throw new Error('dashboard interval must be positive');
+  return duration.toString();
+}
+
 /**
  * The selected window ends at the scenario's disclosed cutoff. Its previous
  * comparator is exactly the same elapsed duration, not a guessed calendar

@@ -196,12 +196,17 @@ test('inspector trend makes gaps and raw-to-validated differences explicit', () 
       },
     ],
     healthHistory: { state: 'unconfigured', source: 'unconfigured', reason: 'Not synthesized.' },
+    maintenance: {
+      state: 'unconfigured',
+      records: [],
+      source: 'unconfigured',
+      reason: 'No maintenance source is configured.',
+    },
     placeholders: {
       plan: 'unconfigured',
       intervalVariance: 'unconfigured',
       alarms: 'unconfigured',
       incidents: 'unconfigured',
-      maintenance: 'unconfigured',
       firmware: 'unconfigured',
       documents: 'unconfigured',
     },

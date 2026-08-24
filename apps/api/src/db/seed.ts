@@ -619,6 +619,26 @@ async function seedSyntheticDashboardScenario(client: {
       ordinal IN(3,5)
     FROM candidates CROSS JOIN periods
     ON CONFLICT (scenario_id,period,station_id) DO NOTHING`);
+  await client.query(`
+    WITH candidates AS (
+      SELECT device.id device_id,device.organization_id,device.territory_id,
+        row_number() OVER (ORDER BY device.code) ordinal
+      FROM telemetry_devices device
+      WHERE device.code ~ '^SYN-HOTSPOT-[0-9]{3}-DEVICE-01$'
+    ), periods(period) AS (
+      VALUES ('today'), ('week'), ('month'), ('season'), ('year')
+    )
+    INSERT INTO dashboard_synthetic_device_states(
+      scenario_id,period,organization_id,territory_id,device_id,connection_state,provenance,
+      data_classification,official_telemetry
+    )
+    SELECT 'd5000000-0000-4000-8000-000000000001',periods.period,
+      organization_id,territory_id,device_id,
+      CASE WHEN mod(ordinal,19)=0 THEN 'offline' WHEN mod(ordinal,11)=0 THEN 'unknown' ELSE 'online' END,
+      'synthetic: deterministic dashboard device availability scenario; not official telemetry',
+      'synthetic',false
+    FROM candidates CROSS JOIN periods
+    ON CONFLICT (scenario_id,period,device_id) DO NOTHING`);
 }
 
 async function seedSyntheticAnalyticsScenario(client: {
@@ -928,6 +948,52 @@ async function seedSyntheticLiveOperationsScenario(client: {
   );
 }
 
+async function seedSyntheticMaintenanceHistory(client: {
+  query: (text: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  // The single stable fixture makes the inspector's maintenance history
+  // contract demonstrable. It is explicitly synthetic and has no command,
+  // work-order dispatch, or physical-control implication.
+  const recordId = 'da100000-0000-4000-8000-000000000001';
+  const auditId = 'da100000-0000-4000-8000-000000000002';
+  const provenance =
+    'synthetic: immutable calibration maintenance history; not official work order';
+  await client.query(
+    `INSERT INTO audit_events(
+       id,organization_id,territory_id,actor_user_id,actor_organization_id,action,resource,resource_id,
+       old_state,new_state,reason,request_id,occurred_at,data_classification,provenance
+     )
+     SELECT $1,device.organization_id,device.territory_id,
+       'a3000000-0000-4000-8000-000000000001','a1000000-0000-4000-8000-000000000001',
+       'maintenance_record.created','maintenance_record',$2,NULL,
+       jsonb_build_object('status','completed','dataClassification','synthetic'),
+       'seed synthetic maintenance history','seed-maintenance-history',
+       '2026-08-22T08:00:00.000000Z','synthetic',$3
+     FROM telemetry_devices device
+     WHERE device.code='SYN-HOTSPOT-001-DEVICE-01'
+     ON CONFLICT (id) DO NOTHING`,
+    [auditId, recordId, provenance],
+  );
+  await client.query(
+    `INSERT INTO maintenance_records(
+       id,organization_id,territory_id,device_id,record_version,maintenance_type,status,
+       scheduled_start_at,scheduled_end_at,started_at,completed_at,recorded_at,created_at,
+       created_by_user_id,creation_reason,created_request_id,audit_event_id,provenance,
+       data_classification,official_record
+     )
+     SELECT $1,device.organization_id,device.territory_id,device.id,1,'calibration','completed',
+       '2026-08-22T06:00:00.000000Z','2026-08-22T07:00:00.000000Z',
+       '2026-08-22T06:05:00.000000Z','2026-08-22T06:45:00.000000Z',
+       '2026-08-22T08:00:00.000000Z','2026-08-21T12:00:00.000000Z',
+       'a3000000-0000-4000-8000-000000000001','seed synthetic maintenance history',
+       'seed-maintenance-history',$2,$3,'synthetic',false
+     FROM telemetry_devices device
+     WHERE device.code='SYN-HOTSPOT-001-DEVICE-01'
+     ON CONFLICT (id) DO NOTHING`,
+    [recordId, auditId, provenance],
+  );
+}
+
 export async function seedSystemMetadata(databaseUrl: string | undefined): Promise<void> {
   await withDatabase(databaseUrl, async (pool) => {
     const client = await pool.connect();
@@ -1003,6 +1069,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
       await seedSyntheticGovernedAnalyticsScenario(client);
       await seedSyntheticAnalyticsScenario(client);
       await seedSyntheticLiveOperationsScenario(client);
+      await seedSyntheticMaintenanceHistory(client);
       await seedSyntheticAlarmIncidentScenario(client);
       await client.query('COMMIT');
       console.info(

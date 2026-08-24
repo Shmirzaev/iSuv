@@ -18,6 +18,7 @@ export const auditResourceSchema = z.enum([
   'alarm',
   'incident',
   'escalation_policy',
+  'maintenance_record',
   'report',
 ]);
 export const auditActionSchema = z.enum([
@@ -68,6 +69,7 @@ export const auditActionSchema = z.enum([
   'incident.corrective_action',
   'incident.resolved',
   'incident.closed',
+  'maintenance_record.created',
   'water_balance_component.created',
   'water_balance_assumption.created',
   'report.generated',

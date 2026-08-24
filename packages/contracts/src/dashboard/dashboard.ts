@@ -192,6 +192,16 @@ export const dashboardResponseSchema = z
         descendantTerritoryIds: z.array(uuid).min(1),
         stationDenominator: nonnegativeInteger,
         deviceDenominator: nonnegativeInteger,
+        deviceConnectivity: z
+          .object({
+            denominator: nonnegativeInteger,
+            online: nonnegativeInteger,
+            offline: nonnegativeInteger,
+            unknown: nonnegativeInteger,
+            source: z.literal('synthetic_scenario'),
+            reason: z.null(),
+          })
+          .strict(),
         reportedStationCount: nonnegativeInteger,
         dataStates: z
           .object({
@@ -225,6 +235,17 @@ export const dashboardResponseSchema = z
             code: 'custom',
             path: ['deviceDenominator'],
             message: 'fixture has one device per station denominator',
+          });
+        const connectivity = value.deviceConnectivity;
+        if (
+          connectivity.denominator !== value.deviceDenominator ||
+          connectivity.online + connectivity.offline + connectivity.unknown !==
+            connectivity.denominator
+        )
+          issue.addIssue({
+            code: 'custom',
+            path: ['deviceConnectivity'],
+            message: 'device connectivity counts must reconcile with device denominator',
           });
       }),
     kpis: z
@@ -351,6 +372,7 @@ export const dashboardResponseSchema = z
           dataState,
           quality: z.enum(['valid', 'unreliable', 'no_data', 'unconfigured']),
           assessedInterval: windowSchema,
+          durationMicroseconds: z.string().regex(/^[1-9]\d*$/),
           signedM3: exactM3Schema,
           absoluteM3: exactM3Schema,
           mapTarget: z.string().regex(/^#map\?stationId=/),

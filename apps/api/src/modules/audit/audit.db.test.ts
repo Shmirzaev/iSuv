@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
-import { auditStateMaximumBytes } from '@isuv/contracts';
+import { auditEventSchema, auditStateMaximumBytes } from '@isuv/contracts';
 import { Pool, type PoolClient } from 'pg';
 import { PostgresRoleGrantAdministrationService } from '../administration/service.js';
 import { PostgresAuditEventRepository } from './repository.js';
@@ -591,4 +591,25 @@ test('audit explorer default scope prefers an effective territory grant, then a 
     await repository.resolveDefaultTerritory(systemActor, organizationA, evaluatedAt),
     territoryA,
   );
+});
+
+test('seeded synthetic maintenance audit evidence is searchable and contract-parseable', async () => {
+  const rootTerritoryId = 'a2000000-0000-4000-8000-000000000001';
+  const eventId = 'da100000-0000-4000-8000-000000000002';
+  const page = await repository.list({
+    territoryId: rootTerritoryId,
+    action: 'maintenance_record.created',
+    resource: 'maintenance_record',
+    resourceId: 'da100000-0000-4000-8000-000000000001',
+    limit: 25,
+  });
+  assert.deepEqual(
+    page.events.map((event) => event.id),
+    [eventId],
+  );
+  const detail = await repository.findById(eventId, rootTerritoryId);
+  assert.ok(detail);
+  assert.equal(auditEventSchema.parse(detail).action, 'maintenance_record.created');
+  assert.equal(detail.resource, 'maintenance_record');
+  assert.deepEqual(detail.newState, { status: 'completed', dataClassification: 'synthetic' });
 });

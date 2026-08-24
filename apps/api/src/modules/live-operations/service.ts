@@ -3,6 +3,7 @@ import type {
   LiveOperationsQuery,
   LiveOperationsResponse,
   LiveOperationsRow,
+  MaintenanceRecord,
 } from '@isuv/contracts';
 import { attentionPresentation, liveAttention } from '@isuv/domain';
 import { withDatabase } from '../../db/client.js';
@@ -49,6 +50,24 @@ interface RevisionRow {
   reason: string | null;
   provenance: string;
   classification: 'synthetic' | 'official';
+}
+
+interface MaintenanceRecordRow {
+  id: string;
+  record_version: number;
+  organization_id: string;
+  territory_id: string;
+  device_id: string;
+  maintenance_type: 'inspection' | 'preventive' | 'corrective' | 'calibration';
+  status: 'planned' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  scheduled_start_at: string;
+  scheduled_end_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  recorded_at: string;
+  created_at: string;
+  audit_event_id: string;
+  provenance: string;
 }
 
 interface Raw {
@@ -634,6 +653,58 @@ export class PostgresLiveOperationsService {
               source: stage.source,
             },
           ];
+    const maintenanceRecords = await this.read(
+      async (client) =>
+        (
+          await client.query<MaintenanceRecordRow>(
+            `SELECT id,record_version,organization_id,territory_id,device_id,maintenance_type,status,
+             ${ts('scheduled_start_at')} scheduled_start_at,${ts('scheduled_end_at')} scheduled_end_at,
+             CASE WHEN started_at IS NULL THEN NULL ELSE ${ts('started_at')} END started_at,
+             CASE WHEN completed_at IS NULL THEN NULL ELSE ${ts('completed_at')} END completed_at,
+             ${ts('recorded_at')} recorded_at,${ts('created_at')} created_at,audit_event_id,provenance
+           FROM maintenance_records
+           WHERE territory_id=$1 AND device_id=$2 AND recorded_at<=$3::timestamptz
+           ORDER BY recorded_at DESC,id DESC LIMIT 10`,
+            [current.territory.id, current.deviceId, result.knownAt],
+          )
+        ).rows,
+    );
+    const maintenance = maintenanceRecords.length
+      ? {
+          state: 'synthetic_history' as const,
+          records: maintenanceRecords.map(
+            (record) =>
+              ({
+                id: record.id,
+                version: record.record_version as 1,
+                organizationId: record.organization_id,
+                territoryId: record.territory_id,
+                deviceId: record.device_id,
+                type: record.maintenance_type,
+                status: record.status,
+                scheduledInterval: {
+                  start: record.scheduled_start_at,
+                  end: record.scheduled_end_at,
+                },
+                startedAt: record.started_at,
+                completedAt: record.completed_at,
+                recordedAt: record.recorded_at,
+                createdAt: record.created_at,
+                auditEventId: record.audit_event_id,
+                provenance: record.provenance,
+                dataClassification: 'synthetic' as const,
+                officialRecord: false as const,
+              }) satisfies MaintenanceRecord,
+          ),
+          source: 'synthetic_scenario' as const,
+          reason: null,
+        }
+      : {
+          state: 'unconfigured' as const,
+          records: [] as [],
+          source: 'unconfigured' as const,
+          reason: 'No synthetic maintenance history is configured for this device.',
+        };
     return {
       referenceAt: result.referenceAt,
       knownAt: result.knownAt,
@@ -651,12 +722,12 @@ export class PostgresLiveOperationsService {
         reason:
           'Health history is not synthesized; use the governed device-health history endpoint when available.',
       },
+      maintenance,
       placeholders: {
         plan: 'unconfigured' as const,
         intervalVariance: 'unconfigured' as const,
         alarms: 'unconfigured' as const,
         incidents: 'unconfigured' as const,
-        maintenance: 'unconfigured' as const,
         firmware: 'unconfigured' as const,
         documents: 'unconfigured' as const,
       },

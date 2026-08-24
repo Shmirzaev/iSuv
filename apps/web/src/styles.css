@@ -1027,6 +1027,35 @@ main:focus-visible {
   background: #fff7ed;
   border-left: 4px solid #b45309 !important;
 }
+.coverage-state-list__offline,
+.coverage-state-list__unknown {
+  background: #fff7ed;
+  border-left: 4px solid #b45309 !important;
+}
+.device-connectivity {
+  border-top: 1px solid #cbd5e1;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.device-connectivity h3 {
+  margin: 0;
+}
+.maintenance-record-list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: decimal;
+  margin: 0.75rem 0 0;
+  padding-left: 1.5rem;
+}
+.maintenance-record-list article {
+  border: 1px solid #94a3b8;
+  border-left: 4px solid #7c3aed;
+  border-radius: 0.3rem;
+  padding: 0.75rem;
+}
+.maintenance-record-list h4 {
+  margin: 0 0 0.65rem;
+}
 .metric-grid {
   display: grid;
   gap: 0.85rem;
@@ -1356,6 +1385,43 @@ footer {
     position: relative;
   }
   .live-table td::before {
+    color: #334155;
+    content: attr(data-label);
+    font-weight: 800;
+    left: 0.6rem;
+    max-width: 38%;
+    position: absolute;
+    top: 0.6rem;
+  }
+  .deviations-table,
+  .deviations-table tbody,
+  .deviations-table tr,
+  .deviations-table td,
+  .deviations-table tbody th {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .deviations-table thead {
+    clip: rect(0, 0, 0, 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+  }
+  .deviations-table tr {
+    border: 1px solid #94a3b8;
+    margin: 0.75rem;
+  }
+  .deviations-table td,
+  .deviations-table tbody th {
+    border-bottom: 1px solid #cbd5e1;
+    padding-left: 42%;
+    position: relative;
+  }
+  .deviations-table td::before,
+  .deviations-table tbody th::before {
     color: #334155;
     content: attr(data-label);
     font-weight: 800;

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   auditActionSchema,
+  auditResourceSchema,
   auditEventResponseSchema,
   auditEventsResponseSchema,
   auditStateMaximumBytes,
@@ -72,6 +73,11 @@ test('audit list summaries cannot contain state while event detail preserves imm
 test('audit explorer does not invent identity or infrastructure-control event classes', () => {
   for (const action of auditActionSchema.options)
     assert.doesNotMatch(action, /(login|logout|mfa|valve|gate|pump|plc|rtu|command)/i);
+});
+
+test('audit explorer recognizes the immutable synthetic maintenance record vocabulary', () => {
+  assert.equal(auditResourceSchema.parse('maintenance_record'), 'maintenance_record');
+  assert.equal(auditActionSchema.parse('maintenance_record.created'), 'maintenance_record.created');
 });
 
 test('audit detail preserves exact state only within the deterministic UTF-8 byte budget', () => {

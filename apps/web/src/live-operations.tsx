@@ -133,6 +133,109 @@ function GovernedPlaceholder({ locale, reason }: { locale: Locale; reason: strin
   );
 }
 
+function maintenanceTypeKey(
+  type: Extract<
+    LiveOperationsInspector['maintenance'],
+    { state: 'synthetic_history' }
+  >['records'][number]['type'],
+): TranslationKey {
+  const keys = {
+    inspection: 'maintenanceInspection',
+    preventive: 'maintenancePreventive',
+    corrective: 'maintenanceCorrective',
+    calibration: 'maintenanceCalibration',
+  } as const satisfies Record<typeof type, TranslationKey>;
+  return keys[type];
+}
+
+function maintenanceStatusKey(
+  status: Extract<
+    LiveOperationsInspector['maintenance'],
+    { state: 'synthetic_history' }
+  >['records'][number]['status'],
+): TranslationKey {
+  const keys = {
+    planned: 'maintenancePlanned',
+    scheduled: 'maintenanceScheduledStatus',
+    in_progress: 'maintenanceInProgress',
+    completed: 'maintenanceCompleted',
+    cancelled: 'maintenanceCancelled',
+  } as const satisfies Record<typeof status, TranslationKey>;
+  return keys[status];
+}
+
+function MaintenanceHistory({
+  locale,
+  maintenance,
+}: {
+  locale: Locale;
+  maintenance: LiveOperationsInspector['maintenance'];
+}) {
+  if (maintenance.state === 'unconfigured')
+    return (
+      <section aria-labelledby="live-maintenance-heading">
+        <h3 id="live-maintenance-heading">{t(locale, 'liveMaintenanceHistory')}</h3>
+        <GovernedPlaceholder locale={locale} reason={maintenance.reason} />
+      </section>
+    );
+  return (
+    <section aria-labelledby="live-maintenance-heading">
+      <h3 id="live-maintenance-heading">{t(locale, 'liveMaintenanceHistory')}</h3>
+      <p className="supporting-text">{t(locale, 'maintenanceNonOfficial')}</p>
+      {maintenance.records.length === 0 ? (
+        <p className="metric-unavailable">{t(locale, 'liveMaintenanceNoRecords')}</p>
+      ) : (
+        <ol className="maintenance-record-list">
+          {maintenance.records.map((record) => (
+            <li key={record.id}>
+              <article>
+                <h4>
+                  {t(locale, maintenanceTypeKey(record.type))} —{' '}
+                  {t(locale, maintenanceStatusKey(record.status))}
+                </h4>
+                <dl className="live-inspector__details">
+                  <div>
+                    <dt>{t(locale, 'maintenanceType')}</dt>
+                    <dd>{t(locale, maintenanceTypeKey(record.type))}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceStatus')}</dt>
+                    <dd>{t(locale, maintenanceStatusKey(record.status))}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceScheduled')}</dt>
+                    <dd>{`${formatLiveTimestamp(record.scheduledInterval.start)} — ${formatLiveTimestamp(record.scheduledInterval.end)}`}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceActual')}</dt>
+                    <dd>{`${formatLiveTimestamp(record.startedAt)} / ${formatLiveTimestamp(record.completedAt)}`}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceRecordedAt')}</dt>
+                    <dd>{formatLiveTimestamp(record.recordedAt)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceAuditEvidence')}</dt>
+                    <dd className="stable-identifier">{record.auditEventId}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'maintenanceProvenance')}</dt>
+                    <dd>{record.provenance}</dd>
+                  </div>
+                  <div>
+                    <dt>{t(locale, 'source')}</dt>
+                    <dd>{t(locale, 'maintenanceNonOfficial')}</dd>
+                  </div>
+                </dl>
+              </article>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 function StatusValue({
   locale,
   row,
@@ -693,9 +796,8 @@ export function LiveOperationsInspector({
         <GovernedPlaceholder locale={locale} reason={row.governed.calibrationDue.reason} />
         <h3>{t(locale, 'liveAlarm')}</h3>
         <GovernedPlaceholder locale={locale} reason={row.governed.alarm.reason} />
-        <h3>{t(locale, 'plannedWorkArea')}</h3>
-        <GovernedPlaceholder locale={locale} reason={t(locale, 'liveNoConfiguredPolicy')} />
       </section>
+      <MaintenanceHistory locale={locale} maintenance={inspector.maintenance} />
     </aside>
   );
 }
