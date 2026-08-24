@@ -33,7 +33,8 @@ export type AuthorizationAction =
   | 'telemetry:correct'
   | 'validation_profile:approve'
   | 'allocation_plan:approve'
-  | 'water_balance:approve';
+  | 'water_balance:approve'
+  | 'alarm:approve';
 
 export interface EffectiveGrant {
   id: string;
@@ -100,6 +101,7 @@ const rolePermissions: Readonly<
     'validation_profile:approve',
     'allocation_plan:approve',
     'water_balance:approve',
+    'alarm:approve',
   ],
   maintenance_engineer: [
     'network:read',
@@ -148,7 +150,7 @@ export function decideTerritoryAuthorization(
     if (!coversTarget) continue;
     sawScopedGrant = true;
     if (!permits(grant.role, request.action)) {
-      if (grant.role === 'auditor' && request.action.endsWith(':write')) sawReadOnlyGrant = true;
+      if (grant.role === 'auditor') sawReadOnlyGrant = true;
       else sawRoleGrant = true;
       continue;
     }

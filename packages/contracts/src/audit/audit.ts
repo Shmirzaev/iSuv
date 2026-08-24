@@ -13,6 +13,7 @@ export const auditResourceSchema = z.enum([
   'quantity_model',
   'tolerance_policy',
   'water_balance_model',
+  'alarm_rule',
 ]);
 export const auditActionSchema = z.enum([
   'user_role_grant.created',
@@ -42,6 +43,9 @@ export const auditActionSchema = z.enum([
   'water_balance_model.created',
   'water_balance_version.requested',
   'water_balance_version.approved',
+  'alarm_rule.created',
+  'alarm_rule_version.requested',
+  'alarm_rule_version.approved',
   'water_balance_component.created',
   'water_balance_assumption.created',
 ]);
