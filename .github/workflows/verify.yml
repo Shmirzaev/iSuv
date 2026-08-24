@@ -37,6 +37,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Audit high-severity dependency advisories
+        run: pnpm audit --audit-level high
       - name: Install Chromium for browser smoke tests
         run: pnpm --filter @isuv/web exec playwright install --with-deps chromium
       - run: pnpm verify

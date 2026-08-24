@@ -93,6 +93,75 @@ test('alarm rule routes reject malformed identifiers and policy before lookup', 
   await app.close();
 });
 
+test('anonymous alarm-rule requests authenticate before validation or resource lookup', async () => {
+  let identityCalls = 0;
+  let sessionCalls = 0;
+  let serviceCalls = 0;
+  let authorizationCalls = 0;
+  const app = Fastify();
+  registerAlarmRuleRoutes(app, {
+    identityProvider: {
+      resolve: async () => {
+        identityCalls += 1;
+        return null;
+      },
+    } as unknown as IdentityProvider,
+    sessionRepository: {
+      findCurrentSession: async () => {
+        sessionCalls += 1;
+        return null;
+      },
+    } as unknown as IdentitySessionRepository,
+    authorizationRepository: {
+      findEffectiveGrantsForTarget: async () => {
+        authorizationCalls += 1;
+        return [];
+      },
+    } as unknown as TerritoryAuthorizationRepository,
+    service: {
+      findTerritory: async () => {
+        serviceCalls += 1;
+        return null;
+      },
+      findRuleScope: async () => {
+        serviceCalls += 1;
+        return null;
+      },
+    } as unknown as PostgresAlarmRuleService,
+  });
+  const responses = await Promise.all([
+    app.inject({ method: 'POST', url: '/api/v1/alarm-rules', payload: {} }),
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/alarm-rules/not-a-uuid/versions/request',
+      payload: {},
+    }),
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/alarm-rules/not-a-uuid/versions/not-a-version/approve',
+      payload: {},
+    }),
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/alarm-rules/not-a-uuid/evaluate',
+      payload: {},
+    }),
+  ]);
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(response.json().error, {
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication is required.',
+      requestId: response.json().error.requestId,
+    });
+  }
+  assert.equal(identityCalls, responses.length);
+  assert.equal(sessionCalls, 0);
+  assert.equal(serviceCalls, 0);
+  assert.equal(authorizationCalls, 0);
+  await app.close();
+});
+
 test('alarm authoring authenticates before lookup and never mutates when scope is denied', async () => {
   let lookups = 0;
   let mutations = 0;

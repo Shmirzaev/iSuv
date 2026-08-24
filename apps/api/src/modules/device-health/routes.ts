@@ -61,6 +61,8 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
     return true;
   }
   app.post('/api/v1/device-health/events', async (request, reply) => {
+    const session = await user(request, reply);
+    if (!session) return;
     const parsed = ingestDeviceHealthEventRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
@@ -76,8 +78,6 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
             request.id,
           ),
         );
-    const session = await user(request, reply);
-    if (!session) return;
     try {
       const territory = await options.service.resolveDeviceTerritory(
         parsed.data.deviceId,
@@ -125,6 +125,8 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
     },
     reply: { code(status: number): { send(value: ApiError): unknown } },
   ) {
+    const session = await user(request, reply);
+    if (!session) return null;
     const deviceId = (request.params as { deviceId?: string }).deviceId;
     if (!deviceId || !uuidPattern.test(deviceId)) {
       reply
@@ -132,8 +134,6 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
         .send(apiError('VALIDATION_ERROR', 'The device identifier is invalid.', request.id));
       return null;
     }
-    const session = await user(request, reply);
-    if (!session) return null;
     try {
       const territory = await options.service.findCurrentTerritory(deviceId);
       if (
@@ -174,13 +174,13 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
     }
   });
   app.get('/api/v1/device-health/:deviceId/history', async (request, reply) => {
+    const context = await authenticatedDevice(request, reply);
+    if (!context) return;
     const query = deviceHealthHistoryQuerySchema.safeParse(request.query);
     if (!query.success)
       return reply
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'The history query is invalid.', request.id));
-    const context = await authenticatedDevice(request, reply);
-    if (!context) return;
     try {
       const territories = await authorizedOccurrenceTerritories(
         context.deviceId,
@@ -263,6 +263,8 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
     },
     reply: { code(status: number): { send(value: ApiError): unknown } },
   ) {
+    const session = await user(request, reply);
+    if (!session) return null;
     const deviceId = (request.params as { deviceId?: string }).deviceId;
     if (!deviceId || !uuidPattern.test(deviceId)) {
       reply
@@ -270,7 +272,6 @@ export function registerDeviceHealthRoutes(app: FastifyInstance, options: Option
         .send(apiError('VALIDATION_ERROR', 'The device identifier is invalid.', request.id));
       return null;
     }
-    const session = await user(request, reply);
     return session ? { deviceId, session } : null;
   }
   async function authorizedOccurrenceTerritories(

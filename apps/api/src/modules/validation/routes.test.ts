@@ -136,6 +136,110 @@ test('validation profile API authenticates/authorizes before service calls and k
   assert.equal(calls, 0);
   await app.close();
 });
+test('validation routes authenticate before parsing malformed targets or consulting protected dependencies', async () => {
+  let identityCalls = 0;
+  let sessionCalls = 0;
+  let authorizationCalls = 0;
+  let serviceCalls = 0;
+  const app = createApp(async () => undefined, false, {
+    identityProvider: {
+      async resolve() {
+        identityCalls += 1;
+        return null;
+      },
+    },
+    identitySessionRepository: {
+      async findCurrentSession() {
+        sessionCalls += 1;
+        return null;
+      },
+    },
+    territoryAuthorizationRepository: {
+      async findEffectiveGrantsForTarget() {
+        authorizationCalls += 1;
+        return [];
+      },
+    },
+    validationService: {
+      async createProfile() {
+        serviceCalls += 1;
+        return version;
+      },
+      async createVersion() {
+        serviceCalls += 1;
+        return version;
+      },
+      async approveVersion() {
+        serviceCalls += 1;
+        return version;
+      },
+      async validate() {
+        serviceCalls += 1;
+        throw new Error('must not validate unauthenticated observations');
+      },
+    } as unknown as PostgresValidationService,
+  });
+  const requests = [
+    { url: '/api/v1/validation/profiles', payload: {} },
+    {
+      url: '/api/v1/validation/profiles/not-a-uuid/versions',
+      payload: {},
+    },
+    {
+      url: '/api/v1/validation/profiles/not-a-uuid/versions/zero/approve',
+      payload: {},
+    },
+    { url: '/api/v1/observations/not-a-uuid/validate', payload: {} },
+    {
+      url: '/api/v1/validation/profiles',
+      payload: {
+        organizationId,
+        territoryId,
+        sensorId,
+        measurementKind: 'stage',
+        dataClassification: 'synthetic',
+        name: 'valid target must remain private',
+        effectiveFrom: '2026-08-23T00:00:00.000000Z',
+        rules: { staleAfterSeconds: 60 },
+        reason: 'auth boundary regression',
+      },
+    },
+  ];
+  for (const request of requests) {
+    const response = await app.inject({ method: 'POST', ...request });
+    assert.equal(response.statusCode, 401);
+    assert.equal(response.json().error.code, 'UNAUTHENTICATED');
+  }
+  assert.equal(identityCalls, requests.length);
+  assert.equal(sessionCalls, 0);
+  assert.equal(authorizationCalls, 0);
+  assert.equal(serviceCalls, 0);
+  await app.close();
+});
+test('validation routes retain authenticated validation errors without authorizing invalid payloads', async () => {
+  let authorizationCalls = 0;
+  const app = createApp(async () => undefined, false, {
+    identityProvider: provider,
+    identitySessionRepository: sessions,
+    territoryAuthorizationRepository: {
+      async findEffectiveGrantsForTarget() {
+        authorizationCalls += 1;
+        return [];
+      },
+    },
+    validationService: {} as PostgresValidationService,
+  });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/validation/profiles',
+    headers: { 'x-isuv-user-id': userId },
+    payload: {},
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error.code, 'VALIDATION_ERROR');
+  assert.equal(authorizationCalls, 0);
+  await app.close();
+});
 test('validation profile API exposes typed synthetic draft only to dedicated authority', async () => {
   const service = {
     async createProfile() {

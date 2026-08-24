@@ -93,6 +93,59 @@ test('allocation routes require authentication before exposing absent direct ide
   assert.equal(response.statusCode, 401);
   await app.close();
 });
+
+test('anonymous allocation requests authenticate before validation, lookup, or authorization', async () => {
+  let lookups = 0;
+  let authorizations = 0;
+  const app = createApp(async () => {}, false, {
+    identityProvider: {
+      async resolve() {
+        return null;
+      },
+    },
+    identitySessionRepository: sessions,
+    territoryAuthorizationRepository: {
+      async findEffectiveGrantsForTarget() {
+        authorizations += 1;
+        return [];
+      },
+    },
+    allocationPlanService: {
+      async findPlanTerritory() {
+        lookups += 1;
+        return territoryId;
+      },
+      async findSectionTerritory() {
+        lookups += 1;
+        return territoryId;
+      },
+    } as unknown as PostgresAllocationPlanService,
+  });
+  const requests = [
+    { method: 'POST' as const, url: '/api/v1/allocation-plans', payload: {} },
+    { method: 'POST' as const, url: '/api/v1/allocation-plans/not-a-uuid/versions', payload: {} },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/allocation-plans/not-a-uuid/versions/nope/request',
+      payload: {},
+    },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/allocation-plans/not-a-uuid/versions/nope/approve',
+      payload: {},
+    },
+    { method: 'GET' as const, url: '/api/v1/allocation-plans/not-a-uuid/current?effectiveAt=nope' },
+    { method: 'GET' as const, url: '/api/v1/allocation-plans/not-a-uuid/history?limit=nope' },
+  ];
+  for (const request of requests) {
+    const response = await app.inject(request);
+    assert.equal(response.statusCode, 401, request.url);
+    assert.equal(response.json().error.code, 'UNAUTHENTICATED', request.url);
+  }
+  assert.equal(lookups, 0);
+  assert.equal(authorizations, 0);
+  await app.close();
+});
 test('allocation routes reject non-RFC direct identifiers before lookup', async () => {
   const app = createApp(async () => {}, false, {
     identityProvider: identity,

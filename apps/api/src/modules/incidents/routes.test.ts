@@ -139,6 +139,89 @@ test('incident mutations authenticate before lookup and denied scope never mutat
   await denied.close();
 });
 
+test('incident routes authenticate before parsing malformed input or resolving a resource', async () => {
+  let identityCalls = 0;
+  let sessionCalls = 0;
+  let serviceCalls = 0;
+  let authorizationCalls = 0;
+  const app = Fastify();
+  registerIncidentRoutes(app, {
+    identityProvider: {
+      resolve: async () => {
+        identityCalls += 1;
+        return null;
+      },
+    } as unknown as IdentityProvider,
+    sessionRepository: {
+      findCurrentSession: async () => {
+        sessionCalls += 1;
+        return null;
+      },
+    } as unknown as IdentitySessionRepository,
+    authorizationRepository: new Proxy(
+      {},
+      {
+        get() {
+          authorizationCalls += 1;
+          return async () => [];
+        },
+      },
+    ) as TerritoryAuthorizationRepository,
+    service: new Proxy(
+      {},
+      {
+        get() {
+          serviceCalls += 1;
+          return async () => null;
+        },
+      },
+    ) as PostgresIncidentService,
+  });
+  const requests = [
+    { method: 'POST' as const, url: '/api/v1/escalation-policies', payload: {} },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/escalation-policies/not-a-uuid/versions/request',
+      payload: {},
+    },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/escalation-policies/not-a-uuid/versions/not-a-number/approve',
+      payload: {},
+    },
+    { method: 'GET' as const, url: '/api/v1/escalation-policies/not-a-uuid?bad=true' },
+    { method: 'POST' as const, url: '/api/v1/incidents', payload: {} },
+    ...['acknowledge', 'investigate', 'resolve', 'close'].map((operation) => ({
+      method: 'POST' as const,
+      url: `/api/v1/incidents/not-a-uuid/${operation}`,
+      payload: {},
+    })),
+    { method: 'POST' as const, url: '/api/v1/incidents/not-a-uuid/alarms', payload: {} },
+    { method: 'POST' as const, url: '/api/v1/incidents/not-a-uuid/assign', payload: {} },
+    { method: 'POST' as const, url: '/api/v1/incidents/not-a-uuid/comments', payload: {} },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/incidents/not-a-uuid/corrective-actions',
+      payload: {},
+    },
+    { method: 'GET' as const, url: '/api/v1/incidents/not-a-uuid?bad=true' },
+  ];
+  const responses = await Promise.all(requests.map((request) => app.inject(request)));
+  assert.equal(identityCalls, requests.length);
+  assert.equal(sessionCalls, 0);
+  assert.equal(serviceCalls, 0);
+  assert.equal(authorizationCalls, 0);
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(response.json().error, {
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication is required.',
+      requestId: response.json().error.requestId,
+    });
+  }
+  await app.close();
+});
+
 test('incident identity, policy, lifecycle, and read dependencies fail as typed 503', async () => {
   const down = async () => {
     throw new Error('down');

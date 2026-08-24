@@ -50,61 +50,68 @@ function failure(
 }
 export function registerValidationRoutes(app: FastifyInstance, options: Options): void {
   const now = options.now ?? (() => new Date());
-  async function authority(
+  async function authenticate(
     request: { headers: Record<string, string | string[] | undefined>; id: string },
     reply: { code(status: number): { send(value: ApiError): unknown } },
+  ): Promise<string | null> {
+    const identity = await options.identityProvider.resolve(request);
+    if (!identity) {
+      reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      return null;
+    }
+    const session = await options.sessionRepository.findCurrentSession(identity.userId, now());
+    if (!session) {
+      reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      return null;
+    }
+    return session.user.id;
+  }
+  async function authority(
+    reply: { code(status: number): { send(value: ApiError): unknown } },
+    requestId: string,
+    userId: string,
     territoryId: string,
     action:
       | 'validation_profile:read'
       | 'validation_profile:write'
       | 'validation_profile:approve'
       | 'telemetry:correct',
-  ): Promise<{ userId: string } | null> {
-    const identity = await options.identityProvider.resolve(request);
-    if (!identity) {
-      reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
-      return null;
-    }
+  ): Promise<boolean> {
     const evaluatedAt = now();
-    const session = await options.sessionRepository.findCurrentSession(
-      identity.userId,
-      evaluatedAt,
-    );
-    if (!session) {
-      reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
-      return null;
-    }
     const decision = await authorizeTerritoryAction(
       options.authorizationRepository,
-      session.user.id,
+      userId,
       action,
       territoryId,
       evaluatedAt,
     );
     if (!decision.allowed) {
-      reply.code(404).send(error('NOT_FOUND', 'Validation resource was not found.', request.id));
-      return null;
+      reply.code(404).send(error('NOT_FOUND', 'Validation resource was not found.', requestId));
+      return false;
     }
-    return { userId: session.user.id };
+    return true;
   }
   app.post('/api/v1/validation/profiles', async (request, reply) => {
+    const userId = await authenticate(request, reply);
+    if (!userId) return;
     const parsed = createValidationProfileRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The validation profile is invalid.', request.id));
-    const actor = await authority(
-      request,
+    const authorized = await authority(
       reply,
+      request.id,
+      userId,
       parsed.data.territoryId,
       'validation_profile:write',
     );
-    if (!actor) return;
+    if (!authorized) return;
     try {
       return validationProfileVersionResponseSchema.parse({
         profileVersion: await options.validationService.createProfile(
           parsed.data,
-          actor.userId,
+          userId,
           request.id,
         ),
       });
@@ -114,26 +121,29 @@ export function registerValidationRoutes(app: FastifyInstance, options: Options)
     }
   });
   app.post('/api/v1/validation/profiles/:profileId/versions', async (request, reply) => {
+    const userId = await authenticate(request, reply);
+    if (!userId) return;
     const profileId = (request.params as { profileId?: string }).profileId;
     const parsed = createValidationProfileVersionRequestSchema.safeParse(request.body);
     if (!profileId || !uuid.test(profileId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The validation profile is invalid.', request.id));
-    const actor = await authority(
-      request,
+    const authorized = await authority(
       reply,
+      request.id,
+      userId,
       parsed.data.territoryId,
       'validation_profile:write',
     );
-    if (!actor) return;
+    if (!authorized) return;
     try {
       return validationProfileVersionResponseSchema.parse({
         profileVersion: await options.validationService.createVersion(
           profileId,
           parsed.data.territoryId,
           parsed.data,
-          actor.userId,
+          userId,
           request.id,
         ),
       });
@@ -145,6 +155,8 @@ export function registerValidationRoutes(app: FastifyInstance, options: Options)
   app.post(
     '/api/v1/validation/profiles/:profileId/versions/:version/approve',
     async (request, reply) => {
+      const userId = await authenticate(request, reply);
+      if (!userId) return;
       const { profileId, version } = request.params as { profileId?: string; version?: string };
       const parsed = approveValidationProfileVersionRequestSchema.safeParse(request.body);
       if (
@@ -157,13 +169,14 @@ export function registerValidationRoutes(app: FastifyInstance, options: Options)
         return reply
           .code(400)
           .send(error('VALIDATION_ERROR', 'The validation profile is invalid.', request.id));
-      const actor = await authority(
-        request,
+      const authorized = await authority(
         reply,
+        request.id,
+        userId,
         parsed.data.territoryId,
         'validation_profile:approve',
       );
-      if (!actor) return;
+      if (!authorized) return;
       try {
         return validationProfileVersionResponseSchema.parse({
           profileVersion: await options.validationService.approveVersion(
@@ -171,7 +184,7 @@ export function registerValidationRoutes(app: FastifyInstance, options: Options)
             Number(version),
             parsed.data.territoryId,
             parsed.data.reason,
-            actor.userId,
+            userId,
             request.id,
           ),
         });
@@ -182,20 +195,28 @@ export function registerValidationRoutes(app: FastifyInstance, options: Options)
     },
   );
   app.post('/api/v1/observations/:lineageId/validate', async (request, reply) => {
+    const userId = await authenticate(request, reply);
+    if (!userId) return;
     const lineageId = (request.params as { lineageId?: string }).lineageId;
     const parsed = validateObservationRequestSchema.safeParse(request.body);
     if (!lineageId || !uuid.test(lineageId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The validation request is invalid.', request.id));
-    const actor = await authority(request, reply, parsed.data.territoryId, 'telemetry:correct');
-    if (!actor) return;
+    const authorized = await authority(
+      reply,
+      request.id,
+      userId,
+      parsed.data.territoryId,
+      'telemetry:correct',
+    );
+    if (!authorized) return;
     try {
       return automaticValidationResponseSchema.parse(
         await options.validationService.validate(
           lineageId,
           parsed.data.territoryId,
-          actor.userId,
+          userId,
           request.id,
           now(),
           parsed.data.algorithmVersion,

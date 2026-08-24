@@ -11,10 +11,13 @@ const territoryA = 'a2000000-0000-4000-8000-000000000004';
 const territoryB = 'a2000000-0000-4000-8000-000000000005';
 const deviceId = 'f1080001-0000-4000-8000-000000000000';
 const identityProvider: IdentityProvider = {
-  async resolve() {
-    return { userId, provider: 'local-development' };
+  async resolve(request) {
+    return request.headers['x-isuv-user-id'] === userId
+      ? { userId, provider: 'local-development' }
+      : null;
   },
 };
+const authenticatedHeaders = { 'x-isuv-user-id': userId };
 const sessions: IdentitySessionRepository = {
   async findCurrentSession() {
     return {
@@ -142,6 +145,7 @@ test('device-health API fails closed, filters historical territory relocation fa
   const history = await app.inject({
     method: 'GET',
     url: `/api/v1/device-health/${deviceId}/history`,
+    headers: authenticatedHeaders,
   });
   assert.equal(history.statusCode, 200);
   assert.equal(history.json().events.length, 1);
@@ -151,10 +155,21 @@ test('device-health API fails closed, filters historical territory relocation fa
     url: `/api/v1/device-health/${deviceId}/live`,
     headers: { 'last-event-id': 'not-a-cursor' },
   });
-  assert.equal(malformed.statusCode, 400);
+  assert.equal(malformed.statusCode, 401);
+  assert.deepEqual(
+    { code: malformed.json().error.code, message: malformed.json().error.message },
+    { code: 'UNAUTHENTICATED', message: 'Authentication is required.' },
+  );
+  const authenticatedMalformed = await app.inject({
+    method: 'GET',
+    url: `/api/v1/device-health/${deviceId}/live`,
+    headers: { ...authenticatedHeaders, 'last-event-id': 'not-a-cursor' },
+  });
+  assert.equal(authenticatedMalformed.statusCode, 400);
   const conditionWrite = await app.inject({
     method: 'POST',
     url: '/api/v1/device-health/events',
+    headers: authenticatedHeaders,
     payload: {
       deviceId,
       sourceSystem: 'test',
@@ -174,7 +189,7 @@ test('device-health API fails closed, filters historical territory relocation fa
   const stream = await app.inject({
     method: 'GET',
     url: `/api/v1/device-health/${deviceId}/live`,
-    headers: { 'last-event-id': '0' },
+    headers: { ...authenticatedHeaders, 'last-event-id': '0' },
   });
   assert.equal(stream.statusCode, 200);
   assert.match(stream.body, /id: 1/);
@@ -185,11 +200,50 @@ test('device-health API fails closed, filters historical territory relocation fa
   const atHead = await app.inject({
     method: 'GET',
     url: `/api/v1/device-health/${deviceId}/live`,
+    headers: authenticatedHeaders,
   });
   assert.equal(atHead.statusCode, 200);
   assert.match(atHead.body, /heartbeat/);
   assert.match(atHead.body, /id: 1/);
   assert.doesNotMatch(atHead.body, /id: 2/);
+  await app.close();
+});
+
+test('anonymous malformed device-health requests are rejected before validation or domain access', async () => {
+  let domainCalls = 0;
+  const guarded = service();
+  const count = <T extends (...args: never[]) => unknown>(method: T): T =>
+    (async (...args: never[]) => {
+      domainCalls += 1;
+      return method(...args);
+    }) as T;
+  guarded.resolveDeviceTerritory = count(guarded.resolveDeviceTerritory);
+  guarded.findCurrentTerritory = count(guarded.findCurrentTerritory);
+  guarded.listOccurrenceTerritories = count(guarded.listOccurrenceTerritories);
+  const app = createApp(async () => undefined, false, {
+    identityProvider: { resolve: async () => null } as unknown as IdentityProvider,
+    identitySessionRepository: sessions,
+    territoryAuthorizationRepository: authorization,
+    deviceHealthService: guarded,
+  });
+  const responses = await Promise.all([
+    app.inject({ method: 'POST', url: '/api/v1/device-health/events', payload: {} }),
+    app.inject({ method: 'GET', url: '/api/v1/device-health/not-a-uuid' }),
+    app.inject({ method: 'GET', url: '/api/v1/device-health/not-a-uuid/history?limit=invalid' }),
+    app.inject({
+      method: 'GET',
+      url: '/api/v1/device-health/not-a-uuid/live',
+      headers: { 'last-event-id': 'not-a-cursor' },
+    }),
+  ]);
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(
+      { code: response.json().error.code, message: response.json().error.message },
+      { code: 'UNAUTHENTICATED', message: 'Authentication is required.' },
+    );
+  }
+  assert.equal(domainCalls, 0);
   await app.close();
 });
 
@@ -213,14 +267,17 @@ test('device-health endpoints report database degradation without inferring an o
   const current = await app.inject({
     method: 'GET',
     url: `/api/v1/device-health/${deviceId}`,
+    headers: authenticatedHeaders,
   });
   const live = await app.inject({
     method: 'GET',
     url: `/api/v1/device-health/${deviceId}/live`,
+    headers: authenticatedHeaders,
   });
   const write = await app.inject({
     method: 'POST',
     url: '/api/v1/device-health/events',
+    headers: authenticatedHeaders,
     payload: {
       deviceId,
       sourceSystem: 'test',

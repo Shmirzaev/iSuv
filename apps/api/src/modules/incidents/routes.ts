@@ -102,12 +102,11 @@ export function registerIncidentRoutes(
   async function scoped(
     q: FastifyRequest,
     r: FastifyReply,
+    actor: string,
     id: string,
     kind: 'incident' | 'policy' | 'alarm',
     actions: AuthorizationAction | AuthorizationAction[],
   ) {
-    const s = await session(q, r);
-    if (!s) return null;
     try {
       const scope =
         kind === 'incident'
@@ -120,18 +119,18 @@ export function registerIncidentRoutes(
         return null;
       }
       for (const action of Array.isArray(actions) ? actions : [actions])
-        if (!(await authorize(q, r, scope.territory_id, s.user.id, action))) return null;
-      return s.user.id;
+        if (!(await authorize(q, r, scope.territory_id, actor, action))) return null;
+      return actor;
     } catch {
       return (unavailable(r, q.id), null);
     }
   }
   app.post('/api/v1/escalation-policies', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const p = createEscalationPolicyRequestSchema.safeParse(q.body);
     if (!p.success)
       return r.code(400).send(error('VALIDATION_ERROR', 'Escalation policy is invalid.', q.id));
-    const s = await session(q, r);
-    if (!s) return;
     try {
       const t = await options.service.findTerritory(p.data.territoryId);
       if (!t) return r.code(404).send(error('NOT_FOUND', 'Escalation policy was not found.', q.id));
@@ -146,13 +145,15 @@ export function registerIncidentRoutes(
     }
   });
   app.post('/api/v1/escalation-policies/:policyId/versions/request', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const id = (q.params as { policyId?: string }).policyId ?? '';
     const p = requestEscalationPolicyVersionRequestSchema.safeParse(q.body);
     if (!uuid.test(id) || !p.success)
       return r
         .code(400)
         .send(error('VALIDATION_ERROR', 'Escalation policy version is invalid.', q.id));
-    const a = await scoped(q, r, id, 'policy', 'incident:write');
+    const a = await scoped(q, r, s.user.id, id, 'policy', 'incident:write');
     if (!a) return;
     try {
       return r.send(
@@ -165,6 +166,8 @@ export function registerIncidentRoutes(
     }
   });
   app.post('/api/v1/escalation-policies/:policyId/versions/:version/approve', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const { policyId = '', version = '' } = q.params as { policyId?: string; version?: string };
     const p = approveEscalationPolicyVersionRequestSchema.safeParse(q.body);
     if (
@@ -176,7 +179,7 @@ export function registerIncidentRoutes(
       return r
         .code(400)
         .send(error('VALIDATION_ERROR', 'Escalation policy approval is invalid.', q.id));
-    const a = await scoped(q, r, policyId, 'policy', 'incident:approve');
+    const a = await scoped(q, r, s.user.id, policyId, 'policy', 'incident:approve');
     if (!a) return;
     try {
       return r.send(
@@ -195,13 +198,15 @@ export function registerIncidentRoutes(
     }
   });
   app.get('/api/v1/escalation-policies/:policyId', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const id = (q.params as { policyId?: string }).policyId ?? '';
     const p = escalationPolicyReadQuerySchema.safeParse(q.query);
     if (!uuid.test(id) || !p.success)
       return r
         .code(400)
         .send(error('VALIDATION_ERROR', 'Escalation policy query is invalid.', q.id));
-    const a = await scoped(q, r, id, 'policy', 'incident:read');
+    const a = await scoped(q, r, s.user.id, id, 'policy', 'incident:read');
     if (!a) return;
     try {
       const x = await options.service.getPolicy(
@@ -219,10 +224,15 @@ export function registerIncidentRoutes(
     }
   });
   app.post('/api/v1/incidents', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const p = createIncidentRequestSchema.safeParse(q.body);
     if (!p.success)
       return r.code(400).send(error('VALIDATION_ERROR', 'Incident is invalid.', q.id));
-    const a = await scoped(q, r, p.data.alarmId, 'alarm', ['alarm:read', 'incident:write']);
+    const a = await scoped(q, r, s.user.id, p.data.alarmId, 'alarm', [
+      'alarm:read',
+      'incident:write',
+    ]);
     if (!a) return;
     try {
       return r.send(
@@ -239,11 +249,13 @@ export function registerIncidentRoutes(
     kind: 'acknowledged' | 'investigating' | 'resolved' | 'closed',
   ) =>
     app.post(path, async (q, r) => {
+      const s = await session(q, r);
+      if (!s) return;
       const id = (q.params as { incidentId?: string }).incidentId ?? '';
       const p = incidentActionRequestSchema.safeParse(q.body);
       if (!uuid.test(id) || !p.success)
         return r.code(400).send(error('VALIDATION_ERROR', 'Incident action is invalid.', q.id));
-      const a = await scoped(q, r, id, 'incident', 'incident:write');
+      const a = await scoped(q, r, s.user.id, id, 'incident', 'incident:write');
       if (!a) return;
       try {
         return r.send(
@@ -260,13 +272,15 @@ export function registerIncidentRoutes(
   operation('/api/v1/incidents/:incidentId/resolve', 'resolved');
   operation('/api/v1/incidents/:incidentId/close', 'closed');
   app.post('/api/v1/incidents/:incidentId/alarms', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const id = (q.params as { incidentId?: string }).incidentId ?? '',
       p = linkIncidentAlarmRequestSchema.safeParse(q.body);
     if (!uuid.test(id) || !p.success)
       return r.code(400).send(error('VALIDATION_ERROR', 'Incident alarm link is invalid.', q.id));
-    const a = await scoped(q, r, id, 'incident', 'incident:write');
+    const a = await scoped(q, r, s.user.id, id, 'incident', 'incident:write');
     if (!a) return;
-    const alarmActor = await scoped(q, r, p.data.alarmId, 'alarm', 'alarm:read');
+    const alarmActor = await scoped(q, r, s.user.id, p.data.alarmId, 'alarm', 'alarm:read');
     if (!alarmActor) return;
     try {
       return r.send(
@@ -279,11 +293,13 @@ export function registerIncidentRoutes(
     }
   });
   app.post('/api/v1/incidents/:incidentId/assign', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const id = (q.params as { incidentId?: string }).incidentId ?? '',
       p = assignIncidentRequestSchema.safeParse(q.body);
     if (!uuid.test(id) || !p.success)
       return r.code(400).send(error('VALIDATION_ERROR', 'Incident assignment is invalid.', q.id));
-    const a = await scoped(q, r, id, 'incident', 'incident:write');
+    const a = await scoped(q, r, s.user.id, id, 'incident', 'incident:write');
     if (!a) return;
     try {
       return r.send(
@@ -300,11 +316,13 @@ export function registerIncidentRoutes(
     ['corrective-actions', incidentCorrectiveActionRequestSchema, 'corrective_action'],
   ] as const)
     app.post(`/api/v1/incidents/:incidentId/${path}`, async (q, r) => {
+      const s = await session(q, r);
+      if (!s) return;
       const id = (q.params as { incidentId?: string }).incidentId ?? '',
         p = schema.safeParse(q.body);
       if (!uuid.test(id) || !p.success)
         return r.code(400).send(error('VALIDATION_ERROR', 'Incident note is invalid.', q.id));
-      const a = await scoped(q, r, id, 'incident', 'incident:write');
+      const a = await scoped(q, r, s.user.id, id, 'incident', 'incident:write');
       if (!a) return;
       try {
         return r.send(
@@ -317,11 +335,13 @@ export function registerIncidentRoutes(
       }
     });
   app.get('/api/v1/incidents/:incidentId', async (q, r) => {
+    const s = await session(q, r);
+    if (!s) return;
     const id = (q.params as { incidentId?: string }).incidentId ?? '',
       p = incidentReadQuerySchema.safeParse(q.query);
     if (!uuid.test(id) || !p.success)
       return r.code(400).send(error('VALIDATION_ERROR', 'Incident query is invalid.', q.id));
-    const a = await scoped(q, r, id, 'incident', 'incident:read');
+    const a = await scoped(q, r, s.user.id, id, 'incident', 'incident:read');
     if (!a) return;
     try {
       return r.send(

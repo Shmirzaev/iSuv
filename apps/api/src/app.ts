@@ -1,6 +1,6 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
-import { healthStatusSchema } from '@isuv/contracts';
+import { apiErrorSchema, healthStatusSchema } from '@isuv/contracts';
 import { checkDatabase } from './db/client.js';
 import { createLocalDevelopmentIdentityProvider } from './modules/identity/provider.js';
 import type { IdentityProvider } from './modules/identity/provider.js';
@@ -52,6 +52,8 @@ import { registerReportRoutes } from './modules/reports/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
+export const API_BODY_LIMIT_BYTES = 256 * 1024;
+
 export interface AppOptions {
   identityProvider?: IdentityProvider;
   identitySessionRepository?: IdentitySessionRepository;
@@ -84,13 +86,45 @@ export function createApp(
 ): FastifyInstance {
   const app = Fastify({
     logger,
+    // Correlation IDs are searchable audit context, never authorization evidence.
+    // A bounded safe value may be propagated by clients or trusted ingress.
     requestIdHeader: 'x-request-id',
     genReqId: () => crypto.randomUUID(),
+    bodyLimit: API_BODY_LIMIT_BYTES,
+    connectionTimeout: 10_000,
+    requestTimeout: 30_000,
   });
 
   void app.register(cors, { origin: false });
+  app.addHook('onRequest', async (request) => {
+    if (!/^[A-Za-z0-9._:-]{1,128}$/.test(request.id)) request.id = crypto.randomUUID();
+  });
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('x-frame-options', 'DENY');
+    reply.header('referrer-policy', 'no-referrer');
+    if (!reply.hasHeader('cache-control')) reply.header('cache-control', 'no-store');
+  });
+
+  app.setErrorHandler((error, request, reply) => {
+    const reportedStatus =
+      typeof error === 'object' && error !== null && 'statusCode' in error
+        ? (error as { statusCode?: unknown }).statusCode
+        : undefined;
+    const statusCode = reportedStatus === 413 ? 413 : reportedStatus === 400 ? 400 : 500;
+    const code = statusCode === 500 ? 'UNAVAILABLE' : 'VALIDATION_ERROR';
+    const message =
+      statusCode === 413
+        ? 'Request payload exceeds the API limit.'
+        : statusCode === 400
+          ? 'Request payload is invalid.'
+          : 'The API is temporarily unavailable.';
+
+    if (statusCode === 500) request.log.error({ err: error }, 'unhandled API request failure');
+    return reply
+      .code(statusCode)
+      .send(apiErrorSchema.parse({ error: { code, message, requestId: request.id } }));
   });
 
   app.get('/health/live', async () =>

@@ -5,6 +5,7 @@ import {
   networkEntityTypeSchema,
   networkTopologyResponseSchema,
   type ApiError,
+  type Session,
 } from '@isuv/contracts';
 import type { FastifyInstance } from 'fastify';
 import {
@@ -23,6 +24,11 @@ interface NetworkRoutesOptions {
   now?: () => Date;
 }
 
+interface AuthenticatedSession {
+  session: Session;
+  evaluatedAt: Date;
+}
+
 function apiError(code: ApiError['error']['code'], message: string, requestId: string): ApiError {
   return apiErrorSchema.parse({ error: { code, message, requestId } });
 }
@@ -36,16 +42,14 @@ function parseUuid(value: unknown): string | null {
 export function registerNetworkRoutes(app: FastifyInstance, options: NetworkRoutesOptions): void {
   const now = options.now ?? (() => new Date());
 
-  async function authorizeRead(
+  async function authenticate(
     request: { headers: Record<string, string | string[] | undefined>; id: string },
     reply: { code(statusCode: number): { send(value: ApiError): unknown } },
-    territoryId: string,
-    hideUnauthorizedResource = false,
-  ): Promise<boolean> {
+  ): Promise<AuthenticatedSession | null> {
     const identity = await options.identityProvider.resolve(request);
     if (!identity) {
       reply.code(401).send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
-      return false;
+      return null;
     }
     const evaluatedAt = now();
     const session = await options.sessionRepository.findCurrentSession(
@@ -54,14 +58,24 @@ export function registerNetworkRoutes(app: FastifyInstance, options: NetworkRout
     );
     if (!session) {
       reply.code(401).send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
-      return false;
+      return null;
     }
+    return { session, evaluatedAt };
+  }
+
+  async function authorizeRead(
+    authenticated: AuthenticatedSession,
+    request: { id: string },
+    reply: { code(statusCode: number): { send(value: ApiError): unknown } },
+    territoryId: string,
+    hideUnauthorizedResource = false,
+  ): Promise<boolean> {
     const decision = await authorizeTerritoryAction(
       options.authorizationRepository,
-      session.user.id,
+      authenticated.session.user.id,
       'network:read',
       territoryId,
-      evaluatedAt,
+      authenticated.evaluatedAt,
     );
     if (!decision.allowed) {
       if (hideUnauthorizedResource) {
@@ -77,19 +91,23 @@ export function registerNetworkRoutes(app: FastifyInstance, options: NetworkRout
   }
 
   app.get('/api/v1/network/topology', async (request, reply) => {
+    const session = await authenticate(request, reply);
+    if (!session) return;
     const territoryId = parseUuid((request.query as { territoryId?: string }).territoryId);
     if (!territoryId) {
       return reply
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'territoryId must be a UUID.', request.id));
     }
-    if (!(await authorizeRead(request, reply, territoryId))) return;
+    if (!(await authorizeRead(session, request, reply, territoryId))) return;
     return networkTopologyResponseSchema.parse({
       edges: await options.networkRepository.listTopology(territoryId),
     });
   });
 
   app.get('/api/v1/network/entities/:entityType', async (request, reply) => {
+    const session = await authenticate(request, reply);
+    if (!session) return;
     const type = networkEntityTypeSchema.safeParse(
       (request.params as { entityType?: string }).entityType,
     );
@@ -99,13 +117,15 @@ export function registerNetworkRoutes(app: FastifyInstance, options: NetworkRout
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'entityType and territoryId are invalid.', request.id));
     }
-    if (!(await authorizeRead(request, reply, territoryId))) return;
+    if (!(await authorizeRead(session, request, reply, territoryId))) return;
     return networkEntitiesResponseSchema.parse({
       entities: await options.networkRepository.listEntities(type.data, territoryId),
     });
   });
 
   app.get('/api/v1/network/entities/:entityType/:id', async (request, reply) => {
+    const session = await authenticate(request, reply);
+    if (!session) return;
     const type = networkEntityTypeSchema.safeParse(
       (request.params as { entityType?: string }).entityType,
     );
@@ -123,7 +143,7 @@ export function registerNetworkRoutes(app: FastifyInstance, options: NetworkRout
     }
     // Resolve the owning territory internally, but return the same response as
     // an unknown identifier when scope does not permit seeing this entity.
-    if (!(await authorizeRead(request, reply, entity.territoryId, true))) return;
+    if (!(await authorizeRead(session, request, reply, entity.territoryId, true))) return;
     return networkEntityResponseSchema.parse({ entity });
   });
 }

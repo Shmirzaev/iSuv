@@ -66,6 +66,22 @@ test('live operations authenticates before filters and nonenumerates denied scop
       .statusCode,
     401,
   );
+  const malformedAnonymous = await Promise.all([
+    anonymous.inject({ method: 'GET', url: '/api/v1/live-operations?sensorIds=forged' }),
+    anonymous.inject({ method: 'GET', url: '/api/v1/live-operations/not-a-uuid?limit=invalid' }),
+    anonymous.inject({
+      method: 'GET',
+      url: '/api/v1/live-operations/live?territoryId=not-a-uuid',
+      headers: { 'last-event-id': 'bad' },
+    }),
+  ]);
+  for (const response of malformedAnonymous) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(
+      { code: response.json().error.code, message: response.json().error.message },
+      { code: 'UNAUTHENTICATED', message: 'Authentication is required.' },
+    );
+  }
   assert.equal(called, 0);
   await anonymous.close();
 

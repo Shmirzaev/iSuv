@@ -94,10 +94,9 @@ export function registerAlarmRoutes(
     request: FastifyRequest,
     reply: FastifyReply,
     catalogId: string,
+    actorId: string,
     action: 'alarm:write' | 'alarm:approve' | 'alarm:read',
   ) {
-    const resolved = await session(request, reply);
-    if (!resolved) return null;
     let scope;
     try {
       scope = await options.service.findCatalogScope(catalogId);
@@ -105,25 +104,22 @@ export function registerAlarmRoutes(
       unavailable(reply, request.id);
       return null;
     }
-    if (
-      !scope ||
-      !(await authorize(request, reply, scope.territoryId, resolved.user.id, [action]))
-    ) {
+    if (!scope || !(await authorize(request, reply, scope.territoryId, actorId, [action]))) {
       if (!scope)
         reply.code(404).send(error('NOT_FOUND', 'Alarm catalog was not found.', request.id));
       return null;
     }
-    return resolved.user.id;
+    return actorId;
   }
 
   app.post('/api/v1/alarm-catalog', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const parsed = createAlarmCatalogRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm catalog is invalid.', request.id));
-    const resolved = await session(request, reply);
-    if (!resolved) return;
     let territory;
     try {
       territory = await options.service.findTerritory(parsed.data.territoryId);
@@ -146,13 +142,15 @@ export function registerAlarmRoutes(
   });
 
   app.post('/api/v1/alarm-catalog/:catalogId/versions/request', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const catalogId = (request.params as { catalogId?: string }).catalogId;
     const parsed = requestAlarmCatalogVersionRequestSchema.safeParse(request.body);
     if (!uuid.test(catalogId ?? '') || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm catalog version is invalid.', request.id));
-    const actor = await catalogActor(request, reply, catalogId!, 'alarm:write');
+    const actor = await catalogActor(request, reply, catalogId!, resolved.user.id, 'alarm:write');
     if (!actor) return;
     try {
       return await options.service.requestVersion(catalogId!, parsed.data, actor, request.id);
@@ -162,6 +160,8 @@ export function registerAlarmRoutes(
   });
 
   app.post('/api/v1/alarm-catalog/:catalogId/versions/:version/approve', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const { catalogId, version } = request.params as { catalogId?: string; version?: string };
     const parsed = approveAlarmCatalogVersionRequestSchema.safeParse(request.body);
     if (
@@ -173,7 +173,7 @@ export function registerAlarmRoutes(
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm catalog approval is invalid.', request.id));
-    const actor = await catalogActor(request, reply, catalogId!, 'alarm:approve');
+    const actor = await catalogActor(request, reply, catalogId!, resolved.user.id, 'alarm:approve');
     if (!actor) return;
     try {
       return await options.service.approveVersion(
@@ -189,13 +189,15 @@ export function registerAlarmRoutes(
   });
 
   app.get('/api/v1/alarm-catalog/:catalogId', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const catalogId = (request.params as { catalogId?: string }).catalogId;
     const parsed = alarmCatalogReadQuerySchema.safeParse(request.query);
     if (!uuid.test(catalogId ?? '') || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm catalog query is invalid.', request.id));
-    const actor = await catalogActor(request, reply, catalogId!, 'alarm:read');
+    const actor = await catalogActor(request, reply, catalogId!, resolved.user.id, 'alarm:read');
     if (!actor) return;
     try {
       const knownAt = parsed.data.knownAt ?? now().toISOString();
@@ -219,13 +221,13 @@ export function registerAlarmRoutes(
   });
 
   app.post('/api/v1/alarms/materialize', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const parsed = materializeAlarmRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm materialization is invalid.', request.id));
-    const resolved = await session(request, reply);
-    if (!resolved) return;
     let scope;
     try {
       scope = await options.service.findRuleScope(parsed.data.ruleId);

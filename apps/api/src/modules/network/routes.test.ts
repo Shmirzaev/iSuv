@@ -110,12 +110,12 @@ const networkRepository: NetworkReadRepository = {
   },
 };
 
-function createNetworkTestApp() {
+function createNetworkTestApp(repository: NetworkReadRepository = networkRepository) {
   return createApp(async () => undefined, false, {
     identityProvider,
     identitySessionRepository: sessionRepository,
     territoryAuthorizationRepository: authorizationRepository,
-    networkReadRepository: networkRepository,
+    networkReadRepository: repository,
   });
 }
 
@@ -182,13 +182,72 @@ test('network read fails closed for cross-territory, inactive, and unknown ident
   await app.close();
 });
 
-test('the API has no physical-control command route', async () => {
-  const app = createNetworkTestApp();
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/v1/control-structures/c4000000-0000-4000-8000-000000000001/commands',
-    headers: { 'x-isuv-user-id': districtUser },
+test('anonymous network reads fail before validation or network repository access', async () => {
+  const calls = { listEntities: 0, findEntity: 0, listTopology: 0 };
+  const app = createNetworkTestApp({
+    async listEntities() {
+      calls.listEntities += 1;
+      throw new Error('anonymous callers must not reach listEntities');
+    },
+    async findEntity() {
+      calls.findEntity += 1;
+      throw new Error('anonymous callers must not reach findEntity');
+    },
+    async listTopology() {
+      calls.listTopology += 1;
+      throw new Error('anonymous callers must not reach listTopology');
+    },
   });
-  assert.equal(response.statusCode, 404);
+
+  const responses = await Promise.all([
+    app.inject({
+      method: 'GET',
+      url: '/api/v1/network/entities/not-an-entity/not-a-uuid',
+    }),
+    app.inject({
+      method: 'GET',
+      url: `/api/v1/network/entities/junction/${junction.id}`,
+    }),
+    app.inject({
+      method: 'GET',
+      url: '/api/v1/network/entities/junction/c4000000-0000-4000-8000-000000000099',
+    }),
+    app.inject({
+      method: 'GET',
+      url: '/api/v1/network/entities/not-an-entity?territoryId=not-a-uuid',
+    }),
+    app.inject({ method: 'GET', url: '/api/v1/network/topology?territoryId=not-a-uuid' }),
+  ]);
+
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(
+      { code: response.json().error.code, message: response.json().error.message },
+      { code: 'UNAUTHENTICATED', message: 'Authentication is required.' },
+    );
+  }
+  assert.deepEqual(calls, { listEntities: 0, findEntity: 0, listTopology: 0 });
+  await app.close();
+});
+
+test('the API exposes incident workflow metadata but no physical-control command or actuation route', async () => {
+  const app = createNetworkTestApp();
+  const physicalControlPaths = [
+    '/api/v1/control-structures/c4000000-0000-4000-8000-000000000001/commands',
+    '/api/v1/gates/c4000000-0000-4000-8000-000000000001/commands',
+    '/api/v1/pumps/c4000000-0000-4000-8000-000000000001/actuate',
+    '/api/v1/valves/c4000000-0000-4000-8000-000000000001/command',
+    '/api/v1/plcs/c4000000-0000-4000-8000-000000000001/commands',
+    '/api/v1/rtus/c4000000-0000-4000-8000-000000000001/actuation',
+  ];
+  for (const url of physicalControlPaths) {
+    const response = await app.inject({
+      method: 'POST',
+      url,
+      headers: { 'x-isuv-user-id': districtUser },
+    });
+    assert.equal(response.statusCode, 404, url);
+  }
+  assert.match(app.printRoutes(), /incidents/);
   await app.close();
 });

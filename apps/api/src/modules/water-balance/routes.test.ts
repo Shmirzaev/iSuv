@@ -57,19 +57,102 @@ const versionPayload = {
     },
   ],
 };
-test('water balance route validates request before resource access', async () => {
+test('water balance routes authenticate before parsing malformed targets or consulting protected dependencies', async () => {
+  let identityCalls = 0;
+  let sessionCalls = 0;
+  let authorizationCalls = 0;
+  let lookupCalls = 0;
   const app = Fastify();
   registerWaterBalanceRoutes(app, {
-    identityProvider: { resolve: async () => null },
-    sessionRepository: { findCurrentSession: async () => null } as never,
-    authorizationRepository: {} as never,
-    service: {} as never,
+    identityProvider: {
+      async resolve() {
+        identityCalls += 1;
+        return null;
+      },
+    } as IdentityProvider,
+    sessionRepository: {
+      async findCurrentSession() {
+        sessionCalls += 1;
+        return null;
+      },
+    } as unknown as IdentitySessionRepository,
+    authorizationRepository: {
+      async findEffectiveGrantsForTarget() {
+        authorizationCalls += 1;
+        return [];
+      },
+    } as unknown as TerritoryAuthorizationRepository,
+    service: {
+      async findCalculationTerritories() {
+        lookupCalls += 1;
+        return [];
+      },
+      async findJunctionTerritories() {
+        lookupCalls += 1;
+        return [];
+      },
+      async findModelTerritories() {
+        lookupCalls += 1;
+        return [];
+      },
+    } as unknown as PostgresWaterBalanceService,
+  });
+  const requests = [
+    { method: 'GET', url: '/api/v1/network/junctions/not-a-uuid/water-balance?from=invalid' },
+    { method: 'POST', url: '/api/v1/water-balance-models', payload: {} },
+    {
+      method: 'POST',
+      url: '/api/v1/water-balance-models/not-a-uuid/versions/request',
+      payload: {},
+    },
+    {
+      method: 'POST',
+      url: '/api/v1/water-balance-models/not-a-uuid/versions/zero/approve',
+      payload: {},
+    },
+    {
+      method: 'POST',
+      url: '/api/v1/water-balance-models',
+      payload: {
+        junctionId,
+        provenance: 'synthetic:route-test',
+        reason: 'well-formed target must remain private',
+      },
+    },
+  ] as const;
+  for (const request of requests) {
+    const response = await app.inject(request);
+    assert.equal(response.statusCode, 401);
+    assert.equal(response.json().error.code, 'UNAUTHENTICATED');
+  }
+  assert.equal(identityCalls, requests.length);
+  assert.equal(sessionCalls, 0);
+  assert.equal(authorizationCalls, 0);
+  assert.equal(lookupCalls, 0);
+  await app.close();
+});
+
+test('water balance routes retain authenticated validation errors without resource access', async () => {
+  let lookupCalls = 0;
+  const app = Fastify();
+  registerWaterBalanceRoutes(app, {
+    identityProvider,
+    sessionRepository,
+    authorizationRepository: allowed,
+    service: {
+      async findCalculationTerritories() {
+        lookupCalls += 1;
+        return [];
+      },
+    } as unknown as PostgresWaterBalanceService,
   });
   const response = await app.inject({
     method: 'GET',
     url: '/api/v1/network/junctions/not-a-uuid/water-balance',
   });
   assert.equal(response.statusCode, 400);
+  assert.equal(response.json().error.code, 'VALIDATION_ERROR');
+  assert.equal(lookupCalls, 0);
   await app.close();
 });
 

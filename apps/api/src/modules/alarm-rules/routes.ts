@@ -93,10 +93,9 @@ export function registerAlarmRuleRoutes(
     request: FastifyRequest,
     reply: FastifyReply,
     ruleId: string,
+    actorId: string,
     action: 'alarm:write' | 'alarm:approve',
   ) {
-    const resolved = await session(request, reply);
-    if (!resolved) return null;
     let scope;
     try {
       scope = await options.service.findRuleScope(ruleId);
@@ -109,23 +108,23 @@ export function registerAlarmRuleRoutes(
       return null;
     }
     if (
-      !(await authorize(request, reply, scope.territoryId, resolved.user.id, [
+      !(await authorize(request, reply, scope.territoryId, actorId, [
         action,
         sourceRead(scope.subjectKind),
       ]))
     )
       return null;
-    return resolved.user.id;
+    return actorId;
   }
 
   app.post('/api/v1/alarm-rules', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const parsed = createAlarmRuleRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm rule is invalid.', request.id));
-    const resolved = await session(request, reply);
-    if (!resolved) return;
     let territory;
     try {
       territory = await options.service.findTerritory(parsed.data.territoryId);
@@ -149,13 +148,15 @@ export function registerAlarmRuleRoutes(
   });
 
   app.post('/api/v1/alarm-rules/:ruleId/versions/request', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const ruleId = (request.params as { ruleId?: string }).ruleId;
     const parsed = requestAlarmRuleVersionRequestSchema.safeParse(request.body);
     if (!uuid.test(ruleId ?? '') || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm rule version is invalid.', request.id));
-    const actor = await ruleActor(request, reply, ruleId!, 'alarm:write');
+    const actor = await ruleActor(request, reply, ruleId!, resolved.user.id, 'alarm:write');
     if (!actor) return;
     try {
       return await options.service.request(ruleId!, parsed.data, actor, request.id);
@@ -165,6 +166,8 @@ export function registerAlarmRuleRoutes(
   });
 
   app.post('/api/v1/alarm-rules/:ruleId/versions/:version/approve', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const { ruleId, version } = request.params as { ruleId?: string; version?: string };
     const parsed = approveAlarmRuleVersionRequestSchema.safeParse(request.body);
     if (
@@ -176,7 +179,7 @@ export function registerAlarmRuleRoutes(
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm rule approval is invalid.', request.id));
-    const actor = await ruleActor(request, reply, ruleId!, 'alarm:approve');
+    const actor = await ruleActor(request, reply, ruleId!, resolved.user.id, 'alarm:approve');
     if (!actor) return;
     try {
       return await options.service.approve(
@@ -192,13 +195,15 @@ export function registerAlarmRuleRoutes(
   });
 
   app.post('/api/v1/alarm-rules/:ruleId/evaluate', async (request, reply) => {
+    const resolved = await session(request, reply);
+    if (!resolved) return;
     const ruleId = (request.params as { ruleId?: string }).ruleId;
     const parsed = alarmRuleEvaluationQuerySchema.safeParse(request.body);
     if (!uuid.test(ruleId ?? '') || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The alarm rule evaluation is invalid.', request.id));
-    const actor = await ruleActor(request, reply, ruleId!, 'alarm:write');
+    const actor = await ruleActor(request, reply, ruleId!, resolved.user.id, 'alarm:write');
     if (!actor) return;
     try {
       return alarmRuleEvaluationResponseSchema.parse({

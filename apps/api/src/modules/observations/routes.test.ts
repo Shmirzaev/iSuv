@@ -190,6 +190,46 @@ test('anonymous observation requests do not resolve known identifiers and timezo
   await app.close();
 });
 
+test('anonymous malformed observation requests are rejected before validation or domain access', async () => {
+  let domainCalls = 0;
+  const guardedService = {
+    ...service,
+    async resolveIngestionTerritory(...args: Parameters<typeof service.resolveIngestionTerritory>) {
+      domainCalls += 1;
+      return service.resolveIngestionTerritory(...args);
+    },
+    async findObservationTerritory(...args: Parameters<typeof service.findObservationTerritory>) {
+      domainCalls += 1;
+      return service.findObservationTerritory(...args);
+    },
+  } as unknown as PostgresObservationService;
+  const app = createApp(async () => undefined, false, {
+    identityProvider,
+    identitySessionRepository: sessionRepository,
+    territoryAuthorizationRepository: authorizationRepository,
+    observationService: guardedService,
+  });
+  const responses = await Promise.all([
+    app.inject({ method: 'POST', url: '/api/v1/observations', payload: {} }),
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/observations/not-a-uuid/corrections',
+      payload: {},
+    }),
+    app.inject({ method: 'GET', url: '/api/v1/observations/not-a-uuid?asOf=invalid' }),
+    app.inject({ method: 'GET', url: '/api/v1/observations/not-a-uuid/history?limit=invalid' }),
+  ]);
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(
+      { code: response.json().error.code, message: response.json().error.message },
+      { code: 'UNAUTHENTICATED', message: 'Authentication is required.' },
+    );
+  }
+  assert.equal(domainCalls, 0);
+  await app.close();
+});
+
 test('raw ingestion rejects estimated quality before resolving an identifier', async () => {
   const app = createApp(async () => undefined, false, {
     identityProvider,

@@ -58,11 +58,9 @@ function unavailable(
 }
 export function registerAllocationPlanRoutes(app: FastifyInstance, options: Options): void {
   const now = options.now ?? (() => new Date());
-  async function planActor(
+  async function authenticatedActor(
     request: { headers: Record<string, string | string[] | undefined>; id: string },
     reply: { code: (status: number) => { send: (value: ApiError) => unknown } },
-    planId: string,
-    action: 'allocation_plan:read' | 'allocation_plan:write' | 'allocation_plan:approve',
   ): Promise<string | null> {
     const identity = await options.identityProvider.resolve(request);
     const session = identity
@@ -72,6 +70,15 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
       reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
       return null;
     }
+    return session.user.id;
+  }
+  async function authorizePlanActor(
+    request: { id: string },
+    reply: { code: (status: number) => { send: (value: ApiError) => unknown } },
+    actor: string,
+    planId: string,
+    action: 'allocation_plan:read' | 'allocation_plan:write' | 'allocation_plan:approve',
+  ): Promise<string | null> {
     let territory: string | null;
     try {
       territory = await options.service.findPlanTerritory(planId);
@@ -87,7 +94,7 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     try {
       decision = await authorizeTerritoryAction(
         options.authorizationRepository,
-        session.user.id,
+        actor,
         action,
         territory,
         now(),
@@ -100,22 +107,16 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
       reply.code(404).send(error('NOT_FOUND', 'Allocation plan was not found.', request.id));
       return null;
     }
-    return session.user.id;
+    return actor;
   }
   app.post('/api/v1/allocation-plans', async (request, reply) => {
+    const actor = await authenticatedActor(request, reply);
+    if (!actor) return;
     const parsed = createAllocationPlanRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan is invalid.', request.id));
-    const identity = await options.identityProvider.resolve(request);
-    const session = identity
-      ? await options.sessionRepository.findCurrentSession(identity.userId, now())
-      : null;
-    if (!session)
-      return reply
-        .code(401)
-        .send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
     let territory: string | null;
     try {
       territory = await options.service.findSectionTerritory(parsed.data.waterSectionId);
@@ -128,7 +129,7 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     try {
       decision = await authorizeTerritoryAction(
         options.authorizationRepository,
-        session.user.id,
+        actor,
         'allocation_plan:write',
         territory,
         now(),
@@ -140,7 +141,7 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
       return reply.code(404).send(error('NOT_FOUND', 'Allocation plan was not found.', request.id));
     try {
       return allocationPlanVersionResponseSchema.parse({
-        planVersion: await options.service.create(parsed.data, session.user.id, request.id),
+        planVersion: await options.service.create(parsed.data, actor, request.id),
       });
     } catch (issue) {
       if (issue instanceof AllocationPlanError) return fail(reply, request.id, issue);
@@ -148,13 +149,21 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     }
   });
   app.post('/api/v1/allocation-plans/:planId/versions', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const planId = (request.params as { planId?: string }).planId;
     const parsed = appendAllocationPlanVersionRequestSchema.safeParse(request.body);
     if (!planId || !uuid.test(planId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan is invalid.', request.id));
-    const actor = await planActor(request, reply, planId, 'allocation_plan:write');
+    const actor = await authorizePlanActor(
+      request,
+      reply,
+      authenticated,
+      planId,
+      'allocation_plan:write',
+    );
     if (!actor) return;
     try {
       return allocationPlanVersionResponseSchema.parse({
@@ -166,6 +175,8 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     }
   });
   app.post('/api/v1/allocation-plans/:planId/versions/:version/request', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const { planId, version } = request.params as { planId?: string; version?: string };
     const parsed = requestAllocationPlanVersionRequestSchema.safeParse(request.body);
     if (
@@ -178,7 +189,13 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan is invalid.', request.id));
-    const actor = await planActor(request, reply, planId, 'allocation_plan:write');
+    const actor = await authorizePlanActor(
+      request,
+      reply,
+      authenticated,
+      planId,
+      'allocation_plan:write',
+    );
     if (!actor) return;
     try {
       return allocationPlanVersionResponseSchema.parse({
@@ -196,6 +213,8 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     }
   });
   app.post('/api/v1/allocation-plans/:planId/versions/:version/approve', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const { planId, version } = request.params as { planId?: string; version?: string };
     const parsed = approveAllocationPlanVersionRequestSchema.safeParse(request.body);
     if (
@@ -208,7 +227,13 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan is invalid.', request.id));
-    const actor = await planActor(request, reply, planId, 'allocation_plan:approve');
+    const actor = await authorizePlanActor(
+      request,
+      reply,
+      authenticated,
+      planId,
+      'allocation_plan:approve',
+    );
     if (!actor) return;
     try {
       return allocationPlanVersionResponseSchema.parse({
@@ -226,13 +251,21 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     }
   });
   app.get('/api/v1/allocation-plans/:planId/current', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const planId = (request.params as { planId?: string }).planId;
     const parsed = allocationPlanCurrentQuerySchema.safeParse(request.query);
     if (!planId || !uuid.test(planId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan query is invalid.', request.id));
-    const actor = await planActor(request, reply, planId, 'allocation_plan:read');
+    const actor = await authorizePlanActor(
+      request,
+      reply,
+      authenticated,
+      planId,
+      'allocation_plan:read',
+    );
     if (!actor) return;
     try {
       return allocationPlanResolutionSchema.parse(
@@ -247,13 +280,21 @@ export function registerAllocationPlanRoutes(app: FastifyInstance, options: Opti
     }
   });
   app.get('/api/v1/allocation-plans/:planId/history', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const planId = (request.params as { planId?: string }).planId;
     const parsed = allocationPlanHistoryQuerySchema.safeParse(request.query);
     if (!planId || !uuid.test(planId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation plan query is invalid.', request.id));
-    const actor = await planActor(request, reply, planId, 'allocation_plan:read');
+    const actor = await authorizePlanActor(
+      request,
+      reply,
+      authenticated,
+      planId,
+      'allocation_plan:read',
+    );
     if (!actor) return;
     try {
       return allocationPlanHistoryResponseSchema.parse(

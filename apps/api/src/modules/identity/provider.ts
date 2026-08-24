@@ -6,7 +6,8 @@ export interface IdentityRequestHeaders {
 
 export interface ResolvedIdentity {
   userId: string;
-  provider: 'local-development';
+  /** Adapter identifier (for example local-development, oidc, or saml). */
+  provider: string;
 }
 
 /**
@@ -18,17 +19,27 @@ export interface IdentityProvider {
 }
 
 export interface LocalDevelopmentIdentityProviderOptions {
+  /**
+   * Injectable for deterministic tests and hosts that establish the runtime
+   * environment before constructing adapters. Defaults to NODE_ENV.
+   */
+  environment?: string | undefined;
   enabled?: boolean;
 }
 
 export function createLocalDevelopmentIdentityProvider(
   options: LocalDevelopmentIdentityProviderOptions = {},
 ): IdentityProvider {
-  const enabled = options.enabled ?? process.env.ISUV_ENABLE_LOCAL_IDENTITY === 'true';
+  const environment = options.environment ?? process.env.NODE_ENV;
+  const isProduction = environment?.trim().toLowerCase() === 'production';
+  const enabled =
+    !isProduction && (options.enabled ?? process.env.ISUV_ENABLE_LOCAL_IDENTITY === 'true');
 
   return {
     async resolve(request): Promise<ResolvedIdentity | null> {
-      // This adapter is deliberately opt-in; production defaults to fail closed.
+      // This header adapter is deliberately opt-in and always fails closed in
+      // production: it exists only to make local/test fixtures usable without
+      // coupling application code to a real identity provider.
       if (!enabled) return null;
       const value = request.headers['x-isuv-user-id'];
       const candidate = Array.isArray(value) ? value[0] : value;

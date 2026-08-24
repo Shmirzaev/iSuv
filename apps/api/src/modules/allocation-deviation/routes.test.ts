@@ -54,6 +54,69 @@ test('allocation deviation endpoint validates input and does not enumerate inacc
   await app.close();
 });
 
+test('anonymous allocation-deviation requests authenticate before validation, lookup, or authorization', async () => {
+  let lookups = 0;
+  let authorizations = 0;
+  const app = createApp(undefined, false, {
+    identityProvider: { resolve: async () => null } as unknown as IdentityProvider,
+    identitySessionRepository: sessions,
+    territoryAuthorizationRepository: {
+      findEffectiveGrantsForTarget: async () => {
+        authorizations += 1;
+        return [];
+      },
+    } as unknown as TerritoryAuthorizationRepository,
+    allocationDeviationService: {
+      findPlanTerritory: async () => {
+        lookups += 1;
+        return null;
+      },
+      findEntryTerritory: async () => {
+        lookups += 1;
+        return null;
+      },
+      findSectionTerritory: async () => {
+        lookups += 1;
+        return null;
+      },
+      findTolerancePolicyTerritory: async () => {
+        lookups += 1;
+        return null;
+      },
+    } as unknown as PostgresAllocationDeviationService,
+  });
+  const requests = [
+    {
+      method: 'GET' as const,
+      url: '/api/v1/allocation-plans/not-a-uuid/deviation?intervalStart=nope',
+    },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/allocation-plan-entries/not-a-uuid/measurement-binding',
+      payload: {},
+    },
+    { method: 'POST' as const, url: '/api/v1/section-tolerance-policies', payload: {} },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/section-tolerance-policies/not-a-uuid/versions/request',
+      payload: {},
+    },
+    {
+      method: 'POST' as const,
+      url: '/api/v1/section-tolerance-policies/not-a-uuid/versions/nope/approve',
+      payload: {},
+    },
+  ];
+  for (const request of requests) {
+    const response = await app.inject(request);
+    assert.equal(response.statusCode, 401, request.url);
+    assert.equal(response.json().error.code, 'UNAUTHENTICATED', request.url);
+  }
+  assert.equal(lookups, 0);
+  assert.equal(authorizations, 0);
+  await app.close();
+});
+
 test('allocation authoring authenticates before lookup and never calls mutations when denied', async () => {
   const entryId = 'd1000000-0000-4000-8000-000000000020';
   const payload = {

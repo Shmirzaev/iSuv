@@ -41,9 +41,12 @@ export function registerQuantityDerivationRoutes(
     }
     return result;
   }
-  async function readStation(request: FastifyRequest, reply: FastifyReply, stationId: string) {
-    const current = await session(request, reply);
-    if (!current) return false;
+  async function readStation(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    stationId: string,
+    userId: string,
+  ) {
     const territory = await options.service.findStationTerritory(stationId);
     if (!territory) {
       reply
@@ -53,7 +56,7 @@ export function registerQuantityDerivationRoutes(
     }
     const allowed = await authorizeTerritoryAction(
       options.authorizationRepository,
-      current.user.id,
+      userId,
       'water_balance:read',
       territory,
       now(),
@@ -67,6 +70,8 @@ export function registerQuantityDerivationRoutes(
     return true;
   }
   app.get('/api/v1/stations/:stationId/derived-volume', async (request, reply) => {
+    const current = await session(request, reply);
+    if (!current) return;
     const stationId = (request.params as { stationId?: string }).stationId;
     const parsed = deriveVolumeQuerySchema.safeParse(request.query);
     if (!stationId || !uuid.test(stationId) || !parsed.success)
@@ -74,7 +79,7 @@ export function registerQuantityDerivationRoutes(
         .code(400)
         .send(error('VALIDATION_ERROR', 'The quantity derivation query is invalid.', request.id));
     try {
-      if (!(await readStation(request, reply, stationId))) return;
+      if (!(await readStation(request, reply, stationId, current.user.id))) return;
       return derivedVolumeResponseSchema.parse({
         result: await options.service.derive(stationId, parsed.data),
       });
@@ -91,14 +96,14 @@ export function registerQuantityDerivationRoutes(
     }
   });
   app.get('/api/v1/rating-curves/:curveId', async (request, reply) => {
+    const current = await session(request, reply);
+    if (!current) return;
     const curveId = (request.params as { curveId?: string }).curveId;
     const parsed = ratingCurveLookupQuerySchema.safeParse(request.query);
     if (!curveId || !uuid.test(curveId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The rating curve query is invalid.', request.id));
-    const current = await session(request, reply);
-    if (!current) return;
     try {
       const found = await options.service.findRatingCurve(
         curveId,

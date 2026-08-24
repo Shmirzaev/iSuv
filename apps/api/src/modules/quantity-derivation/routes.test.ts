@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import Fastify from 'fastify';
 import { createApp } from '../../app.js';
 import type { IdentityProvider } from '../identity/provider.js';
 import type { IdentitySessionRepository } from '../identity/repository.js';
 import type { TerritoryAuthorizationRepository } from '../authorization/service.js';
 import type { PostgresQuantityDerivationService } from './service.js';
+import { registerQuantityDerivationRoutes } from './routes.js';
 const userId = 'a3000000-0000-4000-8000-000000000001',
   territoryId = 'a2000000-0000-4000-8000-000000000004',
   stationId = 'b1000000-0000-4000-8000-000000000001',
@@ -162,5 +164,62 @@ test('quantity derivation degrades as unavailable rather than fabricating a volu
   });
   assert.equal(response.statusCode, 503);
   assert.equal(response.json().error.code, 'UNAVAILABLE');
+  await app.close();
+});
+
+test('quantity derivation routes authenticate before parsing malformed input or resolving a resource', async () => {
+  let identityCalls = 0;
+  let sessionCalls = 0;
+  let serviceCalls = 0;
+  let authorizationCalls = 0;
+  const app = Fastify();
+  registerQuantityDerivationRoutes(app, {
+    identityProvider: {
+      async resolve() {
+        identityCalls += 1;
+        return null;
+      },
+    },
+    sessionRepository: {
+      async findCurrentSession() {
+        sessionCalls += 1;
+        return null;
+      },
+    } as IdentitySessionRepository,
+    authorizationRepository: new Proxy(
+      {},
+      {
+        get() {
+          authorizationCalls += 1;
+          return async () => [];
+        },
+      },
+    ) as TerritoryAuthorizationRepository,
+    service: new Proxy(
+      {},
+      {
+        get() {
+          serviceCalls += 1;
+          return async () => null;
+        },
+      },
+    ) as PostgresQuantityDerivationService,
+  });
+  const responses = await Promise.all([
+    app.inject({ method: 'GET', url: '/api/v1/stations/not-a-uuid/derived-volume?bad=true' }),
+    app.inject({ method: 'GET', url: '/api/v1/rating-curves/not-a-uuid?bad=true' }),
+  ]);
+  assert.equal(identityCalls, 2);
+  assert.equal(sessionCalls, 0);
+  assert.equal(serviceCalls, 0);
+  assert.equal(authorizationCalls, 0);
+  for (const response of responses) {
+    assert.equal(response.statusCode, 401);
+    assert.deepEqual(response.json().error, {
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication is required.',
+      requestId: response.json().error.requestId,
+    });
+  }
   await app.close();
 });

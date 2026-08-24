@@ -100,13 +100,13 @@ export function registerObservationRoutes(
   }
 
   app.post('/api/v1/observations', async (request, reply) => {
+    if (!(await authenticate(request, reply))) return;
     const parsed = ingestObservationRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'The observation is invalid.', request.id));
     }
-    if (!(await authenticate(request, reply))) return;
     const territoryId = await options.observationService.resolveIngestionTerritory(
       parsed.data.sensorId,
       parsed.data.deviceId,
@@ -137,6 +137,7 @@ export function registerObservationRoutes(
   });
 
   app.post('/api/v1/observations/:lineageId/corrections', async (request, reply) => {
+    if (!(await authenticate(request, reply))) return;
     const lineageId = (request.params as { lineageId?: string }).lineageId;
     const parsed = correctObservationRequestSchema.safeParse(request.body);
     if (!lineageId || !uuidPattern.test(lineageId) || !parsed.success) {
@@ -144,7 +145,6 @@ export function registerObservationRoutes(
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'The correction is invalid.', request.id));
     }
-    if (!(await authenticate(request, reply))) return;
     const territoryId = await options.observationService.findObservationTerritory(lineageId);
     const authorization = territoryId
       ? await authorize(request, reply, territoryId, 'telemetry:correct')
@@ -176,6 +176,7 @@ export function registerObservationRoutes(
   });
 
   app.get('/api/v1/observations/:lineageId', async (request, reply) => {
+    if (!(await authenticate(request, reply))) return;
     const lineageId = (request.params as { lineageId?: string }).lineageId;
     const asOfQuery = observationAsOfQuerySchema.safeParse(request.query);
     if (!lineageId || !uuidPattern.test(lineageId) || !asOfQuery.success) {
@@ -183,7 +184,6 @@ export function registerObservationRoutes(
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'The observation query is invalid.', request.id));
     }
-    if (!(await authenticate(request, reply))) return;
     const territoryId = await options.observationService.findObservationTerritory(lineageId);
     const authorization = territoryId
       ? await authorize(request, reply, territoryId, 'telemetry:read')
@@ -202,13 +202,13 @@ export function registerObservationRoutes(
   });
 
   app.get('/api/v1/observations/:lineageId/history', async (request, reply) => {
+    if (!(await authenticate(request, reply))) return;
     const lineageId = (request.params as { lineageId?: string }).lineageId;
     const parsed = observationHistoryQuerySchema.safeParse(request.query);
     if (!lineageId || !uuidPattern.test(lineageId) || !parsed.success)
       return reply
         .code(400)
         .send(apiError('VALIDATION_ERROR', 'The observation query is invalid.', request.id));
-    if (!(await authenticate(request, reply))) return;
     const territoryId = await options.observationService.findObservationTerritory(lineageId);
     const authorization = territoryId
       ? await authorize(request, reply, territoryId, 'telemetry:read')

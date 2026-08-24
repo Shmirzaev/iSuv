@@ -58,12 +58,9 @@ export function registerAllocationDeviationRoutes(
           requestId,
         ),
       );
-  async function actorFor(
+  async function authenticatedActor(
     request: { headers: Record<string, string | string[] | undefined>; id: string },
     reply: { code: (status: number) => { send: (value: ApiError) => unknown } },
-    findTerritory: () => Promise<string | null>,
-    action: 'allocation_plan:read' | 'allocation_plan:write' | 'allocation_plan:approve',
-    message: string,
   ): Promise<string | null> {
     const identity = await options.identityProvider.resolve(request);
     const session = identity
@@ -73,6 +70,16 @@ export function registerAllocationDeviationRoutes(
       reply.code(401).send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
       return null;
     }
+    return session.user.id;
+  }
+  async function authorizeActor(
+    request: { id: string },
+    reply: { code: (status: number) => { send: (value: ApiError) => unknown } },
+    actor: string,
+    findTerritory: () => Promise<string | null>,
+    action: 'allocation_plan:read' | 'allocation_plan:write' | 'allocation_plan:approve',
+    message: string,
+  ): Promise<string | null> {
     try {
       const territory = await findTerritory();
       if (!territory) {
@@ -81,7 +88,7 @@ export function registerAllocationDeviationRoutes(
       }
       const decision = await authorizeTerritoryAction(
         options.authorizationRepository,
-        session.user.id,
+        actor,
         action,
         territory,
         now(),
@@ -90,29 +97,21 @@ export function registerAllocationDeviationRoutes(
         reply.code(404).send(error('NOT_FOUND', message, request.id));
         return null;
       }
-      return session.user.id;
+      return actor;
     } catch {
       unavailable(reply, request.id);
       return null;
     }
   }
   app.get('/api/v1/allocation-plans/:planId/deviation', async (request, reply) => {
+    const actor = await authenticatedActor(request, reply);
+    if (!actor) return;
     const planId = (request.params as { planId?: string }).planId;
     const parsed = allocationDeviationQuerySchema.safeParse(request.query);
     if (!planId || !uuid.test(planId) || !parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The allocation deviation query is invalid.', request.id));
-    const identity = await options.identityProvider.resolve(request);
-    if (!identity)
-      return reply
-        .code(401)
-        .send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
-    const current = await options.sessionRepository.findCurrentSession(identity.userId, now());
-    if (!current)
-      return reply
-        .code(401)
-        .send(error('UNAUTHENTICATED', 'Authentication is required.', request.id));
     try {
       const territory = await options.service.findPlanTerritory(planId);
       if (!territory)
@@ -122,14 +121,14 @@ export function registerAllocationDeviationRoutes(
       const [planAllowed, balanceAllowed] = await Promise.all([
         authorizeTerritoryAction(
           options.authorizationRepository,
-          current.user.id,
+          actor,
           'allocation_plan:read',
           territory,
           now(),
         ),
         authorizeTerritoryAction(
           options.authorizationRepository,
-          current.user.id,
+          actor,
           'water_balance:read',
           territory,
           now(),
@@ -160,15 +159,18 @@ export function registerAllocationDeviationRoutes(
   app.post(
     '/api/v1/allocation-plan-entries/:entryId/measurement-binding',
     async (request, reply) => {
+      const authenticated = await authenticatedActor(request, reply);
+      if (!authenticated) return;
       const entryId = (request.params as { entryId?: string }).entryId;
       const parsed = createAllocationEntryMeasurementBindingRequestSchema.safeParse(request.body);
       if (!entryId || !uuid.test(entryId) || !parsed.success)
         return reply
           .code(400)
           .send(error('VALIDATION_ERROR', 'The measurement binding is invalid.', request.id));
-      const actor = await actorFor(
+      const actor = await authorizeActor(
         request,
         reply,
+        authenticated,
         () => options.service.findEntryTerritory(entryId),
         'allocation_plan:write',
         'Allocation plan entry was not found.',
@@ -185,14 +187,17 @@ export function registerAllocationDeviationRoutes(
     },
   );
   app.post('/api/v1/section-tolerance-policies', async (request, reply) => {
+    const authenticated = await authenticatedActor(request, reply);
+    if (!authenticated) return;
     const parsed = createSectionTolerancePolicyRequestSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
         .code(400)
         .send(error('VALIDATION_ERROR', 'The tolerance policy is invalid.', request.id));
-    const actor = await actorFor(
+    const actor = await authorizeActor(
       request,
       reply,
+      authenticated,
       () => options.service.findSectionTerritory(parsed.data.waterSectionId),
       'allocation_plan:write',
       'Water section was not found.',
@@ -210,15 +215,18 @@ export function registerAllocationDeviationRoutes(
   app.post(
     '/api/v1/section-tolerance-policies/:policyId/versions/request',
     async (request, reply) => {
+      const authenticated = await authenticatedActor(request, reply);
+      if (!authenticated) return;
       const policyId = (request.params as { policyId?: string }).policyId;
       const parsed = requestSectionTolerancePolicyVersionRequestSchema.safeParse(request.body);
       if (!policyId || !uuid.test(policyId) || !parsed.success)
         return reply
           .code(400)
           .send(error('VALIDATION_ERROR', 'The tolerance policy version is invalid.', request.id));
-      const actor = await actorFor(
+      const actor = await authorizeActor(
         request,
         reply,
+        authenticated,
         () => options.service.findTolerancePolicyTerritory(policyId),
         'allocation_plan:write',
         'Tolerance policy was not found.',
@@ -242,6 +250,8 @@ export function registerAllocationDeviationRoutes(
   app.post(
     '/api/v1/section-tolerance-policies/:policyId/versions/:version/approve',
     async (request, reply) => {
+      const authenticated = await authenticatedActor(request, reply);
+      if (!authenticated) return;
       const { policyId, version } = request.params as { policyId?: string; version?: string };
       const parsed = approveSectionTolerancePolicyVersionRequestSchema.safeParse(request.body);
       if (
@@ -254,9 +264,10 @@ export function registerAllocationDeviationRoutes(
         return reply
           .code(400)
           .send(error('VALIDATION_ERROR', 'The tolerance policy version is invalid.', request.id));
-      const actor = await actorFor(
+      const actor = await authorizeActor(
         request,
         reply,
+        authenticated,
         () => options.service.findTolerancePolicyTerritory(policyId),
         'allocation_plan:approve',
         'Tolerance policy was not found.',
