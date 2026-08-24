@@ -124,6 +124,34 @@ async function seedSyntheticDashboardScenario(client: {
     ON CONFLICT (scenario_id,period,station_id) DO NOTHING`);
 }
 
+async function seedSyntheticLiveOperationsScenario(client: {
+  query: (text: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  await client.query(`INSERT INTO live_operations_synthetic_scenarios(id,organization_id,territory_id,version,reference_at,known_at,presentation_time_zone,provenance,data_classification,official_telemetry)
+    VALUES ('d6000000-0000-4000-8000-000000000001','a1000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001',1,'2026-08-24T07:34:56.123456Z','2026-08-24T07:34:56.123456Z','Asia/Tashkent','synthetic: deterministic live operations scenario v1; not official telemetry','synthetic',false) ON CONFLICT(id) DO NOTHING`);
+  await client.query(`WITH candidates AS (
+      SELECT station.id station_id, installation.device_id, installation.id installation_id, station.territory_id,
+        row_number() over(order by station.code) ordinal
+      FROM monitoring_stations station JOIN telemetry_device_installations installation ON installation.station_id=station.id AND installation.effective_until IS NULL
+      WHERE station.code ~ '^SYN-HOTSPOT-[0-9]{3}-STATION-01$'
+    ) INSERT INTO live_operations_synthetic_rows(scenario_id,station_id,device_id,installation_id,territory_id,data_state,stage_data_state,discharge_data_state,counter_data_state,connection_status,device_fault,fault_code,stage_m,discharge_m3s,counter_m3,observed_at,ingested_at,last_seen_received_at,power_voltage,signal_strength_dbm,provenance)
+    SELECT 'd6000000-0000-4000-8000-000000000001',station_id,device_id,installation_id,territory_id,
+      CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'reported' END,CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'reported' END,CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'reported' END,CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'reported' END,
+      (CASE WHEN mod(ordinal,19)=0 THEN 'offline' WHEN mod(ordinal,11)=0 THEN 'unknown' ELSE 'communicating' END)::device_connection_status,
+      CASE WHEN mod(ordinal,23)=0 THEN 'reported' WHEN mod(ordinal,11)=0 THEN 'unknown' ELSE 'none' END,
+      CASE WHEN mod(ordinal,23)=0 THEN 'SYNTHETIC_FAULT' ELSE NULL END,
+      CASE WHEN mod(ordinal,17)=0 THEN NULL ELSE 1.0+ordinal/100.0 END,
+      CASE WHEN mod(ordinal,17)=0 THEN NULL ELSE 2.0+ordinal/10.0 END,
+      CASE WHEN mod(ordinal,17)=0 THEN NULL ELSE 1000000.0+ordinal*1000 END,
+      CASE WHEN mod(ordinal,17)=0 THEN NULL ELSE '2026-08-24T07:30:00.123456Z'::timestamptz END,
+      CASE WHEN mod(ordinal,17)=0 THEN NULL ELSE '2026-08-24T07:30:02.123456Z'::timestamptz END,
+      '2026-08-24T07:34:00.123456Z'::timestamptz,12.0+mod(ordinal,4)/10.0,-70-mod(ordinal,10),
+      'synthetic: deterministic live operations row; not official telemetry' FROM candidates ON CONFLICT(scenario_id,station_id) DO NOTHING`);
+  await client.query(
+    `WITH stations AS (SELECT station_id,row_number() over(order by station_id) n FROM live_operations_synthetic_rows WHERE scenario_id='d6000000-0000-4000-8000-000000000001'), points AS (SELECT generate_series(0,23) h) INSERT INTO live_operations_synthetic_trend_points(scenario_id,station_id,sensor_kind,point_at,raw_value,validated_value,gap,provenance) SELECT 'd6000000-0000-4000-8000-000000000001',stations.station_id,'stage','2026-08-23T08:30:00.123456Z'::timestamptz+(points.h*interval '1 hour'),CASE WHEN points.h=12 THEN NULL ELSE 1+stations.n/100.0+points.h/1000.0 END,CASE WHEN points.h=12 THEN NULL WHEN mod(points.h,5)=0 THEN 1+stations.n/100.0+points.h/1000.0+0.002 ELSE 1+stations.n/100.0+points.h/1000.0 END,points.h=12,'synthetic: immutable 24-hour raw/validated stage trend; not official telemetry' FROM stations CROSS JOIN points ON CONFLICT(scenario_id,station_id,sensor_kind,point_at) DO NOTHING`,
+  );
+}
+
 export async function seedSystemMetadata(databaseUrl: string | undefined): Promise<void> {
   await withDatabase(databaseUrl, async (pool) => {
     const client = await pool.connect();
@@ -196,6 +224,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
       const syntheticNetwork = await seedSyntheticNetwork(client);
       await seedSyntheticQuantityDerivationModels(client);
       await seedSyntheticDashboardScenario(client);
+      await seedSyntheticLiveOperationsScenario(client);
       await client.query('COMMIT');
       console.info(
         JSON.stringify({

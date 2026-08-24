@@ -123,7 +123,7 @@ function validDashboard() {
         signedM3: m3('-1'),
         absoluteM3: m3('1'),
         mapTarget: `#map?stationId=${ids.station}`,
-        liveTarget: `#operations?stationId=${ids.station}`,
+        liveTarget: `#operations?deviceId=${ids.device}`,
         source: 'synthetic_scenario' as const,
       },
     ],

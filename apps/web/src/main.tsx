@@ -23,6 +23,8 @@ import {
 } from './app-model.js';
 import { DashboardWorkspace } from './dashboard.js';
 import { dashboardPath } from './dashboard-model.js';
+import { LiveOperationsWorkspace } from './live-operations.js';
+import { operationsHash, selectedDeviceFromHash } from './live-operations-model.js';
 import { initialLocale, translate, type Locale } from '@isuv/i18n';
 import { ShellChrome, StatusVocabulary } from './shell-semantics.js';
 import './styles.css';
@@ -149,6 +151,9 @@ export function App() {
   const [area, setArea] = useState<ApplicationArea>(() =>
     areaFromHash(typeof window === 'undefined' ? '' : window.location.hash),
   );
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(() =>
+    selectedDeviceFromHash(typeof window === 'undefined' ? '' : window.location.hash),
+  );
   const [dashboardPeriod, setDashboardPeriod] = useState<DashboardPeriod>('today');
   const [dashboard, setDashboard] = useState<
     | { kind: 'loading' }
@@ -240,12 +245,20 @@ export function App() {
   }, [area, dashboardPeriod, dashboardRetry, identity]);
 
   useEffect(() => {
-    const updateArea = () => setArea(areaFromHash(window.location.hash));
+    const updateArea = () => {
+      setArea(areaFromHash(window.location.hash));
+      setSelectedDeviceId(selectedDeviceFromHash(window.location.hash));
+    };
     window.addEventListener('hashchange', updateArea);
     return () => window.removeEventListener('hashchange', updateArea);
   }, []);
 
   const session = identity.kind === 'authenticated' ? identity.session : null;
+  const selectLiveDevice = (deviceId: string | null) => {
+    if (typeof window !== 'undefined') window.location.hash = operationsHash(deviceId);
+    setArea('operations');
+    setSelectedDeviceId(deviceId);
+  };
   return (
     <div className="application-shell">
       <ShellChrome
@@ -270,6 +283,13 @@ export function App() {
             period={dashboardPeriod}
             response={dashboard.kind === 'ready' ? dashboard.response : null}
             state={dashboard.kind}
+          />
+        ) : area === 'operations' ? (
+          <LiveOperationsWorkspace
+            access={dashboardIdentityState(identity)}
+            locale={locale}
+            onDeviceChange={selectLiveDevice}
+            selectedDeviceId={selectedDeviceId}
           />
         ) : (
           <section aria-labelledby="workspace-heading" className="panel">

@@ -354,7 +354,7 @@ export const dashboardResponseSchema = z
           signedM3: exactM3Schema,
           absoluteM3: exactM3Schema,
           mapTarget: z.string().regex(/^#map\?stationId=/),
-          liveTarget: z.string().regex(/^#operations\?stationId=/),
+          liveTarget: z.string().regex(/^#operations\?deviceId=/),
           source: z.literal('synthetic_scenario'),
         })
         .strict(),

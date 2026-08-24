@@ -308,7 +308,7 @@ export class PostgresDashboardService {
             signedM3: exact(deviation.signed),
             absoluteM3: exact(deviation.absolute),
             mapTarget: `#map?stationId=${item.station_id}`,
-            liveTarget: `#operations?stationId=${item.station_id}`,
+            liveTarget: `#operations?deviceId=${item.device_id}`,
             source: 'synthetic_scenario' as const,
           };
         }),

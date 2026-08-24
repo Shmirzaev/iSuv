@@ -111,7 +111,7 @@ const dashboard: DashboardResponse = {
       signedM3: { numerator: '200', denominator: '1', unit: 'm3' },
       absoluteM3: { numerator: '200', denominator: '1', unit: 'm3' },
       mapTarget: '#map?stationId=b2000000-0000-4000-8000-000000000001',
-      liveTarget: '#operations?stationId=b2000000-0000-4000-8000-000000000001',
+      liveTarget: '#operations?deviceId=c2000000-0000-4000-8000-000000000001',
       source: 'synthetic_scenario',
     },
   ],
@@ -151,7 +151,7 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /Territory identifier: a2000000-0000-4000-8000-000000000001/);
   assert.match(markup, /2026-08-23 19:00:00\.000000 UTC — 2026-08-24 07:34:56\.123456 UTC/);
   assert.match(markup, /href="#map\?stationId=b2000000/);
-  assert.match(markup, /href="#operations\?stationId=b2000000/);
+  assert.match(markup, /href="#operations\?deviceId=c2000000/);
 });
 
 test('unavailable and unauthenticated dashboard views do not render values as normal data', () => {
