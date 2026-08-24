@@ -32,7 +32,8 @@ export type AuthorizationAction =
   | `${TerritoryResource}:${'read' | 'write'}`
   | 'telemetry:correct'
   | 'validation_profile:approve'
-  | 'allocation_plan:approve';
+  | 'allocation_plan:approve'
+  | 'water_balance:approve';
 
 export interface EffectiveGrant {
   id: string;
@@ -98,6 +99,7 @@ const rolePermissions: Readonly<
     'validation_profile:write',
     'validation_profile:approve',
     'allocation_plan:approve',
+    'water_balance:approve',
   ],
   maintenance_engineer: [
     'network:read',

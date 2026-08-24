@@ -14,3 +14,4 @@ export * from './validation/model.js';
 export * from './allocation-plans/model.js';
 export * from './quantity-derivation/model.js';
 export * from './allocation-deviation/model.js';
+export * from './water-balance/model.js';

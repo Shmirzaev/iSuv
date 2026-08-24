@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P3-003 on 2026-08-24: B-001–B-004 remain external rollout dependencies. Rating curves, coverage policies, derived volumes, allocation plans, measurement bindings, tolerance versions, and planned-vs-actual results are therefore synthetic-only and explicitly ineligible for official compliance. Missing plans, intervals, bindings, tolerances, trusted actuals, and zero-plan policy remain visibly unassessable rather than normal. No new blocker prevents synthetic parent-child balance and travel-time work.
+Last reviewed after P3-004 on 2026-08-24: B-001–B-005 remain external rollout dependencies. Rating curves, coverage policies, derived volumes, allocation plans, measurement bindings, tolerance versions, travel times, accounting terms, and all planned-vs-actual or balance results are therefore synthetic-only and explicitly ineligible for official compliance. Missing governance or trusted inputs remain visibly deferred/unassessable rather than normal. B-005 does not prevent synthetic alarm-rule implementation because P4 can consume typed nonofficial facts behind explicit governed fixtures.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|
@@ -10,3 +10,4 @@ Last reviewed after P3-003 on 2026-08-24: B-001–B-004 remain external rollout 
 | B-002 | Initial | GIS | Official 83-site geometries and network topology | Real map cannot be authoritative | Seed synthetic geometries/topology and support import | Government/GIS team | Open |
 | B-003 | Initial | Devices | Real payloads, protocols, certificates, connectivity | Production ingestion adapters cannot be finalized | Build simulator and adapter interfaces | Hardware/OT team | Open |
 | B-004 | Initial | Allocation | Legally approved plans/tolerances/escalation rules | Compliance cannot be official | Use synthetic plans and configurable policies | Water authority | Open |
+| B-005 | 2026-08-24 | Hydrology/accounting | Official directed measurement planes, travel/routing times, storage change methods, known additions/removals, uncertainty calibration, and residual acceptance policy | A residual cannot be treated as an official loss, theft, alarm, or compliance finding without calibrated, legally governed inputs | Use immutable approved synthetic fixed-lag models and explicit interval terms; label every result synthetic/nonofficial and keep it alarm-ineligible | Government hydrologist/water authority | Open |

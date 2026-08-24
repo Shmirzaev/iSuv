@@ -29,6 +29,8 @@ import { PostgresQuantityDerivationService } from './modules/quantity-derivation
 import { registerQuantityDerivationRoutes } from './modules/quantity-derivation/routes.js';
 import { PostgresAllocationDeviationService } from './modules/allocation-deviation/service.js';
 import { registerAllocationDeviationRoutes } from './modules/allocation-deviation/routes.js';
+import { PostgresWaterBalanceService } from './modules/water-balance/service.js';
+import { registerWaterBalanceRoutes } from './modules/water-balance/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -45,6 +47,7 @@ export interface AppOptions {
   allocationPlanService?: PostgresAllocationPlanService;
   quantityDerivationService?: PostgresQuantityDerivationService;
   allocationDeviationService?: PostgresAllocationDeviationService;
+  waterBalanceService?: PostgresWaterBalanceService;
 }
 
 export function createApp(
@@ -104,6 +107,8 @@ export function createApp(
   const allocationDeviationService =
     options.allocationDeviationService ??
     new PostgresAllocationDeviationService(process.env.DATABASE_URL);
+  const waterBalanceService =
+    options.waterBalanceService ?? new PostgresWaterBalanceService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -193,6 +198,14 @@ export function createApp(
       options.territoryAuthorizationRepository ??
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     service: allocationDeviationService,
+  });
+  registerWaterBalanceRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: waterBalanceService,
   });
 
   return app;

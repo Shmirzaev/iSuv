@@ -10,6 +10,7 @@ export * from './network/network.js';
 export * from './allocation-plans/allocation-plans.js';
 export * from './quantity-derivation/quantity-derivation.js';
 export * from './allocation-deviation/allocation-deviation.js';
+export * from './water-balance/water-balance.js';
 
 export const healthStatusSchema = z.object({
   status: z.literal('ok'),
