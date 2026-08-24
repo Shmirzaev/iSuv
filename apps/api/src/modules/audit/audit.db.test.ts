@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
+import { auditStateMaximumBytes } from '@isuv/contracts';
 import { Pool, type PoolClient } from 'pg';
 import { PostgresRoleGrantAdministrationService } from '../administration/service.js';
 import { PostgresAuditEventRepository } from './repository.js';
@@ -16,6 +17,8 @@ const organizationA = randomUUID();
 const organizationB = randomUUID();
 const territoryA = randomUUID();
 const territoryB = randomUUID();
+const territoryChildA = randomUUID();
+const territorySiblingA = randomUUID();
 const systemActor = randomUUID();
 const nationalActor = randomUUID();
 const auditor = randomUUID();
@@ -61,6 +64,12 @@ before(async () => {
      VALUES ($1, $3, 'AUDIT-A', 'Audit territory A', 'region', 'synthetic'),
             ($2, $4, 'AUDIT-B', 'Audit territory B', 'region', 'synthetic')`,
     [territoryA, territoryB, organizationA, organizationB],
+  );
+  await database.query(
+    `INSERT INTO territories (id, organization_id, parent_territory_id, code, name, kind, data_classification)
+     VALUES ($1, $3, $4, 'AUDIT-CHILD', 'Audit territory child', 'district', 'synthetic'),
+            ($2, $3, NULL, 'AUDIT-SIBLING', 'Audit territory sibling', 'region', 'synthetic')`,
+    [territoryChildA, territorySiblingA, organizationA, territoryA],
   );
   await database.query(
     `INSERT INTO identity_users (id, organization_id, external_subject, display_name, is_active, data_classification)
@@ -478,6 +487,22 @@ test(
         [organizationA, territoryA, systemActor, randomUUID()],
       ),
     );
+    await expectConstraintFailure(() =>
+      database.query(
+        `INSERT INTO audit_events
+        (organization_id, territory_id, actor_user_id, actor_organization_id, action, resource, resource_id,
+         new_state, reason, request_id, data_classification, provenance)
+       VALUES ($1, $2, $3, $1, 'report.generated', 'report', $4,
+               $5::jsonb, 'oversized state must be rejected', 'oversized-state', 'synthetic', 'test')`,
+        [
+          organizationA,
+          territoryA,
+          systemActor,
+          randomUUID(),
+          JSON.stringify({ payload: 'x'.repeat(auditStateMaximumBytes) }),
+        ],
+      ),
+    );
     const first = await repository.list({
       territoryId: territoryA,
       actorUserId: systemActor,
@@ -506,3 +531,64 @@ test(
     assert.deepEqual(new Set(filtered.events.map((event) => event.id)), new Set(manualEventIds));
   },
 );
+
+test(
+  'audit explorer includes selected descendants, excludes siblings, and applies exact compact filters',
+  { concurrency: false },
+  async () => {
+    const occurredAt = '2026-09-01T00:00:00.000Z';
+    const childResource = randomUUID();
+    const siblingResource = randomUUID();
+    const requestId = `audit-explorer-${childResource}`;
+    const insert = async (territoryId: string, resourceId: string, id: string) =>
+      database.query(
+        `INSERT INTO audit_events
+        (id, organization_id, territory_id, actor_user_id, actor_organization_id, action, resource, resource_id,
+         old_state, new_state, reason, request_id, occurred_at, data_classification, provenance)
+         VALUES ($1, $2, $3, $4, $2, 'user_role_grant.created', 'user_role_grant', $5,
+                 '{"before":"state"}'::jsonb, '{"after":"state"}'::jsonb, 'Explorer fixture.', $6, $7, 'synthetic', 'test')`,
+        [id, organizationA, territoryId, systemActor, resourceId, requestId, occurredAt],
+      );
+    const childEventId = randomUUID();
+    const siblingEventId = randomUUID();
+    await insert(territoryChildA, childResource, childEventId);
+    await insert(territorySiblingA, siblingResource, siblingEventId);
+    const filtered = await repository.list({
+      territoryId: territoryA,
+      actorUserId: systemActor,
+      action: 'user_role_grant.created',
+      resource: 'user_role_grant',
+      resourceId: childResource,
+      requestId,
+      occurredFrom: occurredAt,
+      occurredUntil: '2026-09-02T00:00:00.000Z',
+      limit: 25,
+    });
+    assert.deepEqual(
+      filtered.events.map((event) => event.id),
+      [childEventId],
+    );
+    assert.equal('oldState' in filtered.events[0]!, false);
+    assert.equal('newState' in filtered.events[0]!, false);
+    const detail = await repository.findById(childEventId, territoryA);
+    assert.deepEqual(detail?.oldState, { before: 'state' });
+    assert.deepEqual(detail?.newState, { after: 'state' });
+    assert.equal(await repository.findById(siblingEventId, territoryA), null);
+  },
+);
+
+test('audit explorer default scope prefers an effective territory grant, then a deterministic organization root', async () => {
+  const evaluatedAt = new Date('2026-06-01T00:00:00.000Z');
+  assert.equal(
+    await repository.resolveDefaultTerritory(auditor, organizationA, evaluatedAt),
+    territoryA,
+  );
+  assert.equal(
+    await repository.resolveDefaultTerritory(nationalActor, organizationA, evaluatedAt),
+    territoryA,
+  );
+  assert.equal(
+    await repository.resolveDefaultTerritory(systemActor, organizationA, evaluatedAt),
+    territoryA,
+  );
+});

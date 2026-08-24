@@ -1,10 +1,13 @@
 import {
   apiErrorSchema,
+  auditEventResponseSchema,
   auditEventsResponseSchema,
+  getAuditEventParamsSchema,
+  getAuditEventQuerySchema,
   listAuditEventsQuerySchema,
   type ApiError,
 } from '@isuv/contracts';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   authorizeTerritoryAction,
   type TerritoryAuthorizationRepository,
@@ -27,18 +30,14 @@ function apiError(code: ApiError['error']['code'], message: string, requestId: s
 
 export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOptions): void {
   const now = options.now ?? (() => new Date());
-  app.get('/api/v1/audit/events', async (request, reply) => {
-    const parsed = listAuditEventsQuerySchema.safeParse(request.query);
-    if (!parsed.success || !parsed.data.territoryId) {
-      return reply
-        .code(400)
-        .send(apiError('VALIDATION_ERROR', 'A valid territoryId is required.', request.id));
-    }
+
+  // Authentication intentionally precedes parsing caller-controlled filters
+  // and path values so malformed input cannot probe the protected endpoint.
+  async function currentSession(request: FastifyRequest, reply: FastifyReply) {
     const identity = await options.identityProvider.resolve(request);
     if (!identity) {
-      return reply
-        .code(401)
-        .send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      reply.code(401).send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      return null;
     }
     const evaluatedAt = now();
     const session = await options.sessionRepository.findCurrentSession(
@@ -46,30 +45,65 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
       evaluatedAt,
     );
     if (!session) {
-      return reply
-        .code(401)
-        .send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      reply.code(401).send(apiError('UNAUTHENTICATED', 'Authentication is required.', request.id));
+      return null;
+    }
+    return { session, evaluatedAt };
+  }
+
+  async function selectedScope(
+    requestedTerritoryId: string | undefined,
+    userId: string,
+    organizationId: string,
+    evaluatedAt: Date,
+    requestId: string,
+    reply: FastifyReply,
+  ): Promise<string | null> {
+    const territoryId =
+      requestedTerritoryId ??
+      (await options.auditRepository.resolveDefaultTerritory(userId, organizationId, evaluatedAt));
+    if (!territoryId) {
+      reply.code(404).send(apiError('NOT_FOUND', 'Audit events were not found.', requestId));
+      return null;
     }
     const decision = await authorizeTerritoryAction(
       options.authorizationRepository,
-      session.user.id,
+      userId,
       'audit:read',
-      parsed.data.territoryId,
+      territoryId,
       evaluatedAt,
     );
     // A missing territory and a territory outside the caller's authority are
     // intentionally indistinguishable to prevent scope enumeration.
     if (!decision.allowed) {
-      return reply
-        .code(404)
-        .send(apiError('NOT_FOUND', 'Audit events were not found.', request.id));
+      reply.code(404).send(apiError('NOT_FOUND', 'Audit events were not found.', requestId));
+      return null;
     }
+    return territoryId;
+  }
+
+  app.get('/api/v1/audit/events', async (request, reply) => {
+    const current = await currentSession(request, reply);
+    if (!current) return;
+    const parsed = listAuditEventsQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply
+        .code(400)
+        .send(apiError('VALIDATION_ERROR', 'Audit filters are invalid.', request.id));
+    }
+    const territoryId = await selectedScope(
+      parsed.data.territoryId,
+      current.session.user.id,
+      current.session.organization.id,
+      current.evaluatedAt,
+      request.id,
+      reply,
+    );
+    if (!territoryId) return;
     try {
       return auditEventsResponseSchema.parse({
-        ...(await options.auditRepository.list({
-          ...parsed.data,
-          territoryId: parsed.data.territoryId,
-        })),
+        scope: { territoryId, includesDescendants: true },
+        ...(await options.auditRepository.list({ ...parsed.data, territoryId })),
       });
     } catch (error) {
       if ((error as Error).message === 'Invalid audit cursor.') {
@@ -77,5 +111,34 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
       }
       throw error;
     }
+  });
+
+  app.get('/api/v1/audit/events/:eventId', async (request, reply) => {
+    const current = await currentSession(request, reply);
+    if (!current) return;
+    const params = getAuditEventParamsSchema.safeParse(request.params);
+    const query = getAuditEventQuerySchema.safeParse(request.query);
+    if (!params.success || !query.success) {
+      return reply
+        .code(400)
+        .send(apiError('VALIDATION_ERROR', 'Audit event reference is invalid.', request.id));
+    }
+    const territoryId = await selectedScope(
+      query.data.territoryId,
+      current.session.user.id,
+      current.session.organization.id,
+      current.evaluatedAt,
+      request.id,
+      reply,
+    );
+    if (!territoryId) return;
+    const event = await options.auditRepository.findById(params.data.eventId, territoryId);
+    if (!event) {
+      return reply.code(404).send(apiError('NOT_FOUND', 'Audit event was not found.', request.id));
+    }
+    return auditEventResponseSchema.parse({
+      scope: { territoryId, includesDescendants: true },
+      event,
+    });
   });
 }

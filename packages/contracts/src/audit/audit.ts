@@ -74,7 +74,14 @@ export const auditActionSchema = z.enum([
   'report.exported',
 ]);
 
-export const auditEventSchema = z.object({
+export const auditStateMaximumBytes = 256 * 1024;
+
+function serializedStateBytes(value: Record<string, unknown> | null): number {
+  if (value === null) return 0;
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength;
+}
+
+const auditEventBaseSchema = z.object({
   id: uuidSchema,
   organizationId: uuidSchema,
   territoryId: uuidSchema,
@@ -91,15 +98,45 @@ export const auditEventSchema = z.object({
   dataClassification: auditDataClassificationSchema,
   provenance: z.string().min(1).max(256),
 });
+
+export const auditEventSchema = auditEventBaseSchema.superRefine((value, context) => {
+  if (
+    serializedStateBytes(value.oldState) + serializedStateBytes(value.newState) >
+    auditStateMaximumBytes
+  ) {
+    context.addIssue({
+      code: 'custom',
+      message: `combined audit state must not exceed ${auditStateMaximumBytes} UTF-8 bytes`,
+      path: ['newState'],
+    });
+  }
+});
 export type AuditEvent = z.infer<typeof auditEventSchema>;
+
+/**
+ * List responses deliberately omit the potentially large immutable state
+ * payloads. Clients retrieve those only after selecting one audit event.
+ */
+export const auditEventSummarySchema = auditEventBaseSchema
+  .omit({ oldState: true, newState: true })
+  .strict();
+export type AuditEventSummary = z.infer<typeof auditEventSummarySchema>;
+
+export const auditTerritoryScopeSchema = z.object({
+  territoryId: uuidSchema,
+  includesDescendants: z.literal(true),
+});
+export type AuditTerritoryScope = z.infer<typeof auditTerritoryScopeSchema>;
 
 export const listAuditEventsQuerySchema = z
   .object({
-    limit: z.coerce.number().int().min(1).max(100).default(50),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
     cursor: z.string().min(1).max(128).optional(),
     actorUserId: uuidSchema.optional(),
     action: auditActionSchema.optional(),
     resource: auditResourceSchema.optional(),
+    resourceId: uuidSchema.optional(),
+    requestId: z.string().trim().min(1).max(256).optional(),
     territoryId: uuidSchema.optional(),
     occurredFrom: utcTimestampSchema.optional(),
     occurredUntil: utcTimestampSchema.optional(),
@@ -116,10 +153,19 @@ export const listAuditEventsQuerySchema = z
 export type ListAuditEventsQuery = z.infer<typeof listAuditEventsQuerySchema>;
 
 export const auditEventsResponseSchema = z.object({
-  events: z.array(auditEventSchema),
+  scope: auditTerritoryScopeSchema,
+  events: z.array(auditEventSummarySchema),
   nextCursor: z.string().min(1).max(128).nullable(),
 });
 export type AuditEventsResponse = z.infer<typeof auditEventsResponseSchema>;
+
+export const getAuditEventParamsSchema = z.object({ eventId: uuidSchema });
+export const getAuditEventQuerySchema = z.object({ territoryId: uuidSchema.optional() });
+export const auditEventResponseSchema = z.object({
+  scope: auditTerritoryScopeSchema,
+  event: auditEventSchema,
+});
+export type AuditEventResponse = z.infer<typeof auditEventResponseSchema>;
 
 export const createRoleGrantRequestSchema = z
   .object({

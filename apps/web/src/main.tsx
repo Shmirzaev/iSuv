@@ -28,6 +28,7 @@ import { operationsHash, selectedDeviceFromHash } from './live-operations-model.
 import { AlarmIncidentCenterWorkspace } from './alarm-incident-center.js';
 import { AnalyticsWorkspace } from './analytics.js';
 import { ReportsWorkspace } from './reports.js';
+import { AuditExplorerWorkspace } from './audit-explorer.js';
 import { alarmCenterHash, alarmCenterSelectionFromHash } from './alarm-incident-center-model.js';
 import { MapNetworkWorkspace } from './map-network.js';
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
@@ -333,6 +334,8 @@ export function App() {
           <AnalyticsWorkspace access={dashboardIdentityState(identity)} locale={locale} />
         ) : area === 'reports' ? (
           <ReportsWorkspace access={dashboardIdentityState(identity)} locale={locale} />
+        ) : area === 'audit' ? (
+          <AuditExplorerWorkspace access={dashboardIdentityState(identity)} locale={locale} />
         ) : (
           <section aria-labelledby="workspace-heading" className="panel">
             <p className="eyebrow">{t('currentArea')}</p>

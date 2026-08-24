@@ -1,7 +1,27 @@
 export const auditClassifications = ['synthetic', 'official'] as const;
 export type AuditClassification = (typeof auditClassifications)[number];
 
-export const auditResources = ['user_role_grant', 'observation', 'validation_profile'] as const;
+/**
+ * Keep this resource vocabulary aligned with the public audit contract and
+ * database enum. The exhaustive action vocabulary is canonical in
+ * `@isuv/contracts`; this lower-level package deliberately keeps `action` a
+ * string to avoid a domain -> contracts dependency cycle.
+ */
+export const auditResources = [
+  'user_role_grant',
+  'observation',
+  'validation_profile',
+  'allocation_plan',
+  'quantity_model',
+  'tolerance_policy',
+  'water_balance_model',
+  'alarm_rule',
+  'alarm_catalog',
+  'alarm',
+  'incident',
+  'escalation_policy',
+  'report',
+] as const;
 export type AuditResource = (typeof auditResources)[number];
 
 export interface AuditEvent {

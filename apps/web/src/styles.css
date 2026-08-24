@@ -180,6 +180,131 @@ main:focus-visible {
   margin-block: 1rem;
   min-width: 0;
 }
+.audit-workspace {
+  margin-block: 1rem;
+  min-width: 0;
+}
+.audit-intro,
+.audit-metadata {
+  display: grid;
+  gap: 0.75rem;
+}
+.audit-metadata {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.audit-metadata div {
+  border-top: 1px solid #cbd5e1;
+  min-width: 0;
+  padding-top: 0.45rem;
+}
+.audit-metadata dd {
+  margin: 0.25rem 0 0;
+  overflow-wrap: anywhere;
+}
+.audit-filters {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.45rem;
+  margin-block: 1rem;
+  padding: 0.8rem;
+}
+.audit-filters fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.audit-filters legend {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 0;
+}
+.audit-filters__grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-block: 0.7rem;
+}
+.audit-filters label {
+  display: grid;
+  font-weight: 700;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.audit-filters input,
+.audit-filters select {
+  background: #fff;
+  border: 1px solid #64748b;
+  border-radius: 0.25rem;
+  min-width: 0;
+  padding: 0.45rem;
+}
+.audit-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.audit-table-scroll table {
+  min-width: 67rem;
+}
+.audit-table-scroll:focus-visible {
+  outline: 3px solid #d97706;
+  outline-offset: 3px;
+}
+.audit-list code,
+.audit-metadata code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.audit-authority {
+  background: #fffbeb;
+  border-left: 4px solid #a16207;
+  font-weight: 750;
+  padding: 0.55rem 0.7rem;
+}
+.audit-actions,
+.audit-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+.audit-actions button,
+.audit-actions a,
+.audit-pagination button {
+  border: 2px solid #064e86;
+  border-radius: 0.3rem;
+  font-weight: 750;
+  padding: 0.55rem 0.7rem;
+}
+.audit-actions button,
+.audit-pagination button {
+  background: #fff;
+  color: #102a43;
+}
+.audit-actions .action-button {
+  background: #064e86;
+  color: #fff;
+}
+.audit-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.audit-state {
+  border-top: 1px solid #cbd5e1;
+  margin-top: 1rem;
+  min-width: 0;
+  padding-top: 0.25rem;
+}
+.audit-state pre {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  max-height: 32rem;
+  max-width: 100%;
+  overflow: auto;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .reports-intro,
 .reports-metadata {
   display: grid;
@@ -1158,7 +1283,9 @@ footer {
     grid-template-columns: 1fr;
   }
   .reports-metadata,
-  .reports-template-form__grid {
+  .reports-template-form__grid,
+  .audit-metadata,
+  .audit-filters__grid {
     grid-template-columns: 1fr;
   }
   .analytics-intro,
