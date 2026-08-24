@@ -77,9 +77,14 @@ test(
         `SELECT sensor.organization_id, installation.territory_id, sensor.id sensor_id, sensor.device_id,
        (SELECT id FROM identity_users user_row WHERE user_row.organization_id=sensor.organization_id AND user_row.is_active ORDER BY id LIMIT 1) actor_id
        FROM telemetry_sensors sensor JOIN telemetry_device_installations installation ON installation.device_id=sensor.device_id AND installation.effective_until IS NULL
-       WHERE sensor.measurement_kind='stage' LIMIT 1`,
+       WHERE sensor.measurement_kind='stage'
+         AND NOT EXISTS (
+           SELECT 1 FROM observation_lineages lineage WHERE lineage.sensor_id=sensor.id
+         )
+       ORDER BY sensor.id LIMIT 1`,
       );
-      const row = fixture.rows[0]!;
+      const row = fixture.rows[0];
+      assert.ok(row, 'validation DB fixture requires an unused synthetic stage sensor');
       const approver = randomUUID();
       await client.query(
         `INSERT INTO identity_users (id,organization_id,external_subject,display_name,data_classification) VALUES ($1,$2,$3,'Validation approver','synthetic')`,

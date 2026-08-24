@@ -14,11 +14,15 @@ button,
 input {
   font: inherit;
 }
+button {
+  cursor: pointer;
+}
 a {
   color: #064e86;
 }
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+button:focus-visible {
   outline: 3px solid #d97706;
   outline-offset: 3px;
 }
@@ -157,6 +161,234 @@ main:focus-visible {
   margin-block: 1rem;
   padding: clamp(1rem, 3vw, 1.5rem);
 }
+.dashboard-workspace {
+  margin-block: 1rem;
+}
+.dashboard-workspace__intro,
+.scenario-record,
+.dashboard-windows {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.45rem;
+  margin-block: 1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+}
+.dashboard-workspace__intro,
+.scenario-record {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+.period-picker {
+  border: 1px solid #64748b;
+  border-radius: 0.35rem;
+  min-width: min(100%, 25rem);
+  padding: 0.5rem;
+}
+.period-picker legend {
+  font-weight: 750;
+  padding-inline: 0.25rem;
+}
+.period-picker div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.period-picker button,
+.action-button {
+  background: #fff;
+  border: 2px solid #075985;
+  border-radius: 0.3rem;
+  color: #082f49;
+  font-weight: 750;
+  padding: 0.45rem 0.6rem;
+}
+.period-picker button[aria-pressed='true'],
+.period-picker button:hover,
+.action-button:hover {
+  background: #075985;
+  color: #fff;
+}
+.scenario-record {
+  border-left: 0.5rem solid #7c3aed;
+}
+.scenario-record dl,
+.dashboard-windows {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+.scenario-record dl {
+  flex: 1 1 34rem;
+  margin: 0;
+}
+.scenario-record dl div,
+.dashboard-windows div {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 0.4rem;
+}
+.scenario-record__wide {
+  grid-column: 1 / -1;
+}
+.dashboard-windows {
+  margin: 1rem 0;
+}
+.dashboard-coverage {
+  margin-inline: 0;
+}
+.coverage-state-list {
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.coverage-state-list li {
+  align-items: center;
+  border: 1px solid #94a3b8;
+  border-radius: 0.3rem;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: auto 1fr auto;
+  padding: 0.5rem;
+}
+.coverage-state-list__no_data,
+.coverage-state-list__unreliable,
+.coverage-state-list__unconfigured {
+  background: #fff7ed;
+  border-left: 4px solid #b45309 !important;
+}
+.metric-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+.metric-card {
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.45rem;
+  padding: 1rem;
+}
+.metric-card h3 {
+  margin: 0 0 0.65rem;
+}
+.metric-card--unassessable,
+.metric-card--unconfigured {
+  background: #fff7ed;
+  border-left: 5px solid #b45309;
+}
+.dashboard-status,
+.table-status {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 750;
+  gap: 0.35rem;
+}
+.dashboard-status--unassessable,
+.dashboard-status--unconfigured {
+  color: #78350f;
+}
+.metric-card__value {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  margin: 0.7rem 0;
+  overflow-wrap: anywhere;
+}
+.metric-card__unit,
+.metric-card__reason,
+.metric-card__source,
+.metric-card__detail,
+.metric-unavailable {
+  color: #475569;
+}
+.metric-card__reason,
+.metric-card__source,
+.metric-card__detail {
+  font-size: 0.92rem;
+  margin: 0.5rem 0 0;
+}
+.comparison-panel,
+.deviations-panel {
+  margin-inline: 0;
+}
+.definition-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+.definition-card {
+  border: 1px solid #94a3b8;
+  border-radius: 0.35rem;
+  padding: 0.85rem;
+}
+.definition-card h3 {
+  margin: 0 0 0.65rem;
+}
+.definition-card dl {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  margin: 0.75rem 0 0;
+}
+.definition-card dl > div {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 0.4rem;
+}
+.definition-card__wide {
+  grid-column: 1 / -1;
+}
+.stable-identifier {
+  color: #475569;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.table-scroll .metric-card__source {
+  font-size: 0.85rem;
+  margin: 0;
+}
+.comparison-panel > .dashboard-status {
+  margin-bottom: 0.75rem;
+}
+.comparison-values {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.comparison-values div {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 0.5rem;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  min-width: 82rem;
+  width: 100%;
+}
+th,
+td {
+  border-bottom: 1px solid #cbd5e1;
+  padding: 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+thead th {
+  background: #e0f2fe;
+}
+.visually-hidden {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
 .action-link {
   align-items: center;
   background: #064e86;
@@ -262,6 +494,13 @@ footer {
   }
   .site-header {
     flex-direction: column;
+  }
+  .dashboard-workspace__intro,
+  .scenario-record {
+    flex-direction: column;
+  }
+  .period-picker {
+    width: 100%;
   }
   .language-picker {
     width: 100%;

@@ -8,6 +8,7 @@ import {
   accessibleNavigationItems,
   applyDocumentLocale,
   canDiscoverAlarmWorkspace,
+  dashboardIdentityState,
   identityPresentation,
   navigationItems,
   skipTargetId,
@@ -92,4 +93,6 @@ test('unverified identity never implies territory access', () => {
     title: 'serviceUnavailable',
     detail: 'serviceUnavailableDetail',
   });
+  assert.equal(dashboardIdentityState({ kind: 'unauthenticated' }), 'unauthenticated');
+  assert.equal(dashboardIdentityState({ kind: 'unavailable' }), 'unavailable');
 });

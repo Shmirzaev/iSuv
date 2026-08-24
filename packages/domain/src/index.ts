@@ -18,3 +18,4 @@ export * from './water-balance/model.js';
 export * from './alarm-rules/model.js';
 export * from './alarms/model.js';
 export * from './incidents/model.js';
+export * from './dashboard/model.js';

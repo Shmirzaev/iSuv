@@ -70,6 +70,60 @@ async function seedSyntheticQuantityDerivationModels(client: {
     ON CONFLICT (id) DO NOTHING`);
 }
 
+async function seedSyntheticDashboardScenario(client: {
+  query: (text: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  // A reporting read model only. It deliberately references the seeded 83
+  // monitoring stations/devices but never inserts observations or represents
+  // official allocation, balance, availability, or confidence policy.
+  await client.query(`
+    INSERT INTO dashboard_synthetic_scenarios(
+      id,organization_id,territory_id,version,reference_at,known_at,
+      presentation_time_zone,provenance,data_classification,official_compliance_eligible
+    ) VALUES (
+      'd5000000-0000-4000-8000-000000000001',
+      'a1000000-0000-4000-8000-000000000001',
+      'a2000000-0000-4000-8000-000000000001',1,
+      '2026-08-24T07:34:56.123456Z','2026-08-24T07:34:56.123456Z',
+      'Asia/Tashkent','synthetic: deterministic dashboard scenario v1; not official telemetry or compliance','synthetic',false
+    ) ON CONFLICT (id) DO NOTHING`);
+  await client.query(`
+    WITH candidates AS (
+      SELECT station.id station_id, installation.device_id, station.territory_id,
+        regexp_replace(station.code, '-STATION-01$', '') hotspot_code,
+        row_number() OVER (ORDER BY station.code) ordinal
+      FROM monitoring_stations station
+      JOIN telemetry_device_installations installation
+        ON installation.station_id=station.id AND installation.effective_until IS NULL
+      WHERE station.code ~ '^SYN-HOTSPOT-[0-9]{3}-STATION-01$'
+    ), periods(period, multiplier) AS (
+      -- The fixed reference instant is a Monday in Asia/Tashkent. Today
+      -- and week therefore resolve to the same half-open window and must
+      -- have identical m3 fixture totals. Longer calendar-to-cutoff windows
+      -- use explicit deterministic demonstration multipliers.
+      VALUES ('today', 1.000000), ('week', 1.000000), ('month', 24.000000),
+        ('season', 146.000000), ('year', 236.000000)
+    )
+    INSERT INTO dashboard_synthetic_reporting_rows(
+      scenario_id,period,hotspot_code,territory_id,station_id,device_id,metric_role,data_state,quality,
+      inflow_m3s,planned_m3,actual_m3,prior_actual_m3,active_critical_alarm
+    )
+    SELECT
+      'd5000000-0000-4000-8000-000000000001', periods.period, hotspot_code, territory_id, station_id, device_id,
+      CASE WHEN ordinal IN(1,2) THEN 'regional_ingress_member' WHEN ordinal BETWEEN 3 AND 6 THEN 'delivery_member' ELSE 'none' END,
+      CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'reported' END,
+      CASE WHEN mod(ordinal,17)=0 THEN 'no_data' WHEN mod(ordinal,13)=0 THEN 'unreliable' ELSE 'valid' END,
+      -- Inflow is an instantaneous reference-cutoff rate in m3/s, so it is
+      -- deliberately not multiplied by the elapsed reporting period.
+      CASE WHEN mod(ordinal,17)=0 OR mod(ordinal,13)=0 THEN NULL ELSE 1.000000 + ordinal / 100.0 END,
+      CASE WHEN ordinal BETWEEN 3 AND 6 THEN periods.multiplier * (100000.000000 + ordinal * 1000) ELSE NULL END,
+      CASE WHEN ordinal BETWEEN 3 AND 6 THEN periods.multiplier * (100000.000000 + ordinal * 1000 + (CASE WHEN mod(ordinal,3)=0 THEN -9000 WHEN mod(ordinal,2)=0 THEN 7000 ELSE 1200 END)) ELSE NULL END,
+      CASE WHEN ordinal BETWEEN 3 AND 6 THEN periods.multiplier * (98000.000000 + ordinal * 900) ELSE NULL END,
+      ordinal IN(3,5)
+    FROM candidates CROSS JOIN periods
+    ON CONFLICT (scenario_id,period,station_id) DO NOTHING`);
+}
+
 export async function seedSystemMetadata(databaseUrl: string | undefined): Promise<void> {
   await withDatabase(databaseUrl, async (pool) => {
     const client = await pool.connect();
@@ -141,6 +195,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
     `);
       const syntheticNetwork = await seedSyntheticNetwork(client);
       await seedSyntheticQuantityDerivationModels(client);
+      await seedSyntheticDashboardScenario(client);
       await client.query('COMMIT');
       console.info(
         JSON.stringify({

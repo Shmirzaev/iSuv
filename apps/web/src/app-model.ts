@@ -37,6 +37,16 @@ export type IdentityState =
   | { kind: 'unauthenticated' }
   | { kind: 'unavailable' };
 
+export type DashboardIdentityState = 'loading' | 'ready' | 'unauthenticated' | 'unavailable';
+
+/** Do not mistake an identity dependency outage for a sign-in prompt. */
+export function dashboardIdentityState(identity: IdentityState): DashboardIdentityState {
+  if (identity.kind === 'loading') return 'loading';
+  if (identity.kind === 'authenticated') return 'ready';
+  if (identity.kind === 'unauthenticated') return 'unauthenticated';
+  return 'unavailable';
+}
+
 export interface IdentityPresentation {
   status: 'information' | 'warning' | 'unavailable';
   title: TranslationKey;
