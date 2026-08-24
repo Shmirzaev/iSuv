@@ -60,7 +60,7 @@ test('canonical catalog and governed active signals create one synthetic alarm w
         subjectKind: 'observation_sensor',
         subjectId: fixture.sensor_id,
         provenance: 'synthetic:alarm-db-test',
-        reason: 'high-stage alarm fixture',
+        reason: 'dry-canal alarm fixture',
       },
       requester,
       'alarm-db-rule-create',
@@ -79,9 +79,9 @@ test('canonical catalog and governed active signals create one synthetic alarm w
           sensorId: fixture.sensor_id,
           quantity: 'stage',
           unit: 'm',
-          direction: 'high',
-          enter: '10',
-          clear: '8',
+          direction: 'low',
+          enter: '8',
+          clear: '10',
           enterPersistenceMicroseconds: '10',
           clearPersistenceMicroseconds: '10',
           maxGapMicroseconds: '20',
@@ -89,7 +89,7 @@ test('canonical catalog and governed active signals create one synthetic alarm w
           rateGate: null,
         },
         provenance: 'synthetic:alarm-db-test',
-        reason: 'high-stage exact persistence',
+        reason: 'dry-canal exact persistence',
       },
       requester,
       'alarm-db-rule-request',
@@ -104,8 +104,8 @@ test('canonical catalog and governed active signals create one synthetic alarm w
     const catalog = await alarms.create(
       {
         territoryId: fixture.territory_id,
-        eventType: 'high_stage',
-        title: 'Synthetic high stage warning',
+        eventType: 'dry_canal',
+        title: 'Synthetic dry-canal warning',
         provenance: 'synthetic:alarm-db-test',
         reason: 'catalog test fixture',
       },
@@ -119,11 +119,11 @@ test('canonical catalog and governed active signals create one synthetic alarm w
         effectiveUntil: '2030-01-01T00:00:00.000060Z',
         ruleId: rule.id,
         activationSupport: 'p4_001_rule_signal',
-        waterCondition: 'high_stage',
+        waterCondition: 'dry_canal',
         systemDeviceCondition: 'not_assessed',
         severity: 'warning',
         provenance: 'synthetic:alarm-db-test',
-        reason: 'bind high-stage signal',
+        reason: 'bind dry-canal signal',
       },
       requester,
       'alarm-db-catalog-request',
@@ -180,8 +180,8 @@ test('canonical catalog and governed active signals create one synthetic alarm w
       );
     }
 
-    await stage('2030-01-01T00:00:00.000000Z', '11', true);
-    const second = await stage('2030-01-01T00:00:00.000010Z', '11', true);
+    await stage('2030-01-01T00:00:00.000000Z', '7', true);
+    const second = await stage('2030-01-01T00:00:00.000010Z', '7', true);
     const created = await alarms.materialize(
       rule.id,
       '2030-01-01T00:00:00.000010Z',
@@ -191,7 +191,7 @@ test('canonical catalog and governed active signals create one synthetic alarm w
     );
     assert.equal(created.outcome, 'created');
     assert.equal(created.alarm?.severity, 'warning');
-    assert.equal(created.alarm?.waterCondition, 'high_stage');
+    assert.equal(created.alarm?.waterCondition, 'dry_canal');
     assert.equal(created.alarm?.systemDeviceCondition, 'not_assessed');
     assert.equal(created.alarm?.officialComplianceEligible, false);
     const replay = await alarms.materialize(
@@ -204,8 +204,8 @@ test('canonical catalog and governed active signals create one synthetic alarm w
     assert.equal(replay.outcome, 'existing');
     assert.equal(replay.alarm?.id, created.alarm?.id);
 
-    await stage('2030-01-01T00:00:00.000020Z', '7', true);
-    const clearFact = await stage('2030-01-01T00:00:00.000030Z', '7', true);
+    await stage('2030-01-01T00:00:00.000020Z', '11', true);
+    const clearFact = await stage('2030-01-01T00:00:00.000030Z', '11', true);
     const cleared = await alarms.materialize(
       rule.id,
       '2030-01-01T00:00:00.000030Z',
@@ -217,8 +217,8 @@ test('canonical catalog and governed active signals create one synthetic alarm w
     assert.equal(cleared.action, 'automatically_cleared');
     assert.equal(cleared.alarm?.automaticState, 'cleared');
 
-    await stage('2030-01-01T00:00:00.000040Z', '11', true);
-    const reactivationFact = await stage('2030-01-01T00:00:00.000050Z', '11', true);
+    await stage('2030-01-01T00:00:00.000040Z', '7', true);
+    const reactivationFact = await stage('2030-01-01T00:00:00.000050Z', '7', true);
     const recurrence = await alarms.materialize(
       rule.id,
       '2030-01-01T00:00:00.000050Z',
@@ -229,8 +229,8 @@ test('canonical catalog and governed active signals create one synthetic alarm w
     assert.equal(recurrence.outcome, 'created');
     assert.notEqual(recurrence.alarm?.id, created.alarm?.id);
 
-    await stage('2030-01-01T00:00:00.000060Z', '11', true);
-    const outsideCatalogFact = await stage('2030-01-01T00:00:00.000070Z', '11', true);
+    await stage('2030-01-01T00:00:00.000060Z', '7', true);
+    const outsideCatalogFact = await stage('2030-01-01T00:00:00.000070Z', '7', true);
     await rules.evaluate(rule.id, {
       effectiveAt: '2030-01-01T00:00:00.000070Z',
       knownAt: outsideCatalogFact.ingestedAt,

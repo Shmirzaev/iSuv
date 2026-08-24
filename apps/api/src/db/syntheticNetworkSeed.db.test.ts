@@ -356,4 +356,46 @@ test('synthetic 83-hotspot seed is repeatable, complete, connected, and explicit
     [syntheticOrganizationId],
   );
   assert.equal(reconciledBoundaryEdges.rows[0]!.count, '5');
+
+  const p5Scenario = await pool.query<{
+    rules: string;
+    active_unowned: string;
+    cleared_human_open: string;
+    active_investigating_assigned: string;
+    closed: string;
+    missing_policy_open: string;
+    unassessable: string;
+    incidents_with_post_creation_evidence: string;
+    future_known_evidence: string;
+  }>(
+    `SELECT
+      (SELECT count(*)::text FROM alarm_rules WHERE provenance LIKE 'synthetic: governed P5%') rules,
+      (SELECT count(*)::text FROM alarms a WHERE a.provenance LIKE 'synthetic: governed P5%'
+        AND a.automatic_state='active' AND NOT EXISTS(SELECT 1 FROM incident_alarm_links l WHERE l.alarm_id=a.id)) active_unowned,
+      (SELECT count(*)::text FROM alarms a JOIN incident_alarm_links l ON l.alarm_id=a.id JOIN incidents i ON i.id=l.incident_id
+        WHERE a.provenance LIKE 'synthetic: governed P5%' AND a.automatic_state='cleared' AND i.status IN('open','acknowledged','investigating')) cleared_human_open,
+      (SELECT count(*)::text FROM alarms a JOIN incident_alarm_links l ON l.alarm_id=a.id JOIN incidents i ON i.id=l.incident_id
+        WHERE a.provenance LIKE 'synthetic: governed P5%' AND a.automatic_state='active' AND i.status='investigating' AND i.assigned_user_id IS NOT NULL) active_investigating_assigned,
+      (SELECT count(*)::text FROM incidents WHERE creation_reason='seed P5 governed scenario' AND status='closed') closed,
+      (SELECT count(*)::text FROM incidents i WHERE i.creation_reason='seed P5 governed scenario' AND i.escalation_policy_id IS NULL AND i.status='open') missing_policy_open,
+      (SELECT count(*)::text FROM alarm_evidence evidence JOIN alarms a ON a.id=evidence.alarm_id
+        WHERE a.provenance LIKE 'synthetic: governed P5%' AND evidence.evidence_status='unassessable') unassessable,
+      (SELECT count(*)::text FROM incidents i
+        WHERE i.creation_reason='seed P5 governed scenario' AND EXISTS(
+          SELECT 1 FROM incident_alarm_links link JOIN alarm_evidence evidence ON evidence.alarm_id=link.alarm_id
+          WHERE link.incident_id=i.id AND evidence.known_at>=i.created_at AND evidence.known_at<=clock_timestamp())) incidents_with_post_creation_evidence,
+      (SELECT count(*)::text FROM alarm_evidence evidence JOIN alarms a ON a.id=evidence.alarm_id
+        WHERE a.provenance LIKE 'synthetic: governed P5%' AND evidence.known_at>clock_timestamp()) future_known_evidence`,
+  );
+  assert.deepEqual(p5Scenario.rows[0], {
+    rules: '3',
+    active_unowned: '1',
+    cleared_human_open: '1',
+    active_investigating_assigned: '1',
+    closed: '1',
+    missing_policy_open: '1',
+    unassessable: '2',
+    incidents_with_post_creation_evidence: '4',
+    future_known_evidence: '0',
+  });
 });

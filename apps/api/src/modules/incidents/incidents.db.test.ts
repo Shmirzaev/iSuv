@@ -55,9 +55,9 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
         sensorId: fixture.sensor_id,
         quantity: 'stage',
         unit: 'm',
-        direction: 'high',
-        enter: '10',
-        clear: '8',
+        direction: 'low',
+        enter: '8',
+        clear: '10',
         enterPersistenceMicroseconds: '10',
         clearPersistenceMicroseconds: '10',
         maxGapMicroseconds: '20',
@@ -80,8 +80,8 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
   const catalog = await alarms.create(
     {
       territoryId: fixture.territory_id,
-      eventType: 'high_stage',
-      title: 'Synthetic incident high-stage warning',
+      eventType: 'dry_canal',
+      title: 'Synthetic incident dry-canal warning',
       provenance: 'synthetic:incident-db-test',
       reason: 'incident catalog fixture',
     },
@@ -95,7 +95,7 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
       effectiveUntil: '2030-01-02T00:00:00.000000Z',
       ruleId: rule.id,
       activationSupport: 'p4_001_rule_signal',
-      waterCondition: 'high_stage',
+      waterCondition: 'dry_canal',
       systemDeviceCondition: 'not_assessed',
       severity: 'warning',
       provenance: 'synthetic:incident-db-test',
@@ -149,8 +149,8 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
     );
   }
 
-  await stage('2030-01-01T00:00:00.000000Z', '11');
-  const activationFact = await stage('2030-01-01T00:00:00.000010Z', '11');
+  await stage('2030-01-01T00:00:00.000000Z', '7');
+  const activationFact = await stage('2030-01-01T00:00:00.000010Z', '7');
   const activation = await alarms.materialize(
     rule.id,
     '2030-01-01T00:00:00.000010Z',
@@ -164,7 +164,7 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
   const policy = await incidents.createPolicy(
     {
       territoryId: fixture.territory_id,
-      eventType: 'high_stage',
+      eventType: 'dry_canal',
       severity: 'warning',
       title: 'Synthetic warning response targets',
       provenance: 'synthetic:incident-db-test',
@@ -300,8 +300,8 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
     'incident-corrective',
   );
 
-  await stage('2030-01-01T00:00:00.000020Z', '7');
-  const clearFact = await stage('2030-01-01T00:00:00.000030Z', '7');
+  await stage('2030-01-01T00:00:00.000020Z', '11');
+  const clearFact = await stage('2030-01-01T00:00:00.000030Z', '11');
   const cleared = await alarms.materialize(
     rule.id,
     '2030-01-01T00:00:00.000030Z',
@@ -484,6 +484,6 @@ test('governed incident workflow snapshots policy, serializes alarm ownership, a
   assert.deepEqual(alarmAfter, {
     automatic_state: 'cleared',
     severity: 'warning',
-    event_type: 'high_stage',
+    event_type: 'dry_canal',
   });
 });

@@ -94,8 +94,28 @@ interface TimelineRow {
 }
 
 export class PostgresIncidentService {
-  public constructor(private readonly databaseUrl?: string) {}
+  public constructor(
+    private readonly databaseUrl?: string,
+    private readonly transactionClient?: PoolClient,
+  ) {}
   private async tx<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+    if (this.transactionClient) {
+      await this.transactionClient.query('SAVEPOINT incident_operation');
+      try {
+        const value = await fn(this.transactionClient);
+        await this.transactionClient.query('RELEASE SAVEPOINT incident_operation');
+        return value;
+      } catch (e) {
+        await this.transactionClient.query('ROLLBACK TO SAVEPOINT incident_operation');
+        await this.transactionClient.query('RELEASE SAVEPOINT incident_operation');
+        const code = (e as { code?: string }).code;
+        if (code === '23505' || code === '23P01')
+          throw new IncidentError('CONFLICT', 'The incident conflicts with governed history.');
+        if (code === '23514' || code === '23503' || code === 'P0002')
+          throw new IncidentError('VALIDATION_ERROR', 'The incident input is invalid.');
+        throw e;
+      }
+    }
     return withDatabase(this.databaseUrl, async (pool) => {
       const c = await pool.connect();
       try {
@@ -117,6 +137,7 @@ export class PostgresIncidentService {
     });
   }
   private async read<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
+    if (this.transactionClient) return fn(this.transactionClient);
     return withDatabase(this.databaseUrl, async (pool) => {
       const c = await pool.connect();
       try {

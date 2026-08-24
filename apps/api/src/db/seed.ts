@@ -1,5 +1,499 @@
 import { withDatabase } from './client.js';
 import { seedSyntheticNetwork } from './syntheticNetworkSeed.js';
+import type { PoolClient } from 'pg';
+import { PostgresAlarmRuleService } from '../modules/alarm-rules/service.js';
+import { PostgresAlarmService } from '../modules/alarms/service.js';
+import { PostgresIncidentService } from '../modules/incidents/service.js';
+import { PostgresObservationService } from '../modules/observations/service.js';
+import { PostgresValidationService } from '../modules/validation/service.js';
+
+const p5 = {
+  organization: 'a1000000-0000-4000-8000-000000000001',
+  territoryA: 'a2000000-0000-4000-8000-000000000004',
+  territoryB: 'a2000000-0000-4000-8000-000000000005',
+  requester: 'a3000000-0000-4000-8000-000000000004',
+  approver: 'a3000000-0000-4000-8000-000000000003',
+  assignee: 'a3000000-0000-4000-8000-000000000004',
+  provenance:
+    'synthetic: governed P5 alarm and incident scenario v1; not official telemetry, policy, or SLA',
+} as const;
+
+async function seedSyntheticAlarmIncidentScenario(client: PoolClient): Promise<void> {
+  const base = new Date();
+  const timestamp = (secondsFromBase: number) =>
+    new Date(base.getTime() + secondsFromBase * 1_000)
+      .toISOString()
+      .replace(/\.\d{3}Z$/, '.000000Z');
+  const effectiveFrom = timestamp(-900);
+  const effectiveUntil = timestamp(86_400);
+  const activeOne = timestamp(-600);
+  const activeTwo = timestamp(-599);
+  const clear = timestamp(-598);
+  const clearTwo = timestamp(-597);
+  const reactivateOne = timestamp(-596);
+  const reactivateTwo = timestamp(-595);
+  const finalActiveOne = timestamp(-591);
+  const finalActiveTwo = timestamp(-590);
+  const knownAt = async () =>
+    (
+      await client.query<{ at: string }>(
+        `SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') at`,
+      )
+    ).rows[0]!.at;
+  const existing = await client.query<{ rules: string; catalogs: string; incidents: string }>(
+    `SELECT count(*) FILTER (WHERE provenance=$1)::text rules,
+      (SELECT count(*) FROM alarm_catalogs WHERE provenance=$1)::text catalogs,
+      (SELECT count(*) FROM incidents WHERE creation_reason='seed P5 governed scenario')::text incidents
+     FROM alarm_rules WHERE provenance=$1`,
+    [p5.provenance],
+  );
+  const counts = existing.rows[0]!;
+  if (counts.rules === '3') {
+    if (counts.catalogs !== '3' || Number(counts.incidents) < 3)
+      throw new Error('P5 governed synthetic scenario is partially present.');
+    return;
+  }
+  if (counts.rules !== '0' || counts.catalogs !== '0' || counts.incidents !== '0')
+    throw new Error('P5 governed synthetic scenario is partially present.');
+
+  const sensors = await client.query<{
+    territory_id: string;
+    sensor_id: string;
+    device_id: string;
+    station_code: string;
+  }>(
+    `SELECT station.territory_id,sensor.id sensor_id,sensor.device_id,station.code station_code
+       FROM monitoring_stations station JOIN telemetry_device_installations installation
+         ON installation.station_id=station.id AND installation.effective_until IS NULL
+       JOIN telemetry_sensors sensor ON sensor.device_id=installation.device_id
+      WHERE station.territory_id=ANY($1::uuid[]) AND sensor.measurement_kind='stage' AND sensor.unit='m'
+      ORDER BY station.territory_id,station.code`,
+    [[p5.territoryA, p5.territoryB]],
+  );
+  // Reserve the low-ID stage sensors used by independent governed-service
+  // tests; the scenario itself uses distinct real seeded synthetic sensors,
+  // never a dashboard-only current-state fixture.
+  const a = sensors.rows.filter((x) => x.territory_id === p5.territoryA);
+  const b = sensors.rows.filter((x) => x.territory_id === p5.territoryB);
+  if (a.length < 11 || b.length < 2)
+    throw new Error('P5 scenario needs valid stage/m sensors in both territories.');
+  const targets = [
+    {
+      key: 'a-high',
+      territoryId: p5.territoryA,
+      sensor: a[10]!,
+      eventType: 'high_stage' as const,
+      enter: '1.5',
+      clear: '1.0',
+      direction: 'high' as const,
+      water: 'high_stage' as const,
+    },
+    {
+      key: 'b-high',
+      territoryId: p5.territoryB,
+      sensor: b[0]!,
+      eventType: 'high_stage' as const,
+      enter: '1.5',
+      clear: '1.0',
+      direction: 'high' as const,
+      water: 'high_stage' as const,
+    },
+    {
+      key: 'b-dry',
+      territoryId: p5.territoryB,
+      sensor: b[1]!,
+      eventType: 'dry_canal' as const,
+      enter: '0.2',
+      clear: '0.3',
+      direction: 'low' as const,
+      water: 'dry_canal' as const,
+    },
+  ];
+  const observations = new PostgresObservationService(undefined, client);
+  const validation = new PostgresValidationService(undefined, client);
+  const rules = new PostgresAlarmRuleService(undefined, client);
+  const alarms = new PostgresAlarmService(undefined, client);
+  const incidents = new PostgresIncidentService(undefined, client);
+
+  for (const target of targets) {
+    const profile = await validation.createProfile(
+      {
+        organizationId: p5.organization,
+        territoryId: target.territoryId,
+        sensorId: target.sensor.sensor_id,
+        measurementKind: 'stage',
+        dataClassification: 'synthetic',
+        name: `Synthetic P5 ${target.key} stage validation`,
+        effectiveFrom,
+        effectiveUntil: null,
+        rules: { minimumValue: '0', maximumValue: '10', allowBootstrapWithoutPrior: true },
+        reason: 'seed P5 governed scenario',
+      },
+      p5.requester,
+      `seed-p5-profile-${target.key}`,
+    );
+    await validation.approveVersion(
+      profile.profileId,
+      profile.version,
+      target.territoryId,
+      'independent synthetic P5 approval',
+      p5.approver,
+      `seed-p5-profile-approve-${target.key}`,
+    );
+  }
+  async function stage(
+    target: (typeof targets)[number],
+    at: string,
+    value: string,
+    suffix: string,
+    valid = true,
+  ) {
+    const ingested = await observations.ingest(
+      {
+        sensorId: target.sensor.sensor_id,
+        deviceId: target.sensor.device_id,
+        measurementKind: 'stage',
+        sourceSystem: 'synthetic-p5-scenario',
+        sourceEventId: `${target.key}-${suffix}`,
+        observedAt: at,
+        unit: 'm',
+        value,
+        qualityState: valid ? 'unknown' : 'invalid',
+        qualityReason: valid
+          ? 'synthetic raw evidence awaiting governed validation'
+          : 'synthetic invalid evidence retained for unassessable alarm',
+        uncertainty: '0',
+        uncertaintyMethod: 'synthetic exact scenario input',
+        provenance: p5.provenance,
+        measurementMethod: 'synthetic scenario generator',
+        totalizerTransition: null,
+      },
+      target.territoryId,
+    );
+    if (valid)
+      await validation.validate(
+        ingested.observation.lineageId,
+        target.territoryId,
+        p5.requester,
+        `seed-p5-validate-${target.key}-${suffix}`,
+        at,
+      );
+  }
+  for (const target of targets) {
+    const values = target.key === 'b-dry' ? ['0.10', '0.10'] : ['2.00', '2.00'];
+    await stage(target, activeOne, values[0]!, 'activate-1');
+    await stage(target, activeTwo, values[1]!, 'activate-2');
+  }
+  const seeded = new Map<string, { ruleId: string; alarmId: string }>();
+  for (const target of targets) {
+    const rule = await rules.create(
+      {
+        territoryId: target.territoryId,
+        subjectKind: 'observation_sensor',
+        subjectId: target.sensor.sensor_id,
+        provenance: p5.provenance,
+        reason: 'seed P5 governed scenario',
+      },
+      p5.requester,
+      `seed-p5-rule-${target.key}`,
+    );
+    const version = await rules.request(
+      rule.id,
+      {
+        effectiveFrom,
+        effectiveUntil,
+        condition: {
+          kind: 'observation_threshold',
+          sensorId: target.sensor.sensor_id,
+          quantity: 'stage',
+          unit: 'm',
+          direction: target.direction,
+          enter: target.enter,
+          clear: target.clear,
+          enterPersistenceMicroseconds: '1000000',
+          clearPersistenceMicroseconds: '1000000',
+          maxGapMicroseconds: '60000000',
+          uncertaintyBound: '0',
+          rateGate: null,
+        },
+        provenance: p5.provenance,
+        reason: 'seed P5 governed scenario',
+      },
+      p5.requester,
+      `seed-p5-rule-request-${target.key}`,
+    );
+    await rules.approve(
+      rule.id,
+      version.version,
+      'independent synthetic P5 approval',
+      p5.approver,
+      `seed-p5-rule-approve-${target.key}`,
+    );
+    const catalog = await alarms.create(
+      {
+        territoryId: target.territoryId,
+        eventType: target.eventType,
+        title: `Synthetic P5 ${target.key} alarm`,
+        provenance: p5.provenance,
+        reason: 'seed P5 governed scenario',
+      },
+      p5.requester,
+      `seed-p5-catalog-${target.key}`,
+    );
+    const catalogVersion = await alarms.requestVersion(
+      catalog.id,
+      {
+        effectiveFrom,
+        effectiveUntil,
+        ruleId: rule.id,
+        activationSupport: 'p4_001_rule_signal',
+        waterCondition: target.water,
+        systemDeviceCondition: 'not_assessed',
+        severity: 'warning',
+        provenance: p5.provenance,
+        reason: 'seed P5 governed scenario',
+      },
+      p5.requester,
+      `seed-p5-catalog-request-${target.key}`,
+    );
+    await alarms.approveVersion(
+      catalog.id,
+      catalogVersion.version,
+      'independent synthetic P5 approval',
+      p5.approver,
+      `seed-p5-catalog-approve-${target.key}`,
+    );
+    if (target.key !== 'a-high') {
+      const policy = await incidents.createPolicy(
+        {
+          territoryId: target.territoryId,
+          eventType: target.eventType,
+          severity: 'warning',
+          title: `Synthetic P5 ${target.key} escalation`,
+          provenance: p5.provenance,
+          reason: 'seed P5 governed scenario',
+        },
+        p5.requester,
+        `seed-p5-policy-${target.key}`,
+      );
+      const policyVersion = await incidents.requestPolicyVersion(
+        policy.policy.id,
+        {
+          effectiveFrom,
+          effectiveUntil,
+          tier: 1,
+          procedure: 'Synthetic demonstration only; no notification execution.',
+          acknowledgementTargetMicroseconds: '60000000',
+          resolutionTargetMicroseconds: '120000000',
+          reason: 'seed P5 governed scenario',
+        },
+        p5.requester,
+        `seed-p5-policy-request-${target.key}`,
+      );
+      await incidents.approvePolicyVersion(
+        policy.policy.id,
+        policyVersion.policyVersion.version,
+        'independent synthetic P5 approval',
+        p5.approver,
+        `seed-p5-policy-approve-${target.key}`,
+      );
+    }
+    const evaluation = await rules.evaluate(rule.id, {
+      effectiveAt: activeTwo,
+      knownAt: await knownAt(),
+    });
+    const materialized = await alarms.materialize(
+      rule.id,
+      activeTwo,
+      await knownAt(),
+      p5.requester,
+      `seed-p5-materialize-${target.key}`,
+    );
+    if (!materialized.alarm)
+      throw new Error(
+        `P5 ${target.key} alarm did not materialize: evaluation=${evaluation.state}/${evaluation.reason ?? 'none'}.`,
+      );
+    seeded.set(target.key, { ruleId: rule.id, alarmId: materialized.alarm.id });
+  }
+  // A remains automatic-active and unowned; deferred evidence is preserved rather than shown as clear/normal.
+  await stage(targets[0]!, clear, '2.00', 'unassessable', false);
+  await alarms.materialize(
+    seeded.get('a-high')!.ruleId,
+    clear,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-a-unassessable',
+  );
+  // This open case deliberately has no matching escalation policy, making the
+  // unconfigured state a governed absence rather than a display fixture.
+  await incidents.createIncident(
+    seeded.get('a-high')!.alarmId,
+    'seed P5 governed scenario',
+    p5.requester,
+    'seed-p5-incident-a-missing-policy',
+  );
+  // Record a subsequent invalid fact after the case exists. This preserves the
+  // inability to assess as evidence and makes the latest known evidence safely
+  // later than the incident creation timestamp.
+  await stage(targets[0]!, clearTwo, '2.00', 'unassessable-after-incident', false);
+  await alarms.materialize(
+    seeded.get('a-high')!.ruleId,
+    clearTwo,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-a-unassessable-after-incident',
+  );
+  // B high: automatically clear while its human case remains open, then a new active assigned investigation.
+  const bHighIncident = (await incidents.createIncident(
+    seeded.get('b-high')!.alarmId,
+    'seed P5 governed scenario',
+    p5.requester,
+    'seed-p5-incident-b-high-open',
+  )) as { incident: { id: string } };
+  await incidents.action(
+    bHighIncident.incident.id,
+    'acknowledged',
+    'seed P5 acknowledgement',
+    p5.requester,
+    'seed-p5-incident-b-high-ack',
+  );
+  await incidents.action(
+    bHighIncident.incident.id,
+    'investigating',
+    'seed P5 investigation',
+    p5.requester,
+    'seed-p5-incident-b-high-investigate',
+  );
+  await incidents.assign(
+    bHighIncident.incident.id,
+    p5.assignee,
+    'seed P5 assignment',
+    p5.requester,
+    'seed-p5-incident-b-high-assign',
+  );
+  await stage(targets[1]!, clear, '0.50', 'clear');
+  await stage(targets[1]!, clearTwo, '0.50', 'clear-2');
+  const bHighCleared = await alarms.materialize(
+    seeded.get('b-high')!.ruleId,
+    clearTwo,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-b-high-clear',
+  );
+  if (!bHighCleared.alarm || bHighCleared.alarm.automaticState !== 'cleared')
+    throw new Error('P5 B high automatic episode did not clear before remaining human-open.');
+  await stage(targets[1]!, reactivateOne, '2.00', 'reactivate-1');
+  await stage(targets[1]!, reactivateTwo, '2.00', 'reactivate-2');
+  const reactivated = await alarms.materialize(
+    seeded.get('b-high')!.ruleId,
+    reactivateTwo,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-b-high-reactivate',
+  );
+  if (!reactivated.alarm) throw new Error('P5 B high reactivation did not materialize.');
+  const investigating = (await incidents.createIncident(
+    reactivated.alarm.id,
+    'seed P5 governed scenario',
+    p5.requester,
+    'seed-p5-incident-b-high-reactivated',
+  )) as { incident: { id: string } };
+  await incidents.action(
+    investigating.incident.id,
+    'acknowledged',
+    'seed P5 acknowledgement',
+    p5.requester,
+    'seed-p5-incident-b-high-reactivated-ack',
+  );
+  await incidents.action(
+    investigating.incident.id,
+    'investigating',
+    'seed P5 investigation',
+    p5.requester,
+    'seed-p5-incident-b-high-reactivated-investigate',
+  );
+  await incidents.assign(
+    investigating.incident.id,
+    p5.assignee,
+    'seed P5 assignment',
+    p5.requester,
+    'seed-p5-incident-b-high-reactivated-assign',
+  );
+  // A continued high-stage observation gives the selected active case evidence
+  // whose known time follows the case creation time without inventing a value.
+  await stage(targets[1]!, finalActiveOne, '2.00', 'post-incident-evidence');
+  await alarms.materialize(
+    seeded.get('b-high')!.ruleId,
+    finalActiveOne,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-b-high-post-incident',
+  );
+  // B dry: ordinary governed close history after its automatic signal clears.
+  const dry = (await incidents.createIncident(
+    seeded.get('b-dry')!.alarmId,
+    'seed P5 governed scenario',
+    p5.requester,
+    'seed-p5-incident-b-dry-open',
+  )) as { incident: { id: string } };
+  await incidents.action(
+    dry.incident.id,
+    'acknowledged',
+    'seed P5 acknowledgement',
+    p5.requester,
+    'seed-p5-incident-b-dry-ack',
+  );
+  await incidents.action(
+    dry.incident.id,
+    'investigating',
+    'seed P5 investigation',
+    p5.requester,
+    'seed-p5-incident-b-dry-investigate',
+  );
+  await incidents.assign(
+    dry.incident.id,
+    p5.assignee,
+    'seed P5 assignment',
+    p5.requester,
+    'seed-p5-incident-b-dry-assign',
+  );
+  await stage(targets[2]!, clear, '0.50', 'clear');
+  await stage(targets[2]!, clearTwo, '0.50', 'clear-2');
+  const dryCleared = await alarms.materialize(
+    seeded.get('b-dry')!.ruleId,
+    clearTwo,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-b-dry-clear',
+  );
+  if (!dryCleared.alarm || dryCleared.alarm.automaticState !== 'cleared')
+    throw new Error('P5 B dry automatic episode did not clear before resolution.');
+  await incidents.action(
+    dry.incident.id,
+    'resolved',
+    'seed P5 resolution after automatic clear',
+    p5.requester,
+    'seed-p5-incident-b-dry-resolve',
+  );
+  await incidents.action(
+    dry.incident.id,
+    'closed',
+    'seed P5 closure after resolution',
+    p5.requester,
+    'seed-p5-incident-b-dry-close',
+  );
+  await stage(targets[2]!, finalActiveOne, '0.10', 'final-active-1');
+  await stage(targets[2]!, finalActiveTwo, '0.10', 'final-active-2');
+  const finalActive = await alarms.materialize(
+    seeded.get('b-dry')!.ruleId,
+    finalActiveTwo,
+    await knownAt(),
+    p5.requester,
+    'seed-p5-materialize-b-dry-final-active',
+  );
+  if (!finalActive.alarm || finalActive.alarm.automaticState !== 'active')
+    throw new Error('P5 B dry final active/unowned alarm did not materialize.');
+}
 
 async function seedSyntheticQuantityDerivationModels(client: {
   query: (text: string, values?: unknown[]) => Promise<unknown>;
@@ -225,6 +719,7 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
       await seedSyntheticQuantityDerivationModels(client);
       await seedSyntheticDashboardScenario(client);
       await seedSyntheticLiveOperationsScenario(client);
+      await seedSyntheticAlarmIncidentScenario(client);
       await client.query('COMMIT');
       console.info(
         JSON.stringify({

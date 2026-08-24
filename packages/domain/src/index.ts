@@ -21,3 +21,4 @@ export * from './incidents/model.js';
 export * from './dashboard/model.js';
 export * from './live-operations/model.js';
 export * from './map-network/model.js';
+export * from './alarm-incident-center/model.js';

@@ -179,6 +179,13 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
       )
     ).rows[0]!;
     assert.equal(projection.state, 'deferred');
+    const expectedRebuilt = Number(
+      (
+        await client.query<{ count: string }>(
+          'SELECT count(*)::text count FROM alarm_rule_current_signals',
+        )
+      ).rows[0]!.count,
+    );
     assert.equal(
       Number(
         (
@@ -187,7 +194,7 @@ test('governed exact rule persistence is idempotent and late invalid evidence ne
           )
         ).rows[0]!.rebuilt,
       ),
-      1,
+      expectedRebuilt,
     );
 
     await client.query('SAVEPOINT invalid_alarm_projection');
