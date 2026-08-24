@@ -41,6 +41,8 @@ import { PostgresDashboardService } from './modules/dashboard/service.js';
 import { registerDashboardRoutes } from './modules/dashboard/routes.js';
 import { PostgresLiveOperationsService } from './modules/live-operations/service.js';
 import { registerLiveOperationsRoutes } from './modules/live-operations/routes.js';
+import { PostgresMapNetworkService } from './modules/map-network/service.js';
+import { registerMapNetworkRoutes } from './modules/map-network/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -63,6 +65,7 @@ export interface AppOptions {
   incidentService?: PostgresIncidentService;
   dashboardService?: PostgresDashboardService;
   liveOperationsService?: PostgresLiveOperationsService;
+  mapNetworkService?: PostgresMapNetworkService;
 }
 
 export function createApp(
@@ -134,6 +137,8 @@ export function createApp(
   const liveOperationsService =
     options.liveOperationsService ??
     new PostgresLiveOperationsService(process.env.DATABASE_URL, deviceHealthService);
+  const mapNetworkService =
+    options.mapNetworkService ?? new PostgresMapNetworkService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -271,6 +276,14 @@ export function createApp(
       options.territoryAuthorizationRepository ??
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     service: liveOperationsService,
+  });
+  registerMapNetworkRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: mapNetworkService,
   });
 
   return app;

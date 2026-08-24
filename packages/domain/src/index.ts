@@ -20,3 +20,4 @@ export * from './alarms/model.js';
 export * from './incidents/model.js';
 export * from './dashboard/model.js';
 export * from './live-operations/model.js';
+export * from './map-network/model.js';

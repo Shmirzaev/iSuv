@@ -16,6 +16,7 @@ export * from './alarms/alarms.js';
 export * from './incidents/incidents.js';
 export * from './dashboard/dashboard.js';
 export * from './live-operations/live-operations.js';
+export * from './map-network/map-network.js';
 
 export const healthStatusSchema = z.object({
   status: z.literal('ok'),

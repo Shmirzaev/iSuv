@@ -25,6 +25,8 @@ import { DashboardWorkspace } from './dashboard.js';
 import { dashboardPath } from './dashboard-model.js';
 import { LiveOperationsWorkspace } from './live-operations.js';
 import { operationsHash, selectedDeviceFromHash } from './live-operations-model.js';
+import { MapNetworkWorkspace } from './map-network.js';
+import { mapHash, mapSelectionFromHash } from './map-network-model.js';
 import { initialLocale, translate, type Locale } from '@isuv/i18n';
 import { ShellChrome, StatusVocabulary } from './shell-semantics.js';
 import './styles.css';
@@ -154,6 +156,9 @@ export function App() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(() =>
     selectedDeviceFromHash(typeof window === 'undefined' ? '' : window.location.hash),
   );
+  const [mapSelection, setMapSelection] = useState(() =>
+    mapSelectionFromHash(typeof window === 'undefined' ? '' : window.location.hash),
+  );
   const [dashboardPeriod, setDashboardPeriod] = useState<DashboardPeriod>('today');
   const [dashboard, setDashboard] = useState<
     | { kind: 'loading' }
@@ -248,6 +253,7 @@ export function App() {
     const updateArea = () => {
       setArea(areaFromHash(window.location.hash));
       setSelectedDeviceId(selectedDeviceFromHash(window.location.hash));
+      setMapSelection(mapSelectionFromHash(window.location.hash));
     };
     window.addEventListener('hashchange', updateArea);
     return () => window.removeEventListener('hashchange', updateArea);
@@ -258,6 +264,11 @@ export function App() {
     if (typeof window !== 'undefined') window.location.hash = operationsHash(deviceId);
     setArea('operations');
     setSelectedDeviceId(deviceId);
+  };
+  const selectMapFeature = (selection: typeof mapSelection) => {
+    if (typeof window !== 'undefined') window.location.hash = mapHash(selection);
+    setArea('map');
+    setMapSelection(selection);
   };
   return (
     <div className="application-shell">
@@ -290,6 +301,13 @@ export function App() {
             locale={locale}
             onDeviceChange={selectLiveDevice}
             selectedDeviceId={selectedDeviceId}
+          />
+        ) : area === 'map' ? (
+          <MapNetworkWorkspace
+            access={dashboardIdentityState(identity)}
+            locale={locale}
+            onSelection={selectMapFeature}
+            selection={mapSelection}
           />
         ) : (
           <section aria-labelledby="workspace-heading" className="panel">
