@@ -6,6 +6,9 @@ import { PostgresAlarmService } from '../modules/alarms/service.js';
 import { PostgresIncidentService } from '../modules/incidents/service.js';
 import { PostgresObservationService } from '../modules/observations/service.js';
 import { PostgresValidationService } from '../modules/validation/service.js';
+import { PostgresAllocationPlanService } from '../modules/allocation-plans/service.js';
+import { PostgresAllocationDeviationService } from '../modules/allocation-deviation/service.js';
+import { PostgresWaterBalanceService } from '../modules/water-balance/service.js';
 
 const p5 = {
   organization: 'a1000000-0000-4000-8000-000000000001',
@@ -618,6 +621,285 @@ async function seedSyntheticDashboardScenario(client: {
     ON CONFLICT (scenario_id,period,station_id) DO NOTHING`);
 }
 
+async function seedSyntheticAnalyticsScenario(client: {
+  query: (text: string, values?: unknown[]) => Promise<unknown>;
+}): Promise<void> {
+  // The event/reference cutoff is the exact governed plan-entry end, while
+  // known_at is clocked only after every approval and observation revision.
+  // This keeps the calendar window exact without backdating knowledge.
+  await client.query(`INSERT INTO analytics_synthetic_scenarios(id,organization_id,territory_id,version,reference_at,known_at,provenance,data_classification,official_compliance_eligible)
+    SELECT 'd7000000-0000-4000-8000-000000000001',plan.organization_id,'a2000000-0000-4000-8000-000000000001',1,entry.interval_end,clock_timestamp(),'synthetic: governed P6 composition cutoff; not official accounting or forecast','synthetic',false
+    FROM allocation_plans plan JOIN allocation_plan_versions version_row ON version_row.plan_id=plan.id
+    JOIN allocation_plan_entries entry ON entry.plan_version_id=version_row.id
+    WHERE plan.creation_reason='seed P6 governed analytics scenario' AND version_row.status='approved'
+    ORDER BY version_row.version DESC,entry.interval_end DESC LIMIT 1
+    ON CONFLICT(id) DO NOTHING`);
+}
+
+async function seedSyntheticGovernedAnalyticsScenario(client: PoolClient): Promise<void> {
+  const exists = await client.query<{ id: string }>(
+    `SELECT id FROM allocation_plans WHERE creation_reason='seed P6 governed analytics scenario'`,
+  );
+  if (exists.rows[0]) return;
+  const now = new Date(Math.floor(Date.now() / 1_000) * 1_000);
+  const localMidnight = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 19, 0, 0, 0),
+  );
+  // Asia/Tashkent midnight on the current local day; choose previous UTC day when needed.
+  if (localMidnight > now) localMidnight.setUTCDate(localMidnight.getUTCDate() - 1);
+  const iso = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, '.000000Z');
+  const start = iso(localMidnight),
+    end = iso(now),
+    effectiveUntil = iso(new Date(now.getTime() + 86400000));
+  const actor = 'a3000000-0000-4000-8000-000000000001',
+    approver = p5.approver;
+  const scope = (
+    await client.query<{
+      station_id: string;
+      section_id: string;
+      sensor_id: string;
+      device_id: string;
+      installation_id: string;
+      territory_id: string;
+      junction_id: string;
+    }>(
+      `SELECT station.id station_id,section.id section_id,sensor.id sensor_id,sensor.device_id,installation.id installation_id,station.territory_id,station.junction_id junction_id FROM monitoring_stations station JOIN water_sections section ON section.upstream_junction_id=station.junction_id AND section.lifecycle='active' JOIN telemetry_device_installations installation ON installation.station_id=station.id AND installation.effective_until IS NULL JOIN telemetry_sensors sensor ON sensor.device_id=installation.device_id AND sensor.measurement_kind='discharge' ORDER BY station.code DESC,section.code DESC LIMIT 1`,
+    )
+  ).rows[0];
+  if (!scope || end <= start) return;
+  const observations = new PostgresObservationService(undefined, client),
+    validation = new PostgresValidationService(undefined, client);
+  const plan = new PostgresAllocationPlanService(undefined, client),
+    deviation = new PostgresAllocationDeviationService(undefined, client),
+    balance = new PostgresWaterBalanceService(undefined, client);
+  await client.query(
+    `INSERT INTO integration_coverage_policies(
+       id,organization_id,territory_id,station_id,sensor_id,device_installation_id,method,
+       data_classification,provenance,created_by_user_id,creation_reason,created_request_id)
+     VALUES('d7100000-0000-4000-8000-000000000001',$1,$2,$3,$4,$5,'direct_discharge',
+       'synthetic','synthetic: P6 15 minute direct-discharge coverage; not official policy',
+       $6,'seed P6 governed analytics scenario','seed-p6-coverage-policy')
+     ON CONFLICT(id) DO NOTHING`,
+    [
+      p5.organization,
+      scope.territory_id,
+      scope.station_id,
+      scope.sensor_id,
+      scope.installation_id,
+      actor,
+    ],
+  );
+  await client.query(
+    `INSERT INTO integration_coverage_policy_versions(
+       id,policy_id,version,effective_from,effective_until,max_gap_microseconds,
+       requested_by_user_id,request_reason,requested_request_id,approved_by_user_id,
+       approval_reason,approved_request_id)
+     VALUES('d7100000-0000-4000-8000-000000000002','d7100000-0000-4000-8000-000000000001',
+       1,$1,$2,900000000,$3,'seed P6 governed analytics scenario','seed-p6-coverage-request',
+       $4,'seed P6 independent approval','seed-p6-coverage-approve')
+     ON CONFLICT(id) DO NOTHING`,
+    [start, effectiveUntil, actor, approver],
+  );
+  const profile = await validation.createProfile(
+    {
+      organizationId: p5.organization,
+      territoryId: scope.territory_id,
+      sensorId: scope.sensor_id,
+      measurementKind: 'discharge',
+      dataClassification: 'synthetic',
+      name: 'Synthetic P6 discharge validation',
+      effectiveFrom: start,
+      effectiveUntil: null,
+      rules: { minimumValue: '0', maximumValue: '100', allowBootstrapWithoutPrior: true },
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-validation-profile',
+  );
+  await validation.approveVersion(
+    profile.profileId,
+    profile.version,
+    scope.territory_id,
+    'seed P6 independent approval',
+    approver,
+    'seed-p6-validation-approve',
+  );
+  const observationTimes: string[] = [];
+  const startMs = localMidnight.getTime(),
+    endMs = now.getTime(),
+    cadenceMs = 15 * 60 * 1_000;
+  for (let atMs = startMs; atMs < endMs; atMs += cadenceMs)
+    observationTimes.push(iso(new Date(atMs)));
+  if (observationTimes.at(-1) !== end) observationTimes.push(end);
+  for (const [index, at] of observationTimes.entries()) {
+    const suffix = index.toString().padStart(3, '0');
+    const ingested = await observations.ingest(
+      {
+        sensorId: scope.sensor_id,
+        deviceId: scope.device_id,
+        measurementKind: 'discharge',
+        sourceSystem: 'synthetic-p6-scenario',
+        sourceEventId: `p6-${suffix}`,
+        observedAt: at,
+        unit: 'm3/s',
+        value: '1',
+        qualityState: 'unknown',
+        qualityReason: 'synthetic governed P6 input',
+        uncertainty: '0',
+        uncertaintyMethod: 'synthetic exact scenario input',
+        provenance: 'synthetic: governed P6 evidence',
+        measurementMethod: 'synthetic',
+        totalizerTransition: null,
+      },
+      scope.territory_id,
+    );
+    await validation.validate(
+      ingested.observation.lineageId,
+      scope.territory_id,
+      actor,
+      `seed-p6-validate-${suffix}`,
+      at,
+    );
+  }
+  const version = await plan.create(
+    {
+      waterSectionId: scope.section_id,
+      effectiveFrom: start,
+      effectiveUntil,
+      entries: [
+        {
+          intervalStart: start,
+          intervalEnd: end,
+          plannedVolume: String((now.getTime() - localMidnight.getTime()) / 1000),
+          unit: 'm3',
+          targetSemantics: 'whole_interval_target_no_proration',
+        },
+      ],
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-plan-create',
+  );
+  const entryId = (
+    await client.query<{ id: string }>(
+      'SELECT id FROM allocation_plan_entries WHERE plan_version_id=$1',
+      [version.id],
+    )
+  ).rows[0]?.id;
+  if (!entryId) throw new Error('P6 governed allocation entry was not created.');
+  const binding = await deviation.createBinding(
+    entryId,
+    {
+      stationId: scope.station_id,
+      sensorId: scope.sensor_id,
+      deviceInstallationId: scope.installation_id,
+      method: 'direct_discharge',
+      referencePlane: 'upstream',
+      provenance: 'synthetic: P6 binding',
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-binding',
+  );
+  void binding;
+  await plan.request(
+    version.planId,
+    version.version,
+    'seed P6 request',
+    actor,
+    'seed-p6-plan-request',
+  );
+  await plan.approve(
+    version.planId,
+    version.version,
+    { reason: 'seed P6 independent approval', legalReference: 'synthetic seed fixture' },
+    approver,
+    'seed-p6-plan-approve',
+    { allowSyntheticHistoricalEffectiveTime: true },
+  );
+  const policy = await deviation.createTolerancePolicy(
+    {
+      waterSectionId: scope.section_id,
+      provenance: 'synthetic: P6 tolerance',
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-tolerance',
+  );
+  const pv = await deviation.requestToleranceVersion(
+    policy.id,
+    {
+      effectiveFrom: start,
+      effectiveUntil,
+      underAbsoluteM3: '1',
+      overAbsoluteM3: '1',
+      combination: 'any',
+      appliesToZeroPlan: false,
+      reason: 'seed P6 tolerance',
+    },
+    actor,
+    'seed-p6-tolerance-request',
+  );
+  await deviation.approveToleranceVersion(
+    policy.id,
+    pv.version,
+    'seed P6 independent approval',
+    approver,
+    'seed-p6-tolerance-approve',
+    { allowSyntheticHistoricalEffectiveTime: true },
+  );
+  const model = await balance.create(
+    {
+      junctionId: scope.junction_id,
+      provenance: 'synthetic: P6 balance model',
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-balance-create',
+  );
+  const bv = await balance.request(
+    model.id,
+    {
+      effectiveFrom: start,
+      effectiveUntil,
+      components: [
+        {
+          waterSectionId: scope.section_id,
+          stationId: scope.station_id,
+          sensorId: scope.sensor_id,
+          deviceInstallationId: scope.installation_id,
+          method: 'direct_discharge',
+          role: 'outgoing',
+          referencePlane: 'upstream',
+          travelTimeMicroseconds: '0',
+          provenance: 'synthetic: P6 balance component',
+        },
+      ],
+      assumptions: [
+        {
+          intervalStart: start,
+          intervalEnd: end,
+          storageChangeM3: '0',
+          knownAdditionM3: '0',
+          knownRemovalM3: '0',
+          provenance: 'synthetic: P6 balance assumptions',
+        },
+      ],
+      provenance: 'synthetic: P6 balance model',
+      reason: 'seed P6 governed analytics scenario',
+    },
+    actor,
+    'seed-p6-balance-request',
+  );
+  await balance.approve(
+    model.id,
+    bv.version,
+    'seed P6 independent approval',
+    approver,
+    'seed-p6-balance-approve',
+  );
+}
+
 async function seedSyntheticLiveOperationsScenario(client: {
   query: (text: string, values?: unknown[]) => Promise<unknown>;
 }): Promise<void> {
@@ -718,6 +1000,8 @@ export async function seedSystemMetadata(databaseUrl: string | undefined): Promi
       const syntheticNetwork = await seedSyntheticNetwork(client);
       await seedSyntheticQuantityDerivationModels(client);
       await seedSyntheticDashboardScenario(client);
+      await seedSyntheticGovernedAnalyticsScenario(client);
+      await seedSyntheticAnalyticsScenario(client);
       await seedSyntheticLiveOperationsScenario(client);
       await seedSyntheticAlarmIncidentScenario(client);
       await client.query('COMMIT');

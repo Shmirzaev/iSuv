@@ -26,6 +26,7 @@ import { dashboardPath } from './dashboard-model.js';
 import { LiveOperationsWorkspace } from './live-operations.js';
 import { operationsHash, selectedDeviceFromHash } from './live-operations-model.js';
 import { AlarmIncidentCenterWorkspace } from './alarm-incident-center.js';
+import { AnalyticsWorkspace } from './analytics.js';
 import { alarmCenterHash, alarmCenterSelectionFromHash } from './alarm-incident-center-model.js';
 import { MapNetworkWorkspace } from './map-network.js';
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
@@ -327,6 +328,8 @@ export function App() {
             onSelection={selectAlarmFeature}
             selection={alarmSelection}
           />
+        ) : area === 'analytics' ? (
+          <AnalyticsWorkspace access={dashboardIdentityState(identity)} locale={locale} />
         ) : (
           <section aria-labelledby="workspace-heading" className="panel">
             <p className="eyebrow">{t('currentArea')}</p>

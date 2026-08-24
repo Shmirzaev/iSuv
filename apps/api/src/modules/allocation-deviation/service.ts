@@ -385,9 +385,12 @@ export class PostgresAllocationDeviationService {
     reason: string,
     actorUserId: string,
     requestId: string,
+    options: { allowSyntheticHistoricalEffectiveTime?: boolean } = {},
   ): Promise<SectionTolerancePolicyVersion> {
     try {
       return await this.transaction(async (client) => {
+        if (options.allowSyntheticHistoricalEffectiveTime)
+          await client.query("SET LOCAL isuv.seed_allow_synthetic_historical_tolerance='on'");
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [policyId]);
         const result = await client.query<PolicyVersionRow>(
           `UPDATE section_tolerance_policy_versions SET status='approved',approved_by_user_id=$3,approval_reason=$4,approved_request_id=$5

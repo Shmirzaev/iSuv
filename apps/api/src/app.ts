@@ -45,6 +45,8 @@ import { PostgresMapNetworkService } from './modules/map-network/service.js';
 import { registerMapNetworkRoutes } from './modules/map-network/routes.js';
 import { PostgresAlarmIncidentCenterService } from './modules/alarm-incident-center/service.js';
 import { registerAlarmIncidentCenterRoutes } from './modules/alarm-incident-center/routes.js';
+import { PostgresAnalyticsService } from './modules/analytics/service.js';
+import { registerAnalyticsRoutes } from './modules/analytics/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -69,6 +71,7 @@ export interface AppOptions {
   liveOperationsService?: PostgresLiveOperationsService;
   mapNetworkService?: PostgresMapNetworkService;
   alarmIncidentCenterService?: PostgresAlarmIncidentCenterService;
+  analyticsService?: PostgresAnalyticsService;
 }
 
 export function createApp(
@@ -145,6 +148,8 @@ export function createApp(
   const alarmIncidentCenterService =
     options.alarmIncidentCenterService ??
     new PostgresAlarmIncidentCenterService(process.env.DATABASE_URL);
+  const analyticsService =
+    options.analyticsService ?? new PostgresAnalyticsService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -298,6 +303,14 @@ export function createApp(
       options.territoryAuthorizationRepository ??
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     service: alarmIncidentCenterService,
+  });
+  registerAnalyticsRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: analyticsService,
   });
 
   return app;

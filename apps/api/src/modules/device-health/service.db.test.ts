@@ -11,10 +11,9 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required for database integration tests');
 const pool = new Pool({ connectionString: databaseUrl, max: 2 });
 after(async () => pool.end());
-// Keep this fixture away from the early hotspot devices exercised by the
-// observation, telemetry, and validation DB suites, which deliberately leave
-// durable history for their own cross-slice checks.
-const deviceId = 'f1080053-0000-4000-8000-000000000000';
+// Keep this fixture away from both the early hotspot devices exercised by the
+// core telemetry suites and hotspot 083, whose governed history drives P6 analytics.
+const deviceId = 'f1080052-0000-4000-8000-000000000000';
 
 function fact(sourceEventId: string, occurredAt = '2026-08-24T00:00:00.123456Z') {
   return {
@@ -73,10 +72,10 @@ test(
       });
       assert.equal(callerAssertedOfficial.event.dataClassification, 'synthetic');
       const pageOne = await service.history(deviceId, { limit: 1 }, [
-        'a2000000-0000-4000-8000-000000000005',
+        'a2000000-0000-4000-8000-000000000004',
       ]);
       const pageTwo = await service.history(deviceId, { limit: 1, cursor: pageOne.nextCursor! }, [
-        'a2000000-0000-4000-8000-000000000005',
+        'a2000000-0000-4000-8000-000000000004',
       ]);
       assert.notEqual(pageOne.events[0]?.id, pageTwo.events[0]?.id);
       assert.equal(pageOne.events[0]?.receivedAt, pageTwo.events[0]?.receivedAt);
@@ -110,7 +109,7 @@ test(
       assert.equal(current?.connectionStatus, 'communicating');
       assert.equal(current?.lastSeenReceivedAt, '2026-08-24T00:00:20.000000Z');
       const history = await service.history(deviceId, { limit: 10 }, [
-        'a2000000-0000-4000-8000-000000000005',
+        'a2000000-0000-4000-8000-000000000004',
       ]);
       assert.equal(history.events.filter((item) => item.sourceEventId.endsWith(suffix)).length, 2);
       const stream = await service.live(
@@ -118,7 +117,7 @@ test(
         null,
         250,
         deviceId,
-        ['a2000000-0000-4000-8000-000000000005'],
+        ['a2000000-0000-4000-8000-000000000004'],
       );
       assert.equal(
         stream.events.some((item) => item.event.sourceEventId === `new-${suffix}`),
@@ -160,7 +159,7 @@ test(
         null,
         250,
         point.deviceId,
-        ['a2000000-0000-4000-8000-000000000005'],
+        ['a2000000-0000-4000-8000-000000000004'],
       );
       assert.equal(
         journal.events.some((item) => item.event.sourceSystem === 'observation-health-v1'),

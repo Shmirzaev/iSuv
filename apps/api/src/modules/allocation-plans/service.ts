@@ -293,8 +293,11 @@ export class PostgresAllocationPlanService {
     input: ApproveAllocationPlanVersionRequest,
     actorUserId: string,
     requestId: string,
+    options: { allowSyntheticHistoricalEffectiveTime?: boolean } = {},
   ): Promise<AllocationPlanVersion> {
     return this.transaction(async (client) => {
+      if (options.allowSyntheticHistoricalEffectiveTime)
+        await client.query("SET LOCAL isuv.seed_allow_synthetic_historical_plan='on'");
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [planId]);
       const old = await client.query<VersionRow>(
         `${selectVersion} WHERE v.plan_id=$1 AND v.version=$2 FOR UPDATE`,
@@ -302,11 +305,20 @@ export class PostgresAllocationPlanService {
       );
       if (!old.rows[0])
         throw new AllocationPlanError('NOT_FOUND', 'The allocation plan version was not found.');
-      const backdated = await client.query<{ backdated: boolean }>(
-        'SELECT effective_from < clock_timestamp() AS backdated FROM allocation_plan_versions WHERE id=$1',
+      const backdated = await client.query<{
+        backdated: boolean;
+        data_classification: 'synthetic' | 'official';
+      }>(
+        'SELECT version_row.effective_from < clock_timestamp() AS backdated,plan.data_classification FROM allocation_plan_versions version_row JOIN allocation_plans plan ON plan.id=version_row.plan_id WHERE version_row.id=$1',
         [old.rows[0].id],
       );
-      if (backdated.rows[0]?.backdated)
+      if (
+        backdated.rows[0]?.backdated &&
+        !(
+          options.allowSyntheticHistoricalEffectiveTime &&
+          backdated.rows[0].data_classification === 'synthetic'
+        )
+      )
         throw new AllocationPlanError(
           'VALIDATION_ERROR',
           'An allocation plan cannot be approved with an effective time before approval.',

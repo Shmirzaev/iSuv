@@ -147,6 +147,11 @@ test(
         `SELECT policy.method,policy.station_id,policy.sensor_id,sensor.device_id
          FROM integration_coverage_policies policy
          JOIN telemetry_sensors sensor ON sensor.id=policy.sensor_id
+         WHERE policy.id IN (
+           'b9000000-0000-4000-8000-000000000003',
+           'b9000000-0000-4000-8000-000000000005',
+           'b9000000-0000-4000-8000-000000000007'
+         )
          ORDER BY policy.method`,
       );
       assert.equal(fixtures.rows.length, 3);
