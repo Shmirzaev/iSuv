@@ -16,3 +16,4 @@ export * from './quantity-derivation/model.js';
 export * from './allocation-deviation/model.js';
 export * from './water-balance/model.js';
 export * from './alarm-rules/model.js';
+export * from './alarms/model.js';

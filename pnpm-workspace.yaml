@@ -3,7 +3,7 @@ packages:
   - packages/*
 
 allowBuilds:
-  esbuild: set this to true or false
+  esbuild: true
 
 # Hold fast-moving transitive metadata/parsing packages at mature compatible
 # versions so clean installs keep the supply-chain minimum-release-age policy.

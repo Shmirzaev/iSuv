@@ -18,4 +18,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed during P4-001 on 2026-08-24. D-011/ADR-0008 establishes the bitemporal condition-signal boundary required for restart-safe persistence and correction history while reserving alarm catalog/severity for P4-002 and incident workflow for P4-003. P3-004 balance remains alarm-ineligible under B-005. D-001–D-010 remain unchanged.
+Last reviewed during P4-002 on 2026-08-24. The governed alarm catalog and immutable episode materialization follow existing D-004, D-007, and D-011; no new architectural decision is required. Incident/operator workflow remains reserved for P4-003, and P3-004 balance remains alarm-ineligible under B-005. D-001–D-011 remain unchanged.
