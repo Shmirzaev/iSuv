@@ -16,6 +16,8 @@ export const auditResourceSchema = z.enum([
   'alarm_rule',
   'alarm_catalog',
   'alarm',
+  'incident',
+  'escalation_policy',
 ]);
 export const auditActionSchema = z.enum([
   'user_role_grant.created',
@@ -53,6 +55,18 @@ export const auditActionSchema = z.enum([
   'alarm_catalog_policy.approved',
   'alarm.created',
   'alarm.cleared',
+  'escalation_policy.created',
+  'escalation_policy_version.requested',
+  'escalation_policy_version.approved',
+  'incident.created',
+  'incident.alarm_linked',
+  'incident.acknowledged',
+  'incident.investigating',
+  'incident.assigned',
+  'incident.commented',
+  'incident.corrective_action',
+  'incident.resolved',
+  'incident.closed',
   'water_balance_component.created',
   'water_balance_assumption.created',
 ]);

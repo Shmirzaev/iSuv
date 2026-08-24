@@ -34,7 +34,8 @@ export type AuthorizationAction =
   | 'validation_profile:approve'
   | 'allocation_plan:approve'
   | 'water_balance:approve'
-  | 'alarm:approve';
+  | 'alarm:approve'
+  | 'incident:approve';
 
 export interface EffectiveGrant {
   id: string;

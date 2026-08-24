@@ -35,6 +35,8 @@ import { PostgresAlarmRuleService } from './modules/alarm-rules/service.js';
 import { registerAlarmRuleRoutes } from './modules/alarm-rules/routes.js';
 import { PostgresAlarmService } from './modules/alarms/service.js';
 import { registerAlarmRoutes } from './modules/alarms/routes.js';
+import { PostgresIncidentService } from './modules/incidents/service.js';
+import { registerIncidentRoutes } from './modules/incidents/routes.js';
 
 export type ReadinessCheck = () => Promise<void>;
 
@@ -54,6 +56,7 @@ export interface AppOptions {
   waterBalanceService?: PostgresWaterBalanceService;
   alarmRuleService?: PostgresAlarmRuleService;
   alarmService?: PostgresAlarmService;
+  incidentService?: PostgresIncidentService;
 }
 
 export function createApp(
@@ -118,6 +121,8 @@ export function createApp(
   const alarmRuleService =
     options.alarmRuleService ?? new PostgresAlarmRuleService(process.env.DATABASE_URL);
   const alarmService = options.alarmService ?? new PostgresAlarmService(process.env.DATABASE_URL);
+  const incidentService =
+    options.incidentService ?? new PostgresIncidentService(process.env.DATABASE_URL);
 
   registerIdentityRoutes(app, {
     identityProvider,
@@ -231,6 +236,14 @@ export function createApp(
       options.territoryAuthorizationRepository ??
       new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
     service: alarmService,
+  });
+  registerIncidentRoutes(app, {
+    identityProvider,
+    sessionRepository: identitySessionRepository,
+    authorizationRepository:
+      options.territoryAuthorizationRepository ??
+      new PostgresTerritoryAuthorizationRepository(process.env.DATABASE_URL),
+    service: incidentService,
   });
 
   return app;

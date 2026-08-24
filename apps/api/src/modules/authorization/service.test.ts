@@ -170,6 +170,39 @@ test('reserves alarm approval for hydrologists and senior administrators', async
   assert.deepEqual(await decide('auditor'), { allowed: false, reason: 'ROLE_READ_ONLY' });
 });
 
+test('reserves incident escalation policy approval for senior administrators', async () => {
+  const decide = async (role: EffectiveGrant['role']) =>
+    authorizeTerritoryAction(
+      {
+        async findEffectiveGrantsForTarget() {
+          return [
+            {
+              id: 'a4000000-0000-4000-8000-000000000020',
+              role,
+              scope: 'territory' as const,
+              territoryId: districtA,
+              coversTargetTerritory: true,
+            },
+          ];
+        },
+      },
+      role,
+      'incident:approve',
+      districtA,
+    );
+
+  assert.equal((await decide('regional_director')).allowed, true);
+  assert.deepEqual(await decide('hydrologist'), {
+    allowed: false,
+    reason: 'ROLE_NOT_PERMITTED',
+  });
+  assert.deepEqual(await decide('district_operator'), {
+    allowed: false,
+    reason: 'ROLE_NOT_PERMITTED',
+  });
+  assert.deepEqual(await decide('auditor'), { allowed: false, reason: 'ROLE_READ_ONLY' });
+});
+
 test('fails closed for no effective grant and malformed elevated scope grants', async () => {
   const noGrantRepository = {
     async findEffectiveGrantsForTarget(): Promise<EffectiveGrant[]> {

@@ -18,4 +18,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed during P4-002 on 2026-08-24. The governed alarm catalog and immutable episode materialization follow existing D-004, D-007, and D-011; no new architectural decision is required. Incident/operator workflow remains reserved for P4-003, and P3-004 balance remains alarm-ineligible under B-005. D-001–D-011 remain unchanged.
+Last reviewed during P4-003 on 2026-08-24. The incident lifecycle, immutable alarm links, snapshotted escalation metadata, and atomic operator timeline follow existing D-004, D-007, and D-011; no new architectural decision is required. Automatic alarm state remains independent from human case state, escalation is metadata-only, and P3-004 balance remains alarm-ineligible under B-005. D-001–D-011 remain unchanged.
