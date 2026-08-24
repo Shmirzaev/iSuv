@@ -18,4 +18,4 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
-Last reviewed during P4-003 on 2026-08-24. The incident lifecycle, immutable alarm links, snapshotted escalation metadata, and atomic operator timeline follow existing D-004, D-007, and D-011; no new architectural decision is required. Automatic alarm state remains independent from human case state, escalation is metadata-only, and P3-004 balance remains alarm-ineligible under B-005. D-001–D-011 remain unchanged.
+Last reviewed during P5-001 on 2026-08-24. The React shell, typed shared tri-language vocabulary, session-authoritative display discovery, same-origin local proxy, and accessibility baseline follow ADR-0001 plus D-001, D-002, D-005, and D-007; no new architectural decision is required. Browser display gating remains conservative and never replaces API authorization; the optional local identity header is injected only by the development proxy and is absent from production bundles. D-001–D-011 remain unchanged.

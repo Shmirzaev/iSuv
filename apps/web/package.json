@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "test": "node --test"
+    "test": "pnpm --filter @isuv/i18n build && tsx --test src/**/*.test.ts src/**/*.test.tsx"
   },
   "dependencies": {
+    "@isuv/contracts": "workspace:*",
     "@isuv/i18n": "workspace:*",
     "@vitejs/plugin-react": "^5.0.2",
     "vite": "^7.1.5",

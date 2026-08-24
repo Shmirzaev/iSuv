@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed after P4-003 on 2026-08-24: B-001–B-006 remain external rollout dependencies. Rating curves, coverage policies, derived volumes, allocation plans, measurement bindings, tolerance versions, travel times, accounting terms, alarm policies, alarm episodes, incident policies, response targets, and all planned-vs-actual, balance, condition-signal, or incident-metric results are therefore synthetic-only and explicitly ineligible for official compliance. Missing governance or trusted inputs remain visibly deferred/unassessable rather than normal. B-005/B-006 do not prevent the remaining operator application and reporting work when every affected view stays explicitly synthetic/nonofficial.
+Last reviewed after P5-001 on 2026-08-24: B-001–B-006 remain external rollout dependencies. Rating curves, coverage policies, derived volumes, allocation plans, measurement bindings, tolerance versions, travel times, accounting terms, alarm policies, alarm episodes, incident policies, response targets, and all planned-vs-actual, balance, condition-signal, or incident-metric results are therefore synthetic-only and explicitly ineligible for official compliance. The operator shell persistently labels that boundary, exposes missing/unreliable states with text, icon, and value, and never presents placeholders as live data. B-001–B-006 do not prevent the remaining operator application and reporting work when every affected view stays explicitly synthetic/nonofficial.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|

@@ -28,10 +28,11 @@ The synthetic telemetry simulator is deliberately disabled by default and always
 ```powershell
 $env:ISUV_ENABLE_LOCAL_IDENTITY = 'true'
 $env:ISUV_ENABLE_SYNTHETIC_SIMULATOR = 'true'
+$env:ISUV_WEB_LOCAL_USER_ID = 'a3000000-0000-4000-8000-000000000001'
 pnpm dev
 ```
 
-Authenticated `GET /api/v1/telemetry/simulator/preview` and `POST /api/v1/telemetry/simulator/run` requests accept a bounded scenario request. The seeded system administrator ID is `a3000000-0000-4000-8000-000000000001` and is supplied locally through `x-isuv-user-id`. All simulator output is synthetic, raw, and unsuitable for accounting until the governed validation workflow approves it.
+`ISUV_WEB_LOCAL_USER_ID` is consumed only by Vite's local proxy and is not bundled into the browser. It demonstrates the shell with a seeded role while the API remains the authorization authority; omit it to exercise the fail-closed signed-out state. Authenticated `GET /api/v1/telemetry/simulator/preview` and `POST /api/v1/telemetry/simulator/run` requests accept a bounded scenario request. The seeded system administrator ID is `a3000000-0000-4000-8000-000000000001` and is supplied locally through `x-isuv-user-id`. All simulator output is synthetic, raw, and unsuitable for accounting until the governed validation workflow approves it.
 
 ## Verification and smoke checks
 
