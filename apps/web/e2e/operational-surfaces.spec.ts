@@ -134,3 +134,46 @@ test('seeded synthetic operational surfaces remain navigable, explicit, and resp
   expect(responsive.tableOverflowsLocally).toBe(true);
   expect(consoleErrors).toEqual([]);
 });
+
+test('map-first workspace keeps evidence compact and station markers interactive', async ({
+  page,
+}) => {
+  const consoleErrors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
+
+  await page.goto('/#map');
+  await chooseLocale(page, english);
+  await expect(page.getByRole('heading', { name: 'Map and network' })).toBeVisible();
+  await expect(page.locator('.map-workspace__disclosure')).toContainText(
+    'SYNTHETIC / NON-OFFICIAL',
+  );
+  await expect(page.locator('.map-workspace__provenance')).not.toHaveAttribute('open', '');
+
+  const mapCanvas = page.locator('.map-canvas');
+  await expect(mapCanvas).toBeVisible();
+  const mapCanvasBox = await mapCanvas.boundingBox();
+  expect(mapCanvasBox?.y).toBeLessThan(650);
+  expect(mapCanvasBox?.height).toBeGreaterThan(500);
+  expect(await page.locator('.map-waterway').count()).toBeGreaterThan(0);
+  await expect(page.locator('.map-station-feature')).toHaveCount(0);
+  await expect(page.locator('.map-sidebar__details[open]')).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Network detail', exact: true }).click();
+  const marker = page.locator('.map-station-feature').first();
+  await expect(marker).toBeVisible();
+  await marker.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#map\?stationId=/);
+  await expect(page.getByRole('heading', { name: 'Selected station' })).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const responsive = await page.locator('body').evaluate(() => ({
+    viewport: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  expect(responsive.documentWidth).toBeLessThanOrEqual(responsive.viewport + 1);
+  expect(consoleErrors).toEqual([]);
+});

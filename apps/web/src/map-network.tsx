@@ -135,26 +135,37 @@ function Geometry({
   selection,
   trace,
   layers,
+  onSelect,
 }: {
   locale: Locale;
   response: MapNetworkResponse;
   selection: MapSelection;
   trace: TraceResponse | null;
   layers: Record<string, boolean>;
+  onSelect: (stationId: string, deviceId: string) => void;
 }) {
+  const visibleSections = response.layers.sections.filter(
+    (section) => layers.sections || trace?.edges.some((edge) => edge.sectionId === section.id),
+  );
+  const visibleStations = response.layers.stations.filter(
+    (station) => layers.stations || station.id === selection.stationId,
+  );
   const all = [
-    ...response.layers.waterways.flatMap((x) =>
-      x.geometry.type === 'LineString' ? x.geometry.coordinates : x.geometry.coordinates.flat(),
-    ),
-    ...response.layers.sections.flatMap((x) => x.geometry.coordinates),
-    ...response.layers.stations.map((x) => x.geometry.coordinates),
+    ...(layers.waterways
+      ? response.layers.waterways.flatMap((x) =>
+          x.geometry.type === 'LineString' ? x.geometry.coordinates : x.geometry.coordinates.flat(),
+        )
+      : []),
+    ...visibleSections.flatMap((x) => x.geometry.coordinates),
+    ...(layers.junctions ? response.layers.junctions.map((x) => x.geometry.coordinates) : []),
+    ...visibleStations.map((x) => x.geometry.coordinates),
   ];
   const xs = all.map((x) => x[0]),
     ys = all.map((x) => x[1]);
-  const minX = Math.min(...xs, 0),
-    maxX = Math.max(...xs, 1),
-    minY = Math.min(...ys, 0),
-    maxY = Math.max(...ys, 1);
+  const minX = xs.length > 0 ? Math.min(...xs) : 0,
+    maxX = xs.length > 0 ? Math.max(...xs) : 1,
+    minY = ys.length > 0 ? Math.min(...ys) : 0,
+    maxY = ys.length > 0 ? Math.max(...ys) : 1;
   const point = ([x, y]: [number, number]) =>
     `${20 + ((x - minX) / (maxX - minX || 1)) * 560},${280 - ((y - minY) / (maxY - minY || 1)) * 240}`;
   return (
@@ -179,47 +190,65 @@ function Geometry({
             )),
           )
         : null}
-      {response.layers.sections
-        .filter(
-          (section) =>
-            layers.sections || trace?.edges.some((edge) => edge.sectionId === section.id),
-        )
-        .map((x) => (
-          <polyline
-            key={x.id}
-            className={
-              trace?.edges.some((edge) => edge.sectionId === x.id)
-                ? 'map-section map-section--trace'
-                : 'map-section'
-            }
-            points={x.geometry.coordinates.map(point).join(' ')}
-          />
-        ))}
+      {visibleSections.map((x) => (
+        <polyline
+          key={x.id}
+          className={
+            trace?.edges.some((edge) => edge.sectionId === x.id)
+              ? 'map-section map-section--trace'
+              : 'map-section'
+          }
+          points={x.geometry.coordinates.map(point).join(' ')}
+        />
+      ))}
       {layers.junctions
         ? response.layers.junctions.map((x) => {
             const [cx, cy] = point(x.geometry.coordinates);
             return <circle key={x.id} className="map-junction" cx={cx} cy={cy} r="3" />;
           })
         : null}
-      {response.layers.stations
-        .filter((station) => layers.stations || station.id === selection.stationId)
-        .map((x) => {
-          const [cx, cy] = point(x.geometry.coordinates);
-          const selected = selection.stationId === x.id;
-          return (
-            <g key={x.id}>
-              <circle
-                className={selected ? 'map-station map-station--selected' : 'map-station'}
-                cx={cx}
-                cy={cy}
-                r="7"
-              />
+      {visibleStations.map((x) => {
+        const [cx, cy] = point(x.geometry.coordinates);
+        const selected = selection.stationId === x.id;
+        const selectable = x.deviceId !== null;
+        const selectStation = () => {
+          if (x.deviceId) onSelect(x.id, x.deviceId);
+        };
+        return (
+          <g
+            key={x.id}
+            className={selectable ? 'map-station-feature' : undefined}
+            role={selectable ? 'button' : undefined}
+            tabIndex={selectable ? 0 : undefined}
+            aria-label={selectable ? `${t(locale, 'mapSelect')} ${x.id}` : undefined}
+            aria-pressed={selectable ? selected : undefined}
+            onClick={selectable ? selectStation : undefined}
+            onKeyDown={
+              selectable
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      selectStation();
+                    }
+                  }
+                : undefined
+            }
+          >
+            <title>{x.id}</title>
+            <circle
+              className={selected ? 'map-station map-station--selected' : 'map-station'}
+              cx={cx}
+              cy={cy}
+              r="7"
+            />
+            {selected ? (
               <text x={cx} y={Number(cy) + 14}>
-                {selected ? t(locale, 'mapPanel') : t(locale, 'stations')}
+                {x.id}
               </text>
-            </g>
-          );
-        })}
+            ) : null}
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -376,8 +405,8 @@ function Panel({
   const panel = response.panel;
   if (!panel)
     return (
-      <section className="panel">
-        <h2>{t(locale, 'mapPanel')}</h2>
+      <section className="map-panel map-panel--empty" aria-labelledby="map-panel-heading">
+        <h3 id="map-panel-heading">{t(locale, 'mapPanel')}</h3>
         <p>{t(locale, 'mapNoSelection')}</p>
       </section>
     );
@@ -385,7 +414,7 @@ function Panel({
     p = mapStatePresentation(current),
     f = playbackFrame(playback, frame);
   return (
-    <aside className="map-panel panel" aria-labelledby="map-panel-heading">
+    <aside className="map-panel" aria-labelledby="map-panel-heading">
       <button className="action-button" type="button" onClick={onClose}>
         {t(locale, 'mapClose')}
       </button>
@@ -548,14 +577,16 @@ export function MapNetworkWorkspace({
   selection: MapSelection;
   onSelection: (s: MapSelection) => void;
 }) {
-  const [detail, setDetail] = useState<MapDetail>(initialMapDetail(selection)),
+  const [detail, setDetail] = useState<MapDetail>(
+      selection.stationId ? initialMapDetail(selection) : 'basin',
+    ),
     [response, setResponse] = useState<MapNetworkResponse | null>(null),
     [state, setState] = useState<State>('loading'),
     [layers, setLayers] = useState({
       waterways: true,
       junctions: false,
       sections: false,
-      stations: false,
+      stations: true,
     }),
     [trace, setTrace] = useState<TraceResponse | null>(null),
     [playback, setPlayback] = useState<PlaybackResponse | null>(null),
@@ -653,15 +684,14 @@ export function MapNetworkWorkspace({
     );
   return (
     <section className="map-network" aria-labelledby="map-heading">
-      <header className="panel">
-        <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
-        <h2 id="map-heading">{t(locale, 'mapHeading')}</h2>
-        <p>{t(locale, 'mapDetail')}</p>
-        <p>
-          {t(locale, 'provenance')}: {response.scenario.provenance};{' '}
-          {formatLiveTimestamp(response.referenceAt)}
-        </p>
-        <fieldset>
+      <header className="map-workspace__toolbar">
+        <div>
+          <p className="map-workspace__disclosure">
+            <span aria-hidden="true">⚠</span> <strong>{t(locale, 'syntheticScenario')}</strong>
+          </p>
+          <h2 id="map-heading">{t(locale, 'mapHeading')}</h2>
+        </div>
+        <fieldset className="map-mode-controls">
           <legend>{t(locale, 'mapNetwork')}</legend>
           {(['overview', 'basin', 'network'] as const).map((x) => (
             <button
@@ -678,88 +708,108 @@ export function MapNetworkWorkspace({
             </button>
           ))}
         </fieldset>
+        <details className="map-workspace__provenance">
+          <summary>{t(locale, 'provenance')}</summary>
+          <p>{t(locale, 'mapDetail')}</p>
+          <p>
+            {response.scenario.provenance}; {formatLiveTimestamp(response.referenceAt)}
+          </p>
+        </details>
       </header>
-      <section className="map-overview panel">
-        <h3>{t(locale, 'mapOverview')}</h3>
-        <ul>
-          {response.overview.map((x) => (
-            <li key={x.basinId}>
-              <strong>{x.basinName}</strong>: {x.stationCount} {t(locale, 'stations')};{' '}
-              {t(locale, 'reported')}: {x.states.reported}; {t(locale, 'noData')}:{' '}
-              {x.states.no_data}; {t(locale, 'statusUnreliable')}: {x.states.unreliable}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <fieldset className="map-layers">
-        <legend>{t(locale, 'mapLayers')}</legend>
-        {(Object.keys(layers) as (keyof typeof layers)[]).map((x) => (
-          <label key={x}>
-            <input
-              type="checkbox"
-              checked={visibleLayers[x]}
-              disabled={(x === 'stations' || x === 'sections') && detail !== 'network'}
-              onChange={(e) => setLayers({ ...layers, [x]: e.target.checked })}
-            />
-            {t(locale, `map${x.charAt(0).toUpperCase() + x.slice(1)}` as TranslationKey)}
-          </label>
-        ))}
-      </fieldset>
-      <StatusLegend locale={locale} />
-      <div className="map-views">
-        <section>
-          <h3>{t(locale, 'mapGeographic')}</h3>
+      <div className="map-workspace">
+        <section className="map-canvas" aria-labelledby="map-geographic-heading">
+          <h3 id="map-geographic-heading" className="visually-hidden">
+            {t(locale, 'mapGeographic')}
+          </h3>
           <Geometry
             locale={locale}
             response={response}
             selection={selection}
             trace={trace}
             layers={visibleLayers}
+            onSelect={select}
           />
         </section>
-        <section>
-          <h3>{t(locale, 'mapTopology')}</h3>
-          <Topology
+        <aside className="map-sidebar" aria-label={t(locale, 'mapHeading')}>
+          <Panel
             locale={locale}
-            detail={detail}
             response={response}
-            selection={selection}
+            onTrace={traceIt}
+            onClose={() => onSelection({ stationId: null, deviceId: null })}
             trace={trace}
+            playback={playback}
+            frame={frame}
+            onFrame={setFrame}
           />
-        </section>
+          <details className="map-sidebar__details" open>
+            <summary>{t(locale, 'mapLayers')}</summary>
+            <fieldset className="map-layers">
+              <legend className="visually-hidden">{t(locale, 'mapLayers')}</legend>
+              {(Object.keys(layers) as (keyof typeof layers)[]).map((x) => (
+                <label key={x}>
+                  <input
+                    type="checkbox"
+                    checked={visibleLayers[x]}
+                    disabled={(x === 'stations' || x === 'sections') && detail !== 'network'}
+                    onChange={(e) => setLayers({ ...layers, [x]: e.target.checked })}
+                  />
+                  {t(locale, `map${x.charAt(0).toUpperCase() + x.slice(1)}` as TranslationKey)}
+                </label>
+              ))}
+            </fieldset>
+          </details>
+          <details className="map-sidebar__details">
+            <summary>{t(locale, 'mapSemanticList')}</summary>
+            <ol className="map-semantic">
+              {response.layers.stations.map((station) => (
+                <li key={station.id}>
+                  <button
+                    id={`map-feature-${station.id}`}
+                    type="button"
+                    className="action-button"
+                    aria-pressed={selection.stationId === station.id}
+                    disabled={station.deviceId === null}
+                    onClick={() => station.deviceId && select(station.id, station.deviceId)}
+                  >
+                    {t(locale, 'mapSelect')} {station.id}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </details>
+          <details className="map-sidebar__details">
+            <summary>{t(locale, 'mapLegend')}</summary>
+            <StatusLegend locale={locale} />
+          </details>
+          <details className="map-sidebar__details">
+            <summary>{t(locale, 'mapOverview')}</summary>
+            <section className="map-overview" aria-labelledby="map-overview-heading">
+              <h3 id="map-overview-heading" className="visually-hidden">
+                {t(locale, 'mapOverview')}
+              </h3>
+              <ul>
+                {response.overview.map((x) => (
+                  <li key={x.basinId}>
+                    <strong>{x.basinName}</strong>: {x.stationCount} {t(locale, 'stations')};{' '}
+                    {t(locale, 'reported')}: {x.states.reported}; {t(locale, 'noData')}:{' '}
+                    {x.states.no_data}; {t(locale, 'statusUnreliable')}: {x.states.unreliable}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </details>
+          <details className="map-sidebar__details">
+            <summary>{t(locale, 'mapTopology')}</summary>
+            <Topology
+              locale={locale}
+              detail={detail}
+              response={response}
+              selection={selection}
+              trace={trace}
+            />
+          </details>
+        </aside>
       </div>
-      <section className="map-semantic panel" aria-labelledby="map-semantic-heading">
-        <h3 id="map-semantic-heading">{t(locale, 'mapSemanticList')}</h3>
-        <ol>
-          {(detail === 'network'
-            ? response.layers.stations
-            : response.overview.map((basin) => ({ id: basin.basinId, deviceId: null }))
-          ).map((s) => (
-            <li key={s.id}>
-              <button
-                id={`map-feature-${s.id}`}
-                type="button"
-                className="action-button"
-                aria-pressed={selection.stationId === s.id}
-                disabled={s.deviceId === null}
-                onClick={() => s.deviceId && select(s.id, s.deviceId)}
-              >
-                {t(locale, 'mapSelect')} {s.id}
-              </button>
-            </li>
-          ))}
-        </ol>
-      </section>
-      <Panel
-        locale={locale}
-        response={response}
-        onTrace={traceIt}
-        onClose={() => onSelection({ stationId: null, deviceId: null })}
-        trace={trace}
-        playback={playback}
-        frame={frame}
-        onFrame={setFrame}
-      />
     </section>
   );
 }
