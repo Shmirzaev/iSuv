@@ -4,6 +4,19 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` verified, `[!]` blocked.
 
 The primary agent may split tasks further. It must preserve IDs/dependencies, add measurable exit evidence, and keep only one active owner per overlapping file area.
 
+## Approval-gated design task
+
+- [x] **D0-001 — Creative smooth-transition landing-page MVP**  
+  Depends: none.  
+  Exit: coded UZ/RU/EN landing preview, responsive layouts, reduced-motion path, review document, and browser verification are complete.  
+  Evidence: `landing-mvp/`, `docs/design/LANDING_MVP_SPEC.md`, `docs/design/LANDING_MVP_REVIEW.md`, and `docs/design/LANDING_MVP_BROWSER_QA.json`.
+
+- [!] **D0-002 — User design approval**  
+  Depends: D0-001.  
+  Blocker: explicit `APPROVED` or revision instructions from the user.  
+  Exit: visual/motion direction is approved before any P0–P7 platform implementation begins.  
+  Note: this temporarily pauses the normal autonomous P0–P7 loop.
+
 ## Phase 0 — Foundation
 
 - [ ] **P0-001 — Repository audit and baseline**  

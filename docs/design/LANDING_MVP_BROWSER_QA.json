@@ -1,0 +1,28 @@
+{
+  "browser": "Chromium",
+  "result": { "passed": 30, "total": 30 },
+  "viewports": {
+    "desktop": { "width": 1440, "height": 1000 },
+    "mobile": { "width": 390, "height": 844 }
+  },
+  "verified": [
+    "desktop no horizontal overflow",
+    "desktop hero title visible",
+    "six scroll story keyframes",
+    "sticky story stage",
+    "network path reveal",
+    "A-07 station inspector",
+    "inspector to dashboard morph",
+    "alarm card and acknowledgement state",
+    "three architecture layers",
+    "overview dialog open and close",
+    "desktop command dashboard",
+    "mobile no horizontal overflow",
+    "mobile hero",
+    "mobile station inspector",
+    "mobile command dashboard"
+  ],
+  "console_errors": [],
+  "page_errors": [],
+  "smoke_tests": { "passed": 4, "total": 4 }
+}
