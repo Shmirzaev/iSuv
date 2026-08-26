@@ -1,12 +1,12 @@
 # iSuv Creative Landing MVP
 
-Approval-gated, dependency-free interactive prototype for the regional water operations platform.
+Approval-stage coded prototype for the iSuv regional water operations platform.
 
 ## Run
 
 ```bash
 cd landing-mvp
-python3 -m http.server 4173
+npm run dev
 ```
 
 Open `http://localhost:4173`.
@@ -18,9 +18,13 @@ cd landing-mvp
 npm test
 ```
 
-## Scope boundary
+## Included
 
-- Uses clearly illustrative/synthetic values.
-- Demonstrates the landing-page narrative and motion direction only.
-- Does not connect to real sensors, GIS data, databases or physical water infrastructure.
-- Does not begin the platform MVP task graph until the landing direction is approved.
+- Cinematic scroll story: main canal → network split → A-07 zoom → telemetry inspector → command dashboard → alarm workflow → platform layers.
+- Responsive desktop and mobile layouts.
+- Motion toggle and `prefers-reduced-motion` support.
+- Clearly labeled synthetic data.
+- Correct distinction between stage (`m`), discharge (`m³/s`), and accumulated volume (`m³`).
+- No real infrastructure control.
+
+This branch is a visual and interaction MVP only. It does not begin the complete platform implementation in `TASKS.md`.

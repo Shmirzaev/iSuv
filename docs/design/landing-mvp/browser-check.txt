@@ -1,8 +1,0 @@
-browser=Chromium
-render_mode=local static document with production files
-desktop_render=passed
-mobile_render=passed
-mobile_horizontal_overflow_px=0
-console_errors=[]
-page_errors=[]
-smoke_checks=10/10 passed
