@@ -255,6 +255,11 @@ test('device health exposes independent offline, fault, current, stale, and no-d
     assert.match(markup, new RegExp(visibleState));
   assert.equal((markup.match(/aria-hidden="true"/g) ?? []).length > 12, true);
   assert.equal((markup.match(/data-health-state=/g) ?? []).length, 9);
+  assert.equal((markup.match(/<details class="live-health-disclosure">/g) ?? []).length, 3);
+  assert.match(
+    markup,
+    /aria-label="Water and device status: Reported; Device health: Communicating · No fault reported · Current data condition; Not configured"/,
+  );
 });
 
 test('a valid empty filtered result retains the filters and clear action', () => {

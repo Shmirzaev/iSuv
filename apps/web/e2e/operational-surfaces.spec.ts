@@ -58,11 +58,16 @@ test('seeded synthetic operational surfaces remain navigable, explicit, and resp
   ).toBeVisible();
   await expect(
     page
-      .locator('strong')
-      .filter({ hasText: /^Unreliable$/ })
+      .locator('.live-health-disclosure summary')
+      .filter({ hasText: /Unreliable/ })
       .first(),
   ).toBeVisible();
   await expect(page.getByRole('cell', { name: /^No data/ }).first()).toBeVisible();
+  const liveRowHeights = await page
+    .locator('.live-table tbody tr')
+    .evaluateAll((rows) => rows.slice(0, 3).map((row) => row.getBoundingClientRect().height));
+  expect(Math.max(...liveRowHeights)).toBeLessThan(360);
+  await expect(page.locator('.live-health-disclosure').first()).not.toHaveAttribute('open', '');
   const deviceLink = page.getByRole('link', { name: /^Inspect device:/ }).first();
   await deviceLink.click();
   await expect(page).toHaveURL(/#operations\?deviceId=/);

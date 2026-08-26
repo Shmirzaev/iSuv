@@ -313,6 +313,80 @@ function DeviceHealthStatus({
   );
 }
 
+function LiveStatusDisclosure({
+  locale,
+  row,
+}: {
+  locale: Locale;
+  row: LiveOperationsResponse['rows'][number];
+}) {
+  const health = row.health;
+  const attention = liveAttentionPresentation(row.attention.state);
+  const connectionLabel: TranslationKey =
+    health.connection === 'communicating'
+      ? 'liveCommunicating'
+      : health.connection === 'offline'
+        ? 'liveOffline'
+        : 'liveUnknown';
+  const faultLabel: TranslationKey =
+    health.fault === 'reported'
+      ? 'deviceFault'
+      : health.fault === 'none'
+        ? 'liveNoFault'
+        : 'liveUnknown';
+  const conditionLabel: TranslationKey =
+    health.dataCondition === 'current'
+      ? 'liveDataCurrent'
+      : health.dataCondition === 'stale'
+        ? 'liveDataStale'
+        : health.dataCondition === 'unreliable'
+          ? 'statusUnreliable'
+          : health.dataCondition === 'no_data'
+            ? 'noData'
+            : health.dataCondition === 'unconfigured'
+              ? 'statusUnconfigured'
+              : 'liveUnknown';
+  const connectionIcon =
+    health.connection === 'communicating' ? '↔' : health.connection === 'offline' ? '⊘' : '?';
+  const faultIcon = health.fault === 'reported' ? '!' : health.fault === 'none' ? '✓' : '?';
+  const conditionIcon =
+    health.dataCondition === 'current'
+      ? '✓'
+      : health.dataCondition === 'stale'
+        ? '◷'
+        : health.dataCondition === 'unreliable'
+          ? '!'
+          : health.dataCondition === 'no_data'
+            ? '—'
+            : health.dataCondition === 'unconfigured'
+              ? '⚙'
+              : '?';
+  const summary = `${t(locale, 'liveWaterStatus')}: ${t(locale, attention.label)}; ${t(locale, 'liveDeviceHealth')}: ${t(locale, connectionLabel)} · ${t(locale, faultLabel)} · ${t(locale, conditionLabel)}; ${t(locale, 'liveNotConfigured')}`;
+
+  return (
+    <details className="live-health-disclosure">
+      <summary aria-label={summary}>
+        <span className="live-health-disclosure__states">
+          {[
+            ['attention', attention.icon, attention.label],
+            ['connection', connectionIcon, connectionLabel],
+            ['fault', faultIcon, faultLabel],
+            ['condition', conditionIcon, conditionLabel],
+            ['governance', '⚙', 'liveNotConfigured'],
+          ].map(([key, icon, label]) => (
+            <span key={key}>
+              <span aria-hidden="true">{icon}</span> {t(locale, label as TranslationKey)}
+            </span>
+          ))}
+        </span>
+      </summary>
+      <StatusValue locale={locale} row={row} />
+      <DeviceHealthStatus locale={locale} health={health} />
+      <GovernedPlaceholder locale={locale} reason={row.governed.waterStatus.reason} />
+    </details>
+  );
+}
+
 function FilterSelect({
   locale,
   label,
@@ -590,9 +664,7 @@ function LiveTable({
                 {t(locale, qualityKey(row.quantities.discharge.quality))}
               </td>
               <td data-label={t(locale, 'liveWaterStatus')}>
-                <StatusValue locale={locale} row={row} />
-                <DeviceHealthStatus locale={locale} health={row.health} />
-                <GovernedPlaceholder locale={locale} reason={row.governed.waterStatus.reason} />
+                <LiveStatusDisclosure locale={locale} row={row} />
               </td>
               <td data-label={t(locale, 'liveLastUpdate')}>
                 <time dateTime={row.health.lastSeenReceivedAt ?? undefined}>

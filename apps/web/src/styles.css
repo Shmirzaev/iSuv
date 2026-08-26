@@ -893,6 +893,26 @@ main:focus-visible {
 .live-placeholder small {
   color: #475569;
 }
+.live-health-disclosure {
+  margin-block: 0.45rem;
+}
+.live-health-disclosure summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.live-health-disclosure__states {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  gap: 0.2rem 0.55rem;
+  margin-top: 0.2rem;
+}
+.live-health-disclosure__states > span {
+  white-space: nowrap;
+}
+.live-health-disclosure[open] summary {
+  margin-bottom: 0.45rem;
+}
 .live-pagination {
   display: flex;
   flex-wrap: wrap;
