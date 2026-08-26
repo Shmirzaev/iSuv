@@ -1,0 +1,10 @@
+{
+  "name": "isuv-creative-landing-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Approval-gated creative landing page MVP for the iSuv regional water platform.",
+  "scripts": {
+    "serve": "python3 -m http.server 4173 --directory .",
+    "test": "node ./tests/smoke.mjs"
+  }
+}

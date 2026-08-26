@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#061014" />
+  <meta name="description" content="iSuv — regional water operations, accounting, monitoring and decision-support platform." />
+  <title>iSuv — Every cubic metre, accounted for</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__orb ambient__orb--a"></div>
+    <div class="ambient__orb ambient__orb--b"></div>
+    <div class="ambient__grid"></div>
+    <div class="ambient__noise"></div>
+  </div>
+
+  <header class="topbar" id="topbar">
+    <a class="brand" href="#hero" aria-label="iSuv home">
+      <svg class="brand__mark" viewBox="0 0 40 40" role="img" aria-label="iSuv water network mark">
+        <path d="M20 3C14.5 10.2 8 17 8 24.2A12 12 0 0 0 32 24.2C32 17 25.5 10.2 20 3Z" fill="currentColor" opacity=".22"/>
+        <path d="M12.7 24.7c2.4-3.9 5-5.8 7.7-5.8 2.3 0 4.5 1.4 6.9 4.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="13" cy="25" r="2.2" fill="currentColor"/>
+        <circle cx="20.5" cy="19" r="2.2" fill="currentColor"/>
+        <circle cx="27.5" cy="23.4" r="2.2" fill="currentColor"/>
+      </svg>
+      <span>iSuv</span>
+    </a>
+
+    <nav class="topbar__nav" aria-label="Primary navigation">
+      <a href="#platform">Platform</a>
+      <a href="#operations">Operations</a>
+      <a href="#governance">Governance</a>
+    </nav>
+
+    <div class="topbar__actions">
+      <button class="motion-toggle" id="motionToggle" type="button" aria-pressed="false" aria-label="Turn motion off">
+        <span class="motion-toggle__dot"></span>
+        <span class="motion-toggle__label">Motion on</span>
+      </button>
+      <a class="topbar__cta" href="#contact">Request pilot</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="hero" aria-labelledby="hero-title">
+      <div class="hero__eyebrow reveal-on-load">
+        <span class="status-dot"></span>
+        Regional water intelligence
+      </div>
+      <h1 class="hero__title reveal-on-load" id="hero-title">
+        Every cubic metre.<br />
+        <span>Accounted for.</span>
+      </h1>
+      <p class="hero__lead reveal-on-load">
+        Live river and canal telemetry becomes trusted allocation decisions,
+        early warnings and an auditable regional water record.
+      </p>
+      <div class="hero__actions reveal-on-load">
+        <a class="button button--primary" href="#platform">Explore the system</a>
+        <a class="button button--ghost" href="#operations">See live operations</a>
+      </div>
+
+      <div class="hero__telemetry reveal-on-load" aria-label="Illustrative platform telemetry">
+        <div><span>Regional inflow</span><strong>18.4M m³</strong></div>
+        <div><span>Allocation compliance</span><strong>92.7%</strong></div>
+        <div><span>Stations online</span><strong>97.6%</strong></div>
+      </div>
+
+      <div class="hero__scroll-hint reveal-on-load" aria-hidden="true">
+        <span>Scroll to follow the water</span>
+        <i></i>
+      </div>
+    </section>
+
+    <section class="story" id="platform" aria-label="How iSuv follows water from measurement to government operations">
+      <div class="story__sticky">
+        <div class="story__stage" id="storyStage">
+          <div class="story__copy" aria-live="polite">
+            <p class="story__step" id="storyStep">01 / 05</p>
+            <h2 id="storyTitle">See the entire network breathe.</h2>
+            <p id="storyDescription">
+              One live regional picture connects rivers, main canals, branch canals,
+              stations and sensors instead of treating 83 monitoring points as isolated pins.
+            </p>
+          </div>
+
+          <div class="network" id="networkScene" aria-label="Illustrative hydrological network visualization">
+            <svg class="network__svg" viewBox="0 0 1200 720" role="img" aria-labelledby="network-title network-desc">
+              <title id="network-title">Water network and monitoring nodes</title>
+              <desc id="network-desc">A main canal branches into monitored sections with planned, over-plan and under-plan states.</desc>
+              <defs>
+                <linearGradient id="waterGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#6fffe9"/>
+                  <stop offset=".46" stop-color="#3ad7ff"/>
+                  <stop offset="1" stop-color="#4d7dff"/>
+                </linearGradient>
+                <linearGradient id="waterGradientMuted" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#21404b"/>
+                  <stop offset="1" stop-color="#18304c"/>
+                </linearGradient>
+                <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+                  <feGaussianBlur stdDeviation="10" result="blur" />
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+
+              <g class="network__terrain" opacity=".28">
+                <path d="M50 130C180 70 320 140 425 92s246-70 355-12c98 52 208 50 370-2"/>
+                <path d="M24 565c140-80 278-34 391-90 133-67 214-116 358-66 140 48 239 31 421-77"/>
+                <path d="M-20 330c164-56 262-28 365 0 135 37 265 2 398-48 159-60 281-26 477 24"/>
+              </g>
+
+              <g class="network__paths network__paths--base">
+                <path d="M82 350 C226 350 268 332 382 332 C494 332 516 360 615 360 C690 360 734 345 804 345"/>
+                <path d="M804 345 C884 282 936 240 1066 206"/>
+                <path d="M804 345 C890 345 958 351 1111 351"/>
+                <path d="M804 345 C892 421 958 470 1078 515"/>
+              </g>
+
+              <g class="network__paths network__paths--live" filter="url(#softGlow)">
+                <path class="flow-path flow-path--main" pathLength="100" d="M82 350 C226 350 268 332 382 332 C494 332 516 360 615 360 C690 360 734 345 804 345"/>
+                <path class="flow-path flow-path--a" pathLength="100" d="M804 345 C884 282 936 240 1066 206"/>
+                <path class="flow-path flow-path--b" pathLength="100" d="M804 345 C890 345 958 351 1111 351"/>
+                <path class="flow-path flow-path--c" pathLength="100" d="M804 345 C892 421 958 470 1078 515"/>
+              </g>
+
+              <g class="network__labels">
+                <g class="node node--source" transform="translate(82 350)">
+                  <circle class="node__ring" r="20"/>
+                  <circle class="node__core" r="8"/>
+                  <text x="-12" y="-40">REGIONAL INFLOW</text>
+                  <text class="node__value" x="-12" y="-19">24.5 m³/s</text>
+                </g>
+                <g class="node node--junction" transform="translate(804 345)">
+                  <circle class="node__ring" r="24"/>
+                  <circle class="node__core" r="10"/>
+                  <text x="-22" y="-47">JUNCTION J-04</text>
+                  <text class="node__value" x="-22" y="-25">LIVE SPLIT</text>
+                </g>
+                <g class="node node--a" transform="translate(1066 206)">
+                  <circle class="node__ring" r="18"/>
+                  <circle class="node__core" r="7"/>
+                  <text x="-25" y="-39">SECTION A-07</text>
+                  <text class="node__value node__value--over" x="-25" y="-18">+11% OVER</text>
+                </g>
+                <g class="node node--b" transform="translate(1111 351)">
+                  <circle class="node__ring" r="18"/>
+                  <circle class="node__core" r="7"/>
+                  <text x="-34" y="-39">SECTION B-11</text>
+                  <text class="node__value" x="-34" y="-18">ON PLAN</text>
+                </g>
+                <g class="node node--c" transform="translate(1078 515)">
+                  <circle class="node__ring" r="18"/>
+                  <circle class="node__core" r="7"/>
+                  <text x="-30" y="42">SECTION C-03</text>
+                  <text class="node__value node__value--under" x="-30" y="63">−13% UNDER</text>
+                </g>
+              </g>
+
+              <g class="flow-particles" aria-hidden="true">
+                <circle class="flow-particle p1" r="4"/>
+                <circle class="flow-particle p2" r="3"/>
+                <circle class="flow-particle p3" r="3.6"/>
+              </g>
+            </svg>
+
+            <div class="focus-ring" id="focusRing" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+
+            <article class="inspector" id="inspector" aria-label="Section A-07 live inspector">
+              <header class="inspector__header">
+                <div>
+                  <p>SECTION A-07</p>
+                  <h3>Katta Andijon Canal</h3>
+                </div>
+                <span class="badge badge--warning">Over plan</span>
+              </header>
+              <div class="inspector__metrics">
+                <div><span>Current discharge</span><strong>8.74 <small>m³/s</small></strong></div>
+                <div><span>Target discharge</span><strong>8.20 <small>m³/s</small></strong></div>
+                <div><span>Delivered today</span><strong>524,310 <small>m³</small></strong></div>
+                <div><span>Variance</span><strong class="warning">+33,310 <small>m³</small></strong></div>
+              </div>
+              <div class="inspector__chart" aria-label="Illustrative 24-hour discharge trend">
+                <svg viewBox="0 0 460 130" role="img" aria-label="Actual discharge rises above the planned target">
+                  <path class="chart-grid" d="M0 22H460M0 65H460M0 108H460"/>
+                  <path class="chart-plan" d="M0 74C70 72 120 74 184 72s140 2 276-1"/>
+                  <path class="chart-live" d="M0 91C48 91 70 86 111 87s74-4 113-6 70-2 97-18 57-31 139-28"/>
+                </svg>
+                <div class="inspector__chart-legend"><span><i class="actual"></i>Actual</span><span><i></i>Plan</span></div>
+              </div>
+              <footer class="inspector__footer">
+                <span><i class="quality-dot"></i>Sensor confidence: high</span>
+                <span>Updated 12s ago</span>
+              </footer>
+            </article>
+
+            <article class="dashboard" id="dashboard" aria-label="Regional command dashboard preview">
+              <header class="dashboard__header">
+                <div>
+                  <p>REGIONAL COMMAND CENTER</p>
+                  <h3>Andijon water situation</h3>
+                </div>
+                <div class="dashboard__live"><i></i>Live</div>
+              </header>
+              <div class="dashboard__kpis">
+                <div><span>Regional inflow</span><strong>18.4M m³</strong><small>+2.1% vs plan</small></div>
+                <div><span>Delivered</span><strong>17.1M m³</strong><small>Today</small></div>
+                <div><span>Compliance</span><strong>92.7%</strong><small>Target ≥ 95%</small></div>
+                <div class="dashboard__kpi-alert"><span>Critical alarms</span><strong>7</strong><small>2 unacknowledged</small></div>
+              </div>
+              <div class="dashboard__body">
+                <div class="dashboard__map-card">
+                  <div class="mini-map">
+                    <svg viewBox="0 0 540 300" aria-hidden="true">
+                      <path class="mini-map__border" d="M43 91 131 34l93 24 86-21 83 45 95 2 23 90-71 88-117-4-81 34-116-44-72 3-29-83Z"/>
+                      <path class="mini-map__water" d="M74 130c86 4 116 39 186 18 67-20 103-5 161 45"/>
+                      <path class="mini-map__water" d="M262 148c22-38 48-61 99-79"/>
+                      <g class="mini-map__nodes">
+                        <circle cx="74" cy="130" r="7"/><circle cx="165" cy="145" r="6"/><circle cx="261" cy="148" r="8"/>
+                        <circle class="over" cx="361" cy="69" r="7"/><circle cx="420" cy="192" r="6"/><circle class="under" cx="318" cy="235" r="7"/>
+                      </g>
+                    </svg>
+                    <div class="mini-map__legend"><span><i></i>On plan</span><span><i class="over"></i>Over</span><span><i class="under"></i>Under</span></div>
+                  </div>
+                </div>
+                <div class="dashboard__deviations">
+                  <header><span>Priority deviations</span><small>Live</small></header>
+                  <div><span><b>A-07</b>Katta Andijon</span><strong>+11.0%</strong></div>
+                  <div><span><b>C-03</b>Shahrixon</span><strong class="under">−13.0%</strong></div>
+                  <div><span><b>F-12</b>Asaka branch</span><strong>+8.4%</strong></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="alarm-card" id="alarmCard" aria-label="Critical water allocation alert">
+              <div class="alarm-card__icon" aria-hidden="true">!</div>
+              <div class="alarm-card__copy">
+                <p>CRITICAL ALARM · A-07</p>
+                <h3>Allocation variance persisted for 47 minutes</h3>
+                <span>Actual 524,310 m³ · Plan 491,000 m³ · Confidence high</span>
+              </div>
+              <div class="alarm-card__state">
+                <i></i>
+                <span>Assigned to district operator</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="story__progress" aria-hidden="true">
+            <span id="storyProgressFill"></span>
+          </div>
+
+          <div class="story__index" aria-hidden="true">
+            <span class="is-active">Network</span>
+            <span>Station</span>
+            <span>Command</span>
+            <span>Alarm</span>
+            <span>Governance</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="operations" id="operations" aria-labelledby="operations-title">
+      <div class="section-heading">
+        <p>FROM SIGNAL TO DECISION</p>
+        <h2 id="operations-title">One continuous operational truth.</h2>
+        <span>
+          iSuv keeps measurement, intelligence and government operations connected—without hiding uncertainty or mixing water level, flow and delivered volume.
+        </span>
+      </div>
+
+      <div class="layers" role="list">
+        <article class="layer-card" role="listitem">
+          <div class="layer-card__number">01</div>
+          <div class="layer-card__visual layer-card__visual--measure" aria-hidden="true">
+            <span class="sensor"></span><span class="signal s1"></span><span class="signal s2"></span><span class="signal s3"></span>
+          </div>
+          <p>Measurement layer</p>
+          <h3>Trusted field telemetry</h3>
+          <span>Stage, discharge, volume, device identity, timestamp, quality and provenance.</span>
+        </article>
+
+        <article class="layer-card" role="listitem">
+          <div class="layer-card__number">02</div>
+          <div class="layer-card__visual layer-card__visual--intelligence" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p>Water intelligence</p>
+          <h3>Context before alerts</h3>
+          <span>Validation, allocation comparison, topology balance, persistence and confidence.</span>
+        </article>
+
+        <article class="layer-card" role="listitem">
+          <div class="layer-card__number">03</div>
+          <div class="layer-card__visual layer-card__visual--govern" aria-hidden="true">
+            <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><i></i>
+          </div>
+          <p>Government operations</p>
+          <h3>Accountable action</h3>
+          <span>Alarm lifecycle, assignments, approvals, versioned reports and audit history.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="governance" id="governance" aria-labelledby="governance-title">
+      <div class="governance__visual" aria-hidden="true">
+        <div class="audit-stream">
+          <span>12:41:08 · Observation validated · ST-A07-02</span>
+          <span>12:42:16 · Alarm rule persistence met · AL-2026-0821</span>
+          <span>12:44:03 · Incident acknowledged · District operator</span>
+          <span>12:52:29 · Allocation plan v4 referenced · AP-A07-2026</span>
+          <span>13:03:47 · Corrective action recorded · Field dispatch</span>
+          <span>13:20:15 · Report snapshot created · RS-2026-2408</span>
+        </div>
+        <div class="audit-seal">
+          <svg viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="74"/>
+            <circle cx="90" cy="90" r="52"/>
+            <path d="m63 91 18 18 38-43"/>
+          </svg>
+          <span>Traceable</span>
+        </div>
+      </div>
+
+      <div class="governance__copy">
+        <p>AUDITABLE BY DESIGN</p>
+        <h2 id="governance-title">The number is only useful when you can explain it.</h2>
+        <span>
+          Every corrected reading, plan version, alarm decision, acknowledgement and report snapshot retains who, what, when and why.
+        </span>
+        <div class="governance__checks">
+          <div><i>✓</i><span>Immutable observation revisions</span></div>
+          <div><i>✓</i><span>Effective-dated allocation plans</span></div>
+          <div><i>✓</i><span>Role and territory controls</span></div>
+          <div><i>✓</i><span>Reproducible report snapshots</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing" id="contact" aria-labelledby="closing-title">
+      <div class="closing__halo" aria-hidden="true"></div>
+      <p>REGIONAL WATER OPERATIONS, CONNECTED</p>
+      <h2 id="closing-title">See the network.<br />Trust the numbers.<br /><span>Act in time.</span></h2>
+      <a class="button button--primary button--large" href="mailto:pilot@isuv.uz">Request a regional pilot</a>
+      <small>Illustrative MVP · Synthetic telemetry only · No physical infrastructure control</small>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a class="brand brand--footer" href="#hero">
+      <svg class="brand__mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3C14.5 10.2 8 17 8 24.2A12 12 0 0 0 32 24.2C32 17 25.5 10.2 20 3Z" fill="currentColor" opacity=".22"/><path d="M12.7 24.7c2.4-3.9 5-5.8 7.7-5.8 2.3 0 4.5 1.4 6.9 4.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="13" cy="25" r="2.2" fill="currentColor"/><circle cx="20.5" cy="19" r="2.2" fill="currentColor"/><circle cx="27.5" cy="23.4" r="2.2" fill="currentColor"/></svg>
+      <span>iSuv</span>
+    </a>
+    <p>Regional water operations, accounting, monitoring and decision support.</p>
+    <span>© 2026 iSuv concept</span>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
