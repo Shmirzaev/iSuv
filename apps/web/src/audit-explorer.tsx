@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   auditEventResponseSchema,
   auditEventsResponseSchema,
@@ -8,16 +8,20 @@ import {
 } from '@isuv/contracts';
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
 import {
-  auditActions,
+  auditActionGroupTranslationKey,
+  auditActionTranslationKey,
   auditEventIdFromHash,
   auditEventPath,
   auditEventsPath,
   auditHash,
   auditResources,
-  auditTimestamp,
   defaultAuditFilters,
+  groupedAuditActions,
+  shortIdentifier,
   type AuditFilters,
 } from './audit-explorer-model.js';
+import { presentationTimestamp } from './format.js';
+import { FilterPanel, type ActiveFilter } from './filter-panel.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable' | 'degraded';
@@ -26,6 +30,23 @@ type DetailState =
 const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
 const uuidPattern =
   '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+
+function Timestamp({ locale, value }: { locale: Locale; value: string }) {
+  const timestamp = presentationTimestamp(locale, value);
+  return (
+    <time dateTime={timestamp.dateTime} title={timestamp.title}>
+      {timestamp.value}
+    </time>
+  );
+}
+
+function Identifier({ value }: { value: string }) {
+  return (
+    <code className="stable-identifier" title={value} aria-label={value}>
+      {shortIdentifier(value)}
+    </code>
+  );
+}
 
 function Notice({
   locale,
@@ -78,119 +99,150 @@ export function AuditFiltersForm({
 }) {
   const [draft, setDraft] = useState(filters);
   useEffect(() => setDraft(filters), [filters]);
+  const active = (Object.keys(defaultAuditFilters) as (keyof AuditFilters)[]).filter((key) =>
+    Boolean(filters[key]),
+  );
+  const labels: Record<keyof AuditFilters, TranslationKey> = {
+    actorUserId: 'auditActorId',
+    action: 'auditAction',
+    resource: 'auditResource',
+    resourceId: 'auditResourceId',
+    requestId: 'auditRequestId',
+    occurredFrom: 'auditFrom',
+    occurredUntil: 'auditUntil',
+  };
+  const clear = () => {
+    setDraft(defaultAuditFilters);
+    onApply(defaultAuditFilters);
+  };
+  const remove = (key: keyof AuditFilters) => {
+    const next = { ...filters, [key]: defaultAuditFilters[key] } as AuditFilters;
+    setDraft(next);
+    onApply(next);
+  };
+  const activeFilters: ActiveFilter[] = active.map((key) => ({
+    id: key,
+    label: t(locale, labels[key]),
+    onRemove: () => remove(key),
+  }));
   return (
-    <form
-      className="audit-filters"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(draft);
-      }}
+    <FilterPanel
+      activeFilters={activeFilters}
+      clearLabel={t(locale, 'filtersClearAll')}
+      filtersLabel={t(locale, 'auditFilters')}
+      onClear={clear}
     >
-      <fieldset disabled={busy}>
-        <legend>{t(locale, 'auditFilters')}</legend>
-        <p>{t(locale, 'auditFiltersDetail')}</p>
-        <div className="audit-filters__grid">
-          <label htmlFor="audit-action">
-            {t(locale, 'auditAction')}
-            <select
-              id="audit-action"
-              onChange={(e) =>
-                setDraft({ ...draft, action: e.target.value as AuditFilters['action'] })
-              }
-              value={draft.action}
-            >
-              <option value="">{t(locale, 'auditAll')}</option>
-              {auditActions.map((action) => (
-                <option key={action} value={action}>
-                  {action}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor="audit-resource">
-            {t(locale, 'auditResource')}
-            <select
-              id="audit-resource"
-              onChange={(e) =>
-                setDraft({ ...draft, resource: e.target.value as AuditFilters['resource'] })
-              }
-              value={draft.resource}
-            >
-              <option value="">{t(locale, 'auditAll')}</option>
-              {auditResources.map((resource) => (
-                <option key={resource} value={resource}>
-                  {resource}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor="audit-actor">
-            {t(locale, 'auditActorId')}
-            <input
-              id="audit-actor"
-              onChange={(e) => setDraft({ ...draft, actorUserId: e.target.value.trim() })}
-              pattern={uuidPattern}
-              type="text"
-              value={draft.actorUserId}
-            />
-          </label>
-          <label htmlFor="audit-resource-id">
-            {t(locale, 'auditResourceId')}
-            <input
-              id="audit-resource-id"
-              onChange={(e) => setDraft({ ...draft, resourceId: e.target.value.trim() })}
-              pattern={uuidPattern}
-              type="text"
-              value={draft.resourceId}
-            />
-          </label>
-          <label htmlFor="audit-request-id">
-            {t(locale, 'auditRequestId')}
-            <input
-              id="audit-request-id"
-              maxLength={256}
-              onChange={(e) => setDraft({ ...draft, requestId: e.target.value.trim() })}
-              type="text"
-              value={draft.requestId}
-            />
-          </label>
-          <label htmlFor="audit-from">
-            {t(locale, 'auditFrom')}
-            <input
-              id="audit-from"
-              max={draft.occurredUntil || undefined}
-              onChange={(e) => setDraft({ ...draft, occurredFrom: e.target.value })}
-              type="datetime-local"
-              value={draft.occurredFrom}
-            />
-          </label>
-          <label htmlFor="audit-until">
-            {t(locale, 'auditUntil')}
-            <input
-              id="audit-until"
-              min={draft.occurredFrom || undefined}
-              onChange={(e) => setDraft({ ...draft, occurredUntil: e.target.value })}
-              type="datetime-local"
-              value={draft.occurredUntil}
-            />
-          </label>
-        </div>
-        <div className="audit-actions">
-          <button className="action-button" type="submit">
-            {t(locale, 'auditApplyFilters')}
-          </button>
-          <button
-            onClick={() => {
-              setDraft(defaultAuditFilters);
-              onApply(defaultAuditFilters);
-            }}
-            type="button"
-          >
-            {t(locale, 'auditClearFilters')}
-          </button>
-        </div>
-      </fieldset>
-    </form>
+      <form
+        className="audit-filters"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onApply(draft);
+        }}
+      >
+        <fieldset disabled={busy}>
+          <legend>{t(locale, 'auditFilters')}</legend>
+          <p>{t(locale, 'auditFiltersDetail')}</p>
+          <div className="audit-filters__grid">
+            <label htmlFor="audit-action">
+              {t(locale, 'auditAction')}
+              <select
+                id="audit-action"
+                onChange={(e) =>
+                  setDraft({ ...draft, action: e.target.value as AuditFilters['action'] })
+                }
+                value={draft.action}
+              >
+                <option value="">{t(locale, 'auditAll')}</option>
+                {groupedAuditActions().map(([group, actions]) => (
+                  <optgroup key={group} label={t(locale, auditActionGroupTranslationKey(group))}>
+                    {actions.map((action) => (
+                      <option key={action} value={action}>
+                        {t(locale, auditActionTranslationKey(action))}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            <label htmlFor="audit-resource">
+              {t(locale, 'auditResource')}
+              <select
+                id="audit-resource"
+                onChange={(e) =>
+                  setDraft({ ...draft, resource: e.target.value as AuditFilters['resource'] })
+                }
+                value={draft.resource}
+              >
+                <option value="">{t(locale, 'auditAll')}</option>
+                {auditResources.map((resource) => (
+                  <option key={resource} value={resource}>
+                    {resource}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label htmlFor="audit-actor">
+              {t(locale, 'auditActorId')}
+              <input
+                id="audit-actor"
+                onChange={(e) => setDraft({ ...draft, actorUserId: e.target.value.trim() })}
+                pattern={uuidPattern}
+                type="text"
+                value={draft.actorUserId}
+              />
+            </label>
+            <label htmlFor="audit-resource-id">
+              {t(locale, 'auditResourceId')}
+              <input
+                id="audit-resource-id"
+                onChange={(e) => setDraft({ ...draft, resourceId: e.target.value.trim() })}
+                pattern={uuidPattern}
+                type="text"
+                value={draft.resourceId}
+              />
+            </label>
+            <label htmlFor="audit-request-id">
+              {t(locale, 'auditRequestId')}
+              <input
+                id="audit-request-id"
+                maxLength={256}
+                onChange={(e) => setDraft({ ...draft, requestId: e.target.value.trim() })}
+                type="text"
+                value={draft.requestId}
+              />
+            </label>
+            <label htmlFor="audit-from">
+              {t(locale, 'auditFrom')}
+              <input
+                id="audit-from"
+                max={draft.occurredUntil || undefined}
+                onChange={(e) => setDraft({ ...draft, occurredFrom: e.target.value })}
+                type="datetime-local"
+                value={draft.occurredFrom}
+              />
+            </label>
+            <label htmlFor="audit-until">
+              {t(locale, 'auditUntil')}
+              <input
+                id="audit-until"
+                min={draft.occurredFrom || undefined}
+                onChange={(e) => setDraft({ ...draft, occurredUntil: e.target.value })}
+                type="datetime-local"
+                value={draft.occurredUntil}
+              />
+            </label>
+          </div>
+          <div className="audit-actions">
+            <button className="action-button" type="submit">
+              {t(locale, 'auditApplyFilters')}
+            </button>
+            <button onClick={clear} type="button">
+              {t(locale, 'auditClearFilters')}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </FilterPanel>
   );
 }
 
@@ -233,16 +285,16 @@ function EventsTable({
               return (
                 <tr aria-current={selectedId === event.id ? 'true' : undefined} key={event.id}>
                   <td data-label={t(locale, 'auditOccurredAt')}>
-                    {auditTimestamp(event.occurredAt)}
+                    <Timestamp locale={locale} value={event.occurredAt} />
                   </td>
                   <td data-label={t(locale, 'auditAction')}>
-                    <code>{event.action}</code>
+                    {t(locale, auditActionTranslationKey(event.action))}
                   </td>
                   <td data-label={t(locale, 'auditResource')}>
                     <code>{event.resource}</code>
                   </td>
                   <td data-label={t(locale, 'auditActorId')}>
-                    <code>{event.actorUserId}</code>
+                    <Identifier value={event.actorUserId} />
                   </td>
                   <td data-label={t(locale, 'auditReason')}>{event.reason}</td>
                   <td data-label={t(locale, 'auditOpen')}>
@@ -320,23 +372,22 @@ export function AuditEventDetail({
       </section>
     );
   }
-  const fields: readonly [TranslationKey, string][] = [
-    ['auditOccurredAt', auditTimestamp(event.occurredAt)],
-    ['auditAction', event.action],
+  const fields: readonly [TranslationKey, ReactNode][] = [
+    ['auditOccurredAt', <Timestamp locale={locale} value={event.occurredAt} />],
+    ['auditAction', t(locale, auditActionTranslationKey(event.action))],
     ['auditResource', event.resource],
-    ['auditResourceId', event.resourceId],
-    ['auditActorId', event.actorUserId],
-    ['auditActorOrganizationId', event.actorOrganizationId],
-    ['auditTargetOrganizationId', event.organizationId],
-    ['auditTerritory', event.territoryId],
-    ['auditRequestId', event.requestId],
+    ['auditResourceId', <Identifier value={event.resourceId} />],
+    ['auditActorId', <Identifier value={event.actorUserId} />],
+    ['auditActorOrganizationId', <Identifier value={event.actorOrganizationId} />],
+    ['auditTargetOrganizationId', <Identifier value={event.organizationId} />],
+    ['auditTerritory', <Identifier value={event.territoryId} />],
+    ['auditRequestId', <code>{event.requestId}</code>],
     ['auditClassification', event.dataClassification],
     ['auditProvenance', event.provenance],
     ['auditReason', event.reason],
   ];
   return (
     <article className="panel audit-detail" aria-labelledby="audit-detail-heading">
-      <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
       <h2 id="audit-detail-heading" ref={heading} tabIndex={-1}>
         {t(locale, 'auditDetailHeading')}
       </h2>
@@ -345,9 +396,7 @@ export function AuditEventDetail({
         {fields.map(([label, value]) => (
           <div key={label}>
             <dt>{t(locale, label)}</dt>
-            <dd>
-              <code>{value}</code>
-            </dd>
+            <dd>{value}</dd>
           </div>
         ))}
       </dl>
@@ -494,16 +543,18 @@ export function AuditExplorerWorkspace({
   return (
     <section className="audit-workspace" aria-labelledby="audit-heading">
       <header className="panel audit-intro">
-        <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
         <h2 id="audit-heading">{t(locale, 'auditHeading')}</h2>
         <p>{t(locale, 'auditDetail')}</p>
-        <p className="audit-authority">⚠ {t(locale, 'auditSyntheticNonOfficial')}</p>
-        {response ? (
-          <p className="supporting-text">
-            {t(locale, 'auditScope')}: <code>{response.scope.territoryId}</code> —{' '}
-            {t(locale, 'auditDescendantsIncluded')}
-          </p>
-        ) : null}
+        <details className="workspace-header__provenance">
+          <summary>{t(locale, 'provenance')}</summary>
+          <p className="audit-authority">⚠ {t(locale, 'auditSyntheticNonOfficial')}</p>
+          {response ? (
+            <p className="supporting-text">
+              {t(locale, 'auditScope')}: <Identifier value={response.scope.territoryId} /> —{' '}
+              {t(locale, 'auditDescendantsIncluded')}
+            </p>
+          ) : null}
+        </details>
       </header>
       <AuditFiltersForm busy={false} filters={filters} locale={locale} onApply={apply} />
       {state === 'empty' ? (

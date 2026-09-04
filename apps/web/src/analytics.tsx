@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { analyticsResponseSchema, type AnalyticsResponse } from '@isuv/contracts';
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
 import { formatExactRational } from './dashboard-model.js';
+import { GroupedBarChart, SignedBarChart, StackedBarChart, type ChartDatum } from './charts.js';
 import {
   analyticsConditionPresentation,
   analyticsBalanceDeferKey,
@@ -18,17 +19,55 @@ import {
   formatMicros,
   type AnalyticsFilters,
 } from './analytics-model.js';
+import { StatusChip } from './status-chip.js';
+import { formatNumber } from './format.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable' | 'degraded';
 const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
 
-function M3({ value }: { value: { numerator: string; denominator: string } | null }) {
+function M3({
+  locale,
+  value,
+}: {
+  locale: Locale;
+  value: { numerator: string; denominator: string } | null;
+}) {
   return value ? (
-    <data value={`${value.numerator}/${value.denominator}`}>{formatExactRational(value)} m³</data>
+    <data value={`${value.numerator}/${value.denominator}`}>
+      {formatExactRational(value, locale)} m³
+    </data>
   ) : (
     <span className="metric-unavailable">—</span>
   );
+}
+
+function chartNumber(value: { numerator: string; denominator: string } | null): number | null {
+  if (!value) return null;
+  const numeric = Number(value.numerator) / Number(value.denominator);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function volumeChartDatum(
+  id: string,
+  label: string,
+  values: readonly {
+    id: string;
+    label: string;
+    value: { numerator: string; denominator: string } | null;
+  }[],
+  locale: Locale,
+): ChartDatum {
+  return {
+    id,
+    label,
+    series: values.map((series) => ({
+      id: series.id,
+      label: series.label,
+      value: chartNumber(series.value),
+      valueText: <M3 locale={locale} value={series.value} />,
+    })),
+  };
 }
 
 function Notice({
@@ -70,12 +109,15 @@ function Notice({
 }
 
 function Status({ locale, icon, label }: { locale: Locale; icon: string; label: TranslationKey }) {
-  return (
-    <span className="analytics-status">
-      <span aria-hidden="true">{icon}</span>
-      <span>{t(locale, label)}</span>
-    </span>
-  );
+  const tone =
+    label === 'analyticsOver'
+      ? 'attention'
+      : label === 'analyticsUnder'
+        ? 'attention'
+        : label === 'analyticsAssessed' || label === 'analyticsWithin'
+          ? 'positive'
+          : 'neutral';
+  return <StatusChip icon={icon} label={t(locale, label)} tone={tone} />;
 }
 
 function Filters({
@@ -144,7 +186,6 @@ function Metadata({ locale, response }: { locale: Locale; response: AnalyticsRes
     <>
       <header className="panel analytics-intro">
         <div>
-          <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
           <h2 id="analytics-heading">{t(locale, 'analyticsHeading')}</h2>
           <p>{t(locale, 'analyticsDetail')}</p>
           <p>
@@ -154,41 +195,66 @@ function Metadata({ locale, response }: { locale: Locale; response: AnalyticsRes
             <strong>{t(locale, 'analyticsOfficialIneligible')}</strong>
           </p>
         </div>
-        <dl>
-          <div>
-            <dt>{t(locale, 'referenceAt')}</dt>
-            <dd>{formatAnalyticsTimestamp(response.referenceAt)}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'knownAt')}</dt>
-            <dd>{formatAnalyticsTimestamp(response.knownAt)}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'presentationTimeZone')}</dt>
-            <dd>{response.presentationTimeZone}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'scenarioVersion')}</dt>
-            <dd>{response.scenario.version}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'analyticsMethodVersion')}</dt>
-            <dd>{response.scenario.method}</dd>
-          </div>
-          <div className="analytics-intro__wide">
-            <dt>{t(locale, 'provenance')}</dt>
-            <dd>{response.scenario.provenance}</dd>
-          </div>
-        </dl>
+        <details className="workspace-provenance">
+          <summary>{t(locale, 'analyticsProvenanceDetails')}</summary>
+          <dl>
+            <div>
+              <dt>{t(locale, 'referenceAt')}</dt>
+              <dd>
+                <time dateTime={response.referenceAt} title={response.referenceAt}>
+                  {formatAnalyticsTimestamp(response.referenceAt, locale)}
+                </time>
+              </dd>
+            </div>
+            <div>
+              <dt>{t(locale, 'knownAt')}</dt>
+              <dd>
+                <time dateTime={response.knownAt} title={response.knownAt}>
+                  {formatAnalyticsTimestamp(response.knownAt, locale)}
+                </time>
+              </dd>
+            </div>
+            <div>
+              <dt>{t(locale, 'presentationTimeZone')}</dt>
+              <dd>{response.presentationTimeZone}</dd>
+            </div>
+            <div>
+              <dt>{t(locale, 'scenarioVersion')}</dt>
+              <dd>{response.scenario.version}</dd>
+            </div>
+            <div>
+              <dt>{t(locale, 'analyticsMethodVersion')}</dt>
+              <dd>{response.scenario.method}</dd>
+            </div>
+            <div className="analytics-intro__wide">
+              <dt>{t(locale, 'provenance')}</dt>
+              <dd>{response.scenario.provenance}</dd>
+            </div>
+          </dl>
+          <dl className="analytics-windows">
+            <div>
+              <dt>{t(locale, 'analyticsWindow')}</dt>
+              <dd>
+                {`${formatAnalyticsTimestamp(response.windows.selected.start, locale)} — ${formatAnalyticsTimestamp(response.windows.selected.end, locale)}`}
+              </dd>
+            </div>
+            <div>
+              <dt>{t(locale, 'analyticsPriorWindow')}</dt>
+              <dd>
+                {`${formatAnalyticsTimestamp(response.windows.prior.start, locale)} — ${formatAnalyticsTimestamp(response.windows.prior.end, locale)}`}
+              </dd>
+            </div>
+          </dl>
+        </details>
       </header>
-      <dl className="analytics-windows">
+      <dl aria-hidden="true" className="analytics-windows" hidden>
         <div>
           <dt>{t(locale, 'analyticsWindow')}</dt>
-          <dd>{`${formatAnalyticsTimestamp(response.windows.selected.start)} — ${formatAnalyticsTimestamp(response.windows.selected.end)}`}</dd>
+          <dd>{`${formatAnalyticsTimestamp(response.windows.selected.start, locale)} — ${formatAnalyticsTimestamp(response.windows.selected.end, locale)}`}</dd>
         </div>
         <div>
           <dt>{t(locale, 'analyticsPriorWindow')}</dt>
-          <dd>{`${formatAnalyticsTimestamp(response.windows.prior.start)} — ${formatAnalyticsTimestamp(response.windows.prior.end)}`}</dd>
+          <dd>{`${formatAnalyticsTimestamp(response.windows.prior.start, locale)} — ${formatAnalyticsTimestamp(response.windows.prior.end, locale)}`}</dd>
         </div>
       </dl>
     </>
@@ -197,6 +263,17 @@ function Metadata({ locale, response }: { locale: Locale; response: AnalyticsRes
 
 function Delivery({ locale, response }: { locale: Locale; response: AnalyticsResponse }) {
   const d = response.delivery;
+  const chartData = d.groups.map((group) =>
+    volumeChartDatum(
+      group.sectionId,
+      group.sectionName,
+      [
+        { id: 'planned', label: t(locale, 'analyticsChartLegendPlanned'), value: group.plannedM3 },
+        { id: 'actual', label: t(locale, 'analyticsChartLegendActual'), value: group.actualM3 },
+      ],
+      locale,
+    ),
+  );
   const state =
     d.state === 'assessed'
       ? { icon: '✓', label: 'analyticsAssessed' as const }
@@ -212,24 +289,35 @@ function Delivery({ locale, response }: { locale: Locale; response: AnalyticsRes
       <div className="metric-grid">
         <article className="metric-card">
           <h3>{t(locale, 'analyticsPlanned')}</h3>
-          <M3 value={d.plannedM3} />
+          <M3 locale={locale} value={d.plannedM3} />
         </article>
         <article className="metric-card">
           <h3>{t(locale, 'analyticsActual')}</h3>
-          <M3 value={d.actualM3} />
+          <M3 locale={locale} value={d.actualM3} />
         </article>
         <article className="metric-card">
           <h3>{t(locale, 'analyticsSignedVariance')}</h3>
-          <M3 value={d.signedVarianceM3} />
+          <M3 locale={locale} value={d.signedVarianceM3} />
         </article>
         <article className="metric-card">
           <h3>{t(locale, 'analyticsAbsoluteVariance')}</h3>
-          <M3 value={d.absoluteVarianceM3} />
+          <M3 locale={locale} value={d.absoluteVarianceM3} />
         </article>
       </div>
-      <p>{`${t(locale, 'analyticsAssessed')}: ${d.memberCounts.assessed}/${d.memberCounts.total}; ${t(locale, 'analyticsUnassessable')}: ${d.memberCounts.unassessable}; ${t(locale, 'analyticsOver')}: ${d.memberCounts.over}; ${t(locale, 'analyticsWithin')}: ${d.memberCounts.within}; ${t(locale, 'analyticsUnder')}: ${d.memberCounts.under}`}</p>
+      {chartData.length ? (
+        <div className="analytics-chart-panel">
+          <GroupedBarChart
+            ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartPlannedActual')}`}
+            axisUnit="m³"
+            caption={t(locale, 'analyticsChartPlannedActual')}
+            data={chartData}
+            unavailableLabel={t(locale, 'analyticsUnassessable')}
+          />
+        </div>
+      ) : null}
+      <p>{`${t(locale, 'analyticsAssessed')}: ${formatNumber(locale, d.memberCounts.assessed)}/${formatNumber(locale, d.memberCounts.total)}; ${t(locale, 'analyticsUnassessable')}: ${formatNumber(locale, d.memberCounts.unassessable)}; ${t(locale, 'analyticsOver')}: ${formatNumber(locale, d.memberCounts.over)}; ${t(locale, 'analyticsWithin')}: ${formatNumber(locale, d.memberCounts.within)}; ${t(locale, 'analyticsUnder')}: ${formatNumber(locale, d.memberCounts.under)}`}</p>
       <p>
-        {`${t(locale, 'analyticsGroups')}: ${d.population.returned}/${d.population.defined}. `}
+        {`${t(locale, 'analyticsGroups')}: ${formatNumber(locale, d.population.returned)}/${formatNumber(locale, d.population.defined)}. `}
         {!d.population.complete ? `⊘ ${t(locale, 'analyticsUnassessable')}` : null}
       </p>
       {d.groups.length ? (
@@ -259,13 +347,13 @@ function Delivery({ locale, response }: { locale: Locale; response: AnalyticsRes
                       {group.reason ? <small>{group.reason}</small> : null}
                     </td>
                     <td>
-                      <M3 value={group.plannedM3} />
+                      <M3 locale={locale} value={group.plannedM3} />
                     </td>
                     <td>
-                      <M3 value={group.actualM3} />
+                      <M3 locale={locale} value={group.actualM3} />
                     </td>
                     <td>
-                      <M3 value={group.signedVarianceM3} />
+                      <M3 locale={locale} value={group.signedVarianceM3} />
                     </td>
                     <td>{t(locale, analyticsMethodKey(group.method))}</td>
                     <td>
@@ -297,10 +385,36 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
     ['within', 'analyticsWithin'],
     ['under', 'analyticsUnder'],
   ] as const;
+  const chartData = response.delivery.groups.map((group) =>
+    volumeChartDatum(
+      group.sectionId,
+      group.sectionName,
+      [
+        {
+          id: 'signed-variance',
+          label: t(locale, 'analyticsSignedVariance'),
+          value: group.signedVarianceM3,
+        },
+      ],
+      locale,
+    ),
+  );
   return (
     <section className="panel analytics-section" aria-labelledby="analytics-matrix">
       <h2 id="analytics-matrix">{t(locale, 'analyticsMatrix')}</h2>
       <p>{t(locale, 'analyticsMatrixDetail')}</p>
+      {chartData.length ? (
+        <section aria-labelledby="analytics-variance-chart" className="analytics-chart-panel">
+          <h3 id="analytics-variance-chart">{t(locale, 'analyticsChartSignedVariance')}</h3>
+          <SignedBarChart
+            ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartSignedVariance')}`}
+            axisUnit="m³"
+            caption={t(locale, 'analyticsChartSignedVariance')}
+            data={chartData}
+            unavailableLabel={t(locale, 'analyticsUnassessable')}
+          />
+        </section>
+      ) : null}
       <div className="table-scroll">
         <table>
           <caption>{t(locale, 'analyticsMatrix')}</caption>
@@ -325,15 +439,15 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
                       label={label}
                     />
                   </th>
-                  <td>{row.count}</td>
+                  <td>{formatNumber(locale, row.count)}</td>
                   <td>
-                    <M3 value={row.plannedM3} />
+                    <M3 locale={locale} value={row.plannedM3} />
                   </td>
                   <td>
-                    <M3 value={row.actualM3} />
+                    <M3 locale={locale} value={row.actualM3} />
                   </td>
                   <td>
-                    <M3 value={row.absoluteVarianceM3} />
+                    <M3 locale={locale} value={row.absoluteVarianceM3} />
                   </td>
                 </tr>
               );
@@ -342,7 +456,9 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
               <th scope="row">
                 <Status locale={locale} {...analyticsConditionPresentation('unassessable')} />
               </th>
-              <td colSpan={4}>{response.deviationMatrix.unassessable.count}</td>
+              <td colSpan={4}>
+                {formatNumber(locale, response.deviationMatrix.unassessable.count)}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -381,7 +497,7 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
           <div key={label}>
             <dt>{t(locale, label)}</dt>
             <dd>
-              <M3 value={value} />
+              <M3 locale={locale} value={value} />
             </dd>
           </div>
         ))}
@@ -408,8 +524,8 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
                 <tr key={`${component.stationId}:${component.role}`}>
                   <th scope="row">{t(locale, analyticsBalanceRoleKey(component.role))}</th>
                   <td>{t(locale, analyticsMethodKey(component.method))}</td>
-                  <td>{formatMicros(component.travelTimeMicroseconds)}</td>
-                  <td>{`${formatAnalyticsTimestamp(component.sourceInterval.start)} — ${formatAnalyticsTimestamp(component.sourceInterval.end)}`}</td>
+                  <td>{formatMicros(component.travelTimeMicroseconds, locale)}</td>
+                  <td>{`${formatAnalyticsTimestamp(component.sourceInterval.start, locale)} — ${formatAnalyticsTimestamp(component.sourceInterval.end, locale)}`}</td>
                 </tr>
               ))}
             </tbody>
@@ -423,12 +539,57 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
 function Coverage({ locale, response }: { locale: Locale; response: AnalyticsResponse }) {
   const q = response.qualityCoverage;
   const a = response.availability;
+  const qualityChartData: readonly ChartDatum[] = [
+    {
+      id: 'quality-coverage',
+      label: t(locale, 'analyticsQuality'),
+      series: [
+        {
+          id: 'valid',
+          label: t(locale, 'analyticsCompleteValid'),
+          value: q.completeValid,
+          valueText: formatNumber(locale, q.completeValid),
+        },
+        {
+          id: 'estimated',
+          label: t(locale, 'analyticsEstimatedExcluded'),
+          value: q.estimatedExcluded,
+          valueText: formatNumber(locale, q.estimatedExcluded),
+        },
+        {
+          id: 'unreliable',
+          label: t(locale, 'analyticsUnreliable'),
+          value: q.unreliable,
+          valueText: formatNumber(locale, q.unreliable),
+        },
+        {
+          id: 'no-data',
+          label: t(locale, 'analyticsNoData'),
+          value: q.noData,
+          valueText: formatNumber(locale, q.noData),
+        },
+        {
+          id: 'unconfigured',
+          label: t(locale, 'analyticsNotConfigured'),
+          value: q.unconfigured,
+          valueText: formatNumber(locale, q.unconfigured),
+        },
+      ],
+    },
+  ];
   return (
     <section className="analytics-coverage" aria-label={t(locale, 'analyticsQuality')}>
       <article className="panel">
         <h2>{t(locale, 'analyticsQuality')}</h2>
         <p>{t(locale, 'analyticsQualityDetail')}</p>
-        <p>{`${t(locale, 'analyticsCount')}: ${q.denominator}; ${t(locale, 'analyticsCompleteValid')}: ${q.completeValid}; ${t(locale, 'analyticsEstimatedExcluded')}: ${q.estimatedExcluded}; ${t(locale, 'analyticsUnreliable')}: ${q.unreliable}; ${t(locale, 'analyticsNoData')}: ${q.noData}; ${t(locale, 'analyticsNotConfigured')}: ${q.unconfigured}`}</p>
+        <div className="analytics-chart-panel">
+          <StackedBarChart
+            ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartQualityCoverage')}`}
+            caption={t(locale, 'analyticsChartQualityCoverage')}
+            data={qualityChartData}
+          />
+        </div>
+        <p>{`${t(locale, 'analyticsCount')}: ${formatNumber(locale, q.denominator)}; ${t(locale, 'analyticsCompleteValid')}: ${formatNumber(locale, q.completeValid)}; ${t(locale, 'analyticsEstimatedExcluded')}: ${formatNumber(locale, q.estimatedExcluded)}; ${t(locale, 'analyticsUnreliable')}: ${formatNumber(locale, q.unreliable)}; ${t(locale, 'analyticsNoData')}: ${formatNumber(locale, q.noData)}; ${t(locale, 'analyticsNotConfigured')}: ${formatNumber(locale, q.unconfigured)}`}</p>
         <Status
           locale={locale}
           icon={q.state === 'assessed' ? '✓' : '⊘'}
@@ -447,7 +608,7 @@ function Coverage({ locale, response }: { locale: Locale; response: AnalyticsRes
       <article className="panel">
         <h2>{t(locale, 'analyticsAvailability')}</h2>
         <p>{t(locale, 'analyticsAvailabilityDetail')}</p>
-        <p>{`${t(locale, 'analyticsCount')}: ${a.denominator}; ${t(locale, 'analyticsCommunicating')}: ${a.communicating}; ${t(locale, 'analyticsOffline')}: ${a.offline}; ${t(locale, 'analyticsUnknownAvailability')}: ${a.unknown}`}</p>
+        <p>{`${t(locale, 'analyticsCount')}: ${formatNumber(locale, a.denominator)}; ${t(locale, 'analyticsCommunicating')}: ${formatNumber(locale, a.communicating)}; ${t(locale, 'analyticsOffline')}: ${formatNumber(locale, a.offline)}; ${t(locale, 'analyticsUnknownAvailability')}: ${formatNumber(locale, a.unknown)}`}</p>
         <Status locale={locale} icon="⚙" label="analyticsCadenceUnconfigured" />
         <p className="metric-card__reason">{t(locale, analyticsAvailabilityReasonKey(a.reason))}</p>
         <p>

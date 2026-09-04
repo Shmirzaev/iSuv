@@ -1,6 +1,8 @@
 import type { DashboardPeriod, DashboardResponse } from '@isuv/contracts';
 
-import type { TranslationKey } from '@isuv/i18n';
+import type { Locale, TranslationKey } from '@isuv/i18n';
+
+import { formatDecimal, formatPresentationTimestamp } from './format.js';
 
 export const dashboardPeriods: readonly DashboardPeriod[] = [
   'today',
@@ -68,7 +70,10 @@ export function dashboardQualityKey(
  * rounding of official-sized volumes in the browser; this MVP does no client
  * arithmetic on dashboard values.
  */
-export function formatExactRational(value: { numerator: string; denominator: string }): string {
+export function formatExactRational(
+  value: { numerator: string; denominator: string },
+  locale: Locale = 'en',
+): string {
   const numerator = BigInt(value.numerator);
   const denominator = BigInt(value.denominator);
   const absolute = numerator < 0n ? -numerator : numerator;
@@ -84,7 +89,8 @@ export function formatExactRational(value: { numerator: string; denominator: str
   let terminatingFactor = reducedDenominator;
   while (terminatingFactor % 2n === 0n) terminatingFactor /= 2n;
   while (terminatingFactor % 5n === 0n) terminatingFactor /= 5n;
-  if (terminatingFactor !== 1n) return `${numerator.toString()} / ${denominator.toString()}`;
+  if (terminatingFactor !== 1n)
+    return `${formatDecimal(locale, numerator)} / ${formatDecimal(locale, denominator)}`;
 
   const whole = reducedNumerator / reducedDenominator;
   let remainder = reducedNumerator % reducedDenominator;
@@ -95,20 +101,56 @@ export function formatExactRational(value: { numerator: string; denominator: str
     remainder %= reducedDenominator;
   }
   const sign = numerator < 0n ? '-' : '';
-  return `${sign}${whole.toString()}${fraction ? `.${fraction}` : ''}`;
+  const formattedWhole = formatDecimal(locale, whole);
+  const decimal =
+    formatDecimal(locale, '1.1')
+      .replace(/\d/g, '')
+      .replace(/[^.,،٫]/g, '') || '.';
+  return `${sign}${formattedWhole}${fraction ? `${decimal}${fraction}` : ''}`;
 }
 
 /**
  * Format the server's integer duration without ever converting it to Number.
  * Dashboard intervals can be longer than JavaScript's safe integer range.
  */
-export function formatExactDurationMicroseconds(value: string): string {
+export function formatExactDurationMicroseconds(value: string, locale: Locale = 'en'): string {
   const exact = BigInt(value).toString();
-  return exact.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return formatDecimal(locale, exact);
 }
 
-export function formatDashboardTimestamp(value: string): string {
-  // The authoritative API supplies the presentation zone and microsecond timestamp.
-  // Do not send it through Date, which drops microseconds and localizes unpredictably.
-  return value.replace('T', ' ').replace('Z', ' UTC');
+export function subtractExactRationals(
+  left: { numerator: string; denominator: string },
+  right: { numerator: string; denominator: string },
+): { numerator: string; denominator: string } {
+  const leftNumerator = BigInt(left.numerator);
+  const leftDenominator = BigInt(left.denominator);
+  const rightNumerator = BigInt(right.numerator);
+  const rightDenominator = BigInt(right.denominator);
+  return {
+    numerator: (leftNumerator * rightDenominator - rightNumerator * leftDenominator).toString(),
+    denominator: (leftDenominator * rightDenominator).toString(),
+  };
+}
+
+/** A bounded, exact relative magnitude for a decorative variance bar. */
+export function rationalRelativePercent(
+  value: { numerator: string; denominator: string },
+  maximum: { numerator: string; denominator: string },
+): number {
+  const numerator = BigInt(value.numerator);
+  const denominator = BigInt(value.denominator);
+  const maxNumerator = BigInt(maximum.numerator);
+  const maxDenominator = BigInt(maximum.denominator);
+  if (numerator === 0n || maxNumerator === 0n) return 0;
+  const percent =
+    ((numerator < 0n ? -numerator : numerator) *
+      (maxDenominator < 0n ? -maxDenominator : maxDenominator) *
+      10000n) /
+    ((denominator < 0n ? -denominator : denominator) *
+      (maxNumerator < 0n ? -maxNumerator : maxNumerator));
+  return Math.min(100, Number(percent) / 100);
+}
+
+export function formatDashboardTimestamp(value: string, locale: Locale = 'en'): string {
+  return formatPresentationTimestamp(locale, value);
 }

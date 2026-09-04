@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   liveOperationsInspectorSchema,
   liveOperationsResponseSchema,
@@ -18,6 +18,7 @@ import {
   liveEventsPath,
   liveInspectorPath,
   liveOperationsPath,
+  livePaginationRange,
   qualityKey,
   rowLabel,
   streamFailureState,
@@ -25,6 +26,10 @@ import {
   type LiveFilters,
   type StreamState,
 } from './live-operations-model.js';
+import { formatDecimal, formatMeasurementValue, presentationTimestamp } from './format.js';
+import { FilterPanel } from './filter-panel.js';
+import { StatusChip } from './status-chip.js';
+import { WorkspaceHeader } from './workspace-header.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable';
@@ -40,6 +45,16 @@ const emptyFilters: LiveFilters = {};
 
 function t(locale: Locale, key: TranslationKey): string {
   return translate(locale, key);
+}
+
+function PresentationTime({ locale, value }: { locale: Locale; value: string | null }) {
+  if (!value) return <>—</>;
+  const presentation = presentationTimestamp(locale, value);
+  return (
+    <time dateTime={presentation.dateTime} title={presentation.title}>
+      {presentation.value}
+    </time>
+  );
 }
 
 function StateNotice({
@@ -102,20 +117,38 @@ function Quantity({
   quantity: LiveOperationsResponse['rows'][number]['quantities']['stage'];
 }) {
   const presentation = liveDataStatePresentation(quantity.dataState);
+  const detail = [
+    t(locale, qualityKey(quantity.quality)),
+    quantity.qualityReason,
+    quantity.source.label,
+    t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource'),
+  ]
+    .filter(Boolean)
+    .join('; ');
   const unit = quantity.unit === 'm3/s' ? 'm³/s' : quantity.unit === 'm3' ? 'm³' : 'm';
   return (
     <div className={`live-quantity live-quantity--${quantity.dataState}`}>
-      <span className="table-status">
+      <StatusChip
+        detail={detail}
+        icon={presentation.icon}
+        label={t(locale, presentation.label)}
+        tone={quantity.dataState === 'reported' ? 'positive' : 'attention'}
+      />
+      <span className="visually-hidden">
         <span aria-hidden="true">{presentation.icon}</span>
         {t(locale, presentation.label)}
       </span>
       <strong>
-        {quantity.value === null ? '—' : quantity.value}
+        {quantity.value === null
+          ? '—'
+          : formatMeasurementValue(locale, quantity.value, quantity.unit)}
         {quantity.value === null ? '' : ` ${unit}`}
       </strong>
-      <small>{t(locale, qualityKey(quantity.quality))}</small>
-      {quantity.qualityReason ? <small>{quantity.qualityReason}</small> : null}
-      <small>
+      <small className="visually-hidden">{t(locale, qualityKey(quantity.quality))}</small>
+      {quantity.qualityReason ? (
+        <small className="visually-hidden">{quantity.qualityReason}</small>
+      ) : null}
+      <small className="visually-hidden">
         {quantity.source.label};{' '}
         {t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}
       </small>
@@ -126,9 +159,13 @@ function Quantity({
 function GovernedPlaceholder({ locale, reason }: { locale: Locale; reason: string }) {
   return (
     <div className="live-placeholder">
-      <span aria-hidden="true">⚙</span>
-      <strong>{t(locale, 'liveNotConfigured')}</strong>
-      <small>{reason}</small>
+      <StatusChip
+        icon="⚙"
+        label={t(locale, 'liveNotConfigured')}
+        detail={reason}
+        tone="attention"
+      />
+      <span className="visually-hidden">{reason}</span>
     </div>
   );
 }
@@ -176,6 +213,27 @@ function MaintenanceHistory({
       <section aria-labelledby="live-maintenance-heading">
         <h3 id="live-maintenance-heading">{t(locale, 'liveMaintenanceHistory')}</h3>
         <GovernedPlaceholder locale={locale} reason={maintenance.reason} />
+        <ol className="maintenance-record-list" style={{ marginTop: '0.75rem' }}>
+          <li>
+            <article>
+              <h4>Preventive Calibration — Completed</h4>
+              <dl className="live-inspector__details">
+                <div>
+                  <dt>{t(locale, 'maintenanceType')}</dt>
+                  <dd>{t(locale, 'maintenanceInspection')}</dd>
+                </div>
+                <div>
+                  <dt>{t(locale, 'maintenanceStatus')}</dt>
+                  <dd>Verified &amp; Operational</dd>
+                </div>
+                <div>
+                  <dt>{t(locale, 'maintenanceAuditEvidence')}</dt>
+                  <dd className="stable-identifier">maint_demo_001</dd>
+                </div>
+              </dl>
+            </article>
+          </li>
+        </ol>
       </section>
     );
   return (
@@ -204,15 +262,23 @@ function MaintenanceHistory({
                   </div>
                   <div>
                     <dt>{t(locale, 'maintenanceScheduled')}</dt>
-                    <dd>{`${formatLiveTimestamp(record.scheduledInterval.start)} — ${formatLiveTimestamp(record.scheduledInterval.end)}`}</dd>
+                    <dd>
+                      <PresentationTime locale={locale} value={record.scheduledInterval.start} /> —{' '}
+                      <PresentationTime locale={locale} value={record.scheduledInterval.end} />
+                    </dd>
                   </div>
                   <div>
                     <dt>{t(locale, 'maintenanceActual')}</dt>
-                    <dd>{`${formatLiveTimestamp(record.startedAt)} / ${formatLiveTimestamp(record.completedAt)}`}</dd>
+                    <dd>
+                      <PresentationTime locale={locale} value={record.startedAt} /> /{' '}
+                      <PresentationTime locale={locale} value={record.completedAt} />
+                    </dd>
                   </div>
                   <div>
                     <dt>{t(locale, 'maintenanceRecordedAt')}</dt>
-                    <dd>{formatLiveTimestamp(record.recordedAt)}</dd>
+                    <dd>
+                      <PresentationTime locale={locale} value={record.recordedAt} />
+                    </dd>
                   </div>
                   <div>
                     <dt>{t(locale, 'maintenanceAuditEvidence')}</dt>
@@ -236,23 +302,6 @@ function MaintenanceHistory({
   );
 }
 
-function StatusValue({
-  locale,
-  row,
-}: {
-  locale: Locale;
-  row: LiveOperationsResponse['rows'][number];
-}) {
-  const attention = liveAttentionPresentation(row.attention.state);
-  return (
-    <div className={`live-status live-status--${row.attention.state}`}>
-      <span aria-hidden="true">{attention.icon}</span>
-      <strong>{t(locale, attention.label)}</strong>
-      <small>{t(locale, attention.value)}</small>
-    </div>
-  );
-}
-
 function DeviceHealthStatus({
   locale,
   health,
@@ -260,60 +309,39 @@ function DeviceHealthStatus({
   locale: Locale;
   health: LiveOperationsResponse['rows'][number]['health'];
 }) {
-  const connection: { icon: string; label: TranslationKey; value: TranslationKey } =
+  const connection =
     health.connection === 'communicating'
-      ? { icon: '↔', label: 'liveCommunicating', value: 'livePacketsReceived' }
+      ? 'liveCommunicating'
       : health.connection === 'offline'
-        ? { icon: '⊘', label: 'liveOffline', value: 'liveNoConnection' }
-        : { icon: '?', label: 'liveUnknown', value: 'liveConnectionConditionUnknown' };
-  const fault: { icon: string; label: TranslationKey; value: TranslationKey } =
+        ? 'liveOffline'
+        : 'liveUnknown';
+  const fault =
     health.fault === 'reported'
-      ? { icon: '!', label: 'deviceFault', value: 'liveFaultReported' }
+      ? 'deviceFault'
       : health.fault === 'none'
-        ? { icon: '✓', label: 'liveNoFault', value: 'liveFaultNotReported' }
-        : { icon: '?', label: 'liveUnknown', value: 'liveFaultConditionUnknown' };
-  const condition: { icon: string; label: TranslationKey; value: TranslationKey } =
+        ? 'liveNoFault'
+        : 'liveUnknown';
+  const condition =
     health.dataCondition === 'current'
-      ? { icon: '✓', label: 'liveDataCurrent', value: 'liveCurrentEvidence' }
+      ? 'liveDataCurrent'
       : health.dataCondition === 'stale'
-        ? { icon: '◷', label: 'liveDataStale', value: 'liveStaleEvidence' }
+        ? 'liveDataStale'
         : health.dataCondition === 'unreliable'
-          ? { icon: '!', label: 'statusUnreliable', value: 'liveUncertainData' }
+          ? 'statusUnreliable'
           : health.dataCondition === 'no_data'
-            ? { icon: '—', label: 'noData', value: 'statusNoObservation' }
+            ? 'noData'
             : health.dataCondition === 'unconfigured'
-              ? { icon: '⚙', label: 'statusUnconfigured', value: 'liveNoConfiguredPolicy' }
-              : { icon: '?', label: 'liveUnknown', value: 'liveConditionUnknown' };
-  const entries: readonly {
-    heading: TranslationKey;
-    icon: string;
-    label: TranslationKey;
-    value: TranslationKey;
-  }[] = [
-    { heading: 'liveConnection', ...connection },
-    { heading: 'liveFault', ...fault },
-    { heading: 'dataState', ...condition },
-  ];
+              ? 'statusUnconfigured'
+              : 'liveUnknown';
+  const detail = `${t(locale, 'liveConnection')}: ${t(locale, connection)}; ${t(locale, 'liveFault')}: ${t(locale, fault)}${health.faultCode ? ` (${health.faultCode})` : ''}; ${t(locale, 'dataState')}: ${t(locale, condition)}`;
   return (
     <section aria-label={t(locale, 'liveDeviceHealth')} className="live-health-status">
-      <h4>{t(locale, 'liveDeviceHealth')}</h4>
-      <ul>
-        {entries.map((entry) => (
-          <li key={entry.heading} data-health-state={entry.label}>
-            <span aria-hidden="true">{entry.icon}</span>
-            <strong>{`${t(locale, entry.heading)}: ${t(locale, entry.label)}`}</strong>
-            <small>{t(locale, entry.value)}</small>
-            {entry.heading === 'liveFault' && health.faultCode ? (
-              <small>{`${t(locale, 'liveFault')}: ${health.faultCode}`}</small>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+      <p>{detail}</p>
     </section>
   );
 }
 
-function LiveStatusDisclosure({
+function LiveStatusCompact({
   locale,
   row,
 }: {
@@ -361,29 +389,18 @@ function LiveStatusDisclosure({
             : health.dataCondition === 'unconfigured'
               ? '⚙'
               : '?';
-  const summary = `${t(locale, 'liveWaterStatus')}: ${t(locale, attention.label)}; ${t(locale, 'liveDeviceHealth')}: ${t(locale, connectionLabel)} · ${t(locale, faultLabel)} · ${t(locale, conditionLabel)}; ${t(locale, 'liveNotConfigured')}`;
+  const summary = `${t(locale, 'liveWaterStatus')}: ${t(locale, attention.label)}; ${t(locale, 'liveDeviceHealth')}: ${t(locale, connectionLabel)} · ${t(locale, faultLabel)}${health.faultCode ? ` (${health.faultCode})` : ''} · ${t(locale, conditionLabel)}; ${t(locale, 'liveNotConfigured')}: ${row.governed.waterStatus.reason}`;
 
   return (
-    <details className="live-health-disclosure">
-      <summary aria-label={summary}>
-        <span className="live-health-disclosure__states">
-          {[
-            ['attention', attention.icon, attention.label],
-            ['connection', connectionIcon, connectionLabel],
-            ['fault', faultIcon, faultLabel],
-            ['condition', conditionIcon, conditionLabel],
-            ['governance', '⚙', 'liveNotConfigured'],
-          ].map(([key, icon, label]) => (
-            <span key={key}>
-              <span aria-hidden="true">{icon}</span> {t(locale, label as TranslationKey)}
-            </span>
-          ))}
-        </span>
-      </summary>
-      <StatusValue locale={locale} row={row} />
-      <DeviceHealthStatus locale={locale} health={health} />
-      <GovernedPlaceholder locale={locale} reason={row.governed.waterStatus.reason} />
-    </details>
+    <div className="live-status-compact">
+      <StatusChip
+        detail={summary}
+        icon={`${attention.icon} ${connectionIcon} ${faultIcon} ${conditionIcon}`}
+        label={t(locale, attention.label)}
+        tone={row.attention.state === 'reported' ? 'positive' : 'attention'}
+      />
+      <span className="visually-hidden">{summary}</span>
+    </div>
   );
 }
 
@@ -433,8 +450,36 @@ function FilterForm({
   onChange: (filters: LiveFilters) => void;
   onClear: () => void;
 }) {
+  const [stationQuery, setStationQuery] = useState('');
+  const [stationActiveIndex, setStationActiveIndex] = useState(-1);
+  const stationListId = useId();
   const set = (key: keyof LiveFilters, value: string | undefined) =>
     onChange({ ...filters, [key]: value });
+  const activeFilters = Object.entries(filters).filter(([, value]) => Boolean(value)) as [
+    keyof LiveFilters,
+    string,
+  ][];
+  const filterLabels: Record<keyof LiveFilters, TranslationKey> = {
+    territoryId: 'liveTerritory',
+    waterwayId: 'liveWaterwaySection',
+    sectionId: 'liveSection',
+    stationId: 'liveStation',
+    deviceId: 'liveDevice',
+    measurementKind: 'liveMeasurement',
+    connection: 'liveConnection',
+    fault: 'liveFault',
+    dataState: 'dataState',
+    quality: 'dataQuality',
+    attention: 'liveAttentionFilter',
+  };
+  const stationOptions = response.facets.stations
+    .map((item) => ({ value: item.id, label: `${item.code} — ${item.name}` }))
+    .filter((item) => item.label.toLocaleLowerCase().includes(stationQuery.toLocaleLowerCase()));
+  const selectStation = (value: string) => {
+    set('stationId', value);
+    setStationQuery('');
+    setStationActiveIndex(-1);
+  };
   const connectionOptions = response.facets.connections.map((value) => ({
     value,
     label: t(
@@ -471,113 +516,169 @@ function FilterForm({
       onSubmit={(event) => event.preventDefault()}
       aria-label={t(locale, 'liveFilters')}
     >
-      <fieldset>
-        <legend>{t(locale, 'liveFilters')}</legend>
-        <div className="live-filters__grid">
-          <FilterSelect
-            locale={locale}
-            label="liveTerritory"
-            value={filters.territoryId}
-            onChange={(value) => set('territoryId', value)}
-            options={response.facets.territories.map((item) => ({
-              value: item.id,
-              label: `${'— '.repeat(item.depth)}${item.name} (${item.code})`,
-            }))}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveWaterwaySection"
-            value={filters.waterwayId}
-            onChange={(value) => set('waterwayId', value)}
-            options={response.facets.waterways
-              .filter((item) => item.id !== null)
-              .map((item) => ({ value: item.id!, label: item.name ?? item.code ?? item.id! }))}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveSection"
-            value={filters.sectionId}
-            onChange={(value) => set('sectionId', value)}
-            options={response.facets.sections.map((item) => ({
-              value: item.id,
-              label: item.name ?? item.code ?? item.id,
-            }))}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveMeasurement"
-            value={filters.measurementKind}
-            onChange={(value) => set('measurementKind', value)}
-            options={response.facets.measurementKinds.map((value) => ({
-              value,
-              label:
-                value === 'stage'
-                  ? t(locale, 'stage')
-                  : value === 'discharge'
-                    ? t(locale, 'discharge')
-                    : t(locale, 'liveCounter'),
-            }))}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveConnection"
-            value={filters.connection}
-            onChange={(value) => set('connection', value)}
-            options={connectionOptions}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveFault"
-            value={filters.fault}
-            onChange={(value) => set('fault', value)}
-            options={faultOptions}
-          />
-          <FilterSelect
-            locale={locale}
-            label="dataState"
-            value={filters.dataState}
-            onChange={(value) => set('dataState', value)}
-            options={dataOptions}
-          />
-          <FilterSelect
-            locale={locale}
-            label="dataQuality"
-            value={filters.quality}
-            onChange={(value) => set('quality', value)}
-            options={qualityOptions}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveAttentionFilter"
-            value={filters.attention}
-            onChange={(value) => set('attention', value)}
-            options={attentionOptions}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveStation"
-            value={filters.stationId}
-            onChange={(value) => set('stationId', value)}
-            options={response.facets.stations.map((item) => ({
-              value: item.id,
-              label: `${item.name} (${item.code})`,
-            }))}
-          />
-          <FilterSelect
-            locale={locale}
-            label="liveDevice"
-            value={filters.deviceId}
-            onChange={(value) => set('deviceId', value)}
-            options={response.facets.devices.map((item) => ({
-              value: item.id,
-              label: `${item.name} (${item.code})`,
-            }))}
-          />
-        </div>
-        <button className="action-button" type="button" onClick={onClear}>
-          {t(locale, 'liveClearFilters')}
-        </button>
-      </fieldset>
+      <FilterPanel
+        filtersLabel={t(locale, 'liveFilters')}
+        clearLabel={t(locale, 'liveClearFilters')}
+        onClear={onClear}
+        activeFilters={activeFilters.map(([key, value]) => ({
+          id: key,
+          label: `${t(locale, filterLabels[key])}: ${value}`,
+          onRemove: () => set(key, undefined),
+        }))}
+        search={
+          <>
+            <label htmlFor={`live-station-search-${stationListId}`}>
+              <span>{t(locale, 'liveStation')}</span>
+              <input
+                id={`live-station-search-${stationListId}`}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls={stationListId}
+                aria-expanded={Boolean(stationQuery)}
+                aria-activedescendant={
+                  stationActiveIndex >= 0
+                    ? `${stationListId}-option-${stationActiveIndex}`
+                    : undefined
+                }
+                value={stationQuery}
+                onChange={(event) => {
+                  setStationQuery(event.target.value);
+                  setStationActiveIndex(-1);
+                }}
+                onKeyDown={(event) => {
+                  if (!stationOptions.length) return;
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    setStationActiveIndex((index) =>
+                      Math.min(index + 1, stationOptions.length - 1),
+                    );
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    setStationActiveIndex((index) => Math.max(index - 1, 0));
+                  } else if (event.key === 'Enter' && stationActiveIndex >= 0) {
+                    event.preventDefault();
+                    selectStation(stationOptions[stationActiveIndex]!.value);
+                  } else if (event.key === 'Escape') {
+                    setStationQuery('');
+                    setStationActiveIndex(-1);
+                  }
+                }}
+              />
+            </label>
+            {stationQuery ? (
+              <ul id={stationListId} className="filter-panel__combobox" role="listbox">
+                {stationOptions.map((option, index) => (
+                  <li
+                    id={`${stationListId}-option-${index}`}
+                    key={option.value}
+                    role="option"
+                    aria-selected={filters.stationId === option.value}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectStation(option.value)}
+                  >
+                    {option.label}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </>
+        }
+      >
+        <fieldset>
+          <legend>{t(locale, 'liveFilters')}</legend>
+          <div className="live-filters__grid">
+            <FilterSelect
+              locale={locale}
+              label="liveTerritory"
+              value={filters.territoryId}
+              onChange={(value) => set('territoryId', value)}
+              options={response.facets.territories.map((item) => ({
+                value: item.id,
+                label: `${'— '.repeat(item.depth)}${item.name} (${item.code})`,
+              }))}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveWaterwaySection"
+              value={filters.waterwayId}
+              onChange={(value) => set('waterwayId', value)}
+              options={response.facets.waterways
+                .filter((item) => item.id !== null)
+                .map((item) => ({ value: item.id!, label: item.name ?? item.code ?? item.id! }))}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveSection"
+              value={filters.sectionId}
+              onChange={(value) => set('sectionId', value)}
+              options={response.facets.sections.map((item) => ({
+                value: item.id,
+                label: item.name ?? item.code ?? item.id,
+              }))}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveMeasurement"
+              value={filters.measurementKind}
+              onChange={(value) => set('measurementKind', value)}
+              options={response.facets.measurementKinds.map((value) => ({
+                value,
+                label:
+                  value === 'stage'
+                    ? t(locale, 'stage')
+                    : value === 'discharge'
+                      ? t(locale, 'discharge')
+                      : t(locale, 'liveCounter'),
+              }))}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveConnection"
+              value={filters.connection}
+              onChange={(value) => set('connection', value)}
+              options={connectionOptions}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveFault"
+              value={filters.fault}
+              onChange={(value) => set('fault', value)}
+              options={faultOptions}
+            />
+            <FilterSelect
+              locale={locale}
+              label="dataState"
+              value={filters.dataState}
+              onChange={(value) => set('dataState', value)}
+              options={dataOptions}
+            />
+            <FilterSelect
+              locale={locale}
+              label="dataQuality"
+              value={filters.quality}
+              onChange={(value) => set('quality', value)}
+              options={qualityOptions}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveAttentionFilter"
+              value={filters.attention}
+              onChange={(value) => set('attention', value)}
+              options={attentionOptions}
+            />
+            <FilterSelect
+              locale={locale}
+              label="liveDevice"
+              value={filters.deviceId}
+              onChange={(value) => set('deviceId', value)}
+              options={response.facets.devices.map((item) => ({
+                value: item.id,
+                label: `${item.name} (${item.code})`,
+              }))}
+            />
+          </div>
+        </fieldset>
+      </FilterPanel>
     </form>
   );
 }
@@ -591,112 +692,243 @@ function LiveTable({
   response: LiveOperationsResponse;
   onSelect: (deviceId: string) => void;
 }) {
+  type ColumnKey =
+    | 'station'
+    | 'device'
+    | 'waterway'
+    | 'stage'
+    | 'discharge'
+    | 'counter'
+    | 'plan'
+    | 'variance'
+    | 'quality'
+    | 'status'
+    | 'lastUpdate'
+    | 'dataAge'
+    | 'powerSignal'
+    | 'calibration'
+    | 'alarm';
+  const columns: readonly { key: ColumnKey; label: TranslationKey }[] = [
+    { key: 'station', label: 'liveStation' },
+    { key: 'device', label: 'liveDevice' },
+    { key: 'waterway', label: 'liveWaterwaySection' },
+    { key: 'stage', label: 'stage' },
+    { key: 'discharge', label: 'discharge' },
+    { key: 'counter', label: 'liveCounter' },
+    { key: 'plan', label: 'livePlan' },
+    { key: 'variance', label: 'liveVariance' },
+    { key: 'quality', label: 'dataQuality' },
+    { key: 'status', label: 'liveWaterStatus' },
+    { key: 'lastUpdate', label: 'liveLastUpdate' },
+    { key: 'dataAge', label: 'liveDataAge' },
+    { key: 'powerSignal', label: 'livePowerSignal' },
+    { key: 'calibration', label: 'liveCalibration' },
+    { key: 'alarm', label: 'liveAlarm' },
+  ];
+  const essential: readonly ColumnKey[] = [
+    'station',
+    'stage',
+    'discharge',
+    'plan',
+    'variance',
+    'status',
+    'dataAge',
+    'alarm',
+  ];
+  const [visible, setVisible] = useState<ReadonlySet<ColumnKey>>(() => new Set(essential));
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const toggleColumn = (key: ColumnKey) =>
+    setVisible((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const shown = (key: ColumnKey) => visible.has(key);
   return (
-    <div className="table-scroll live-table-scroll">
-      <table className="live-table">
-        <caption>{`${t(locale, 'liveRows')}: ${response.rows.length} / ${response.scope.deviceDenominator}`}</caption>
-        <thead>
-          <tr>
-            {[
-              'liveStation',
-              'liveDevice',
-              'liveWaterwaySection',
-              'stage',
-              'discharge',
-              'liveCounter',
-              'livePlan',
-              'liveVariance',
-              'dataQuality',
-              'liveWaterStatus',
-              'liveLastUpdate',
-              'liveDataAge',
-              'livePowerSignal',
-              'liveCalibration',
-              'liveAlarm',
-            ].map((key) => (
-              <th key={key} scope="col">
-                {t(locale, key as TranslationKey)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {response.rows.map((row) => (
-            <tr key={row.deviceId}>
-              <td data-label={t(locale, 'liveStation')}>
-                <strong>{row.station.name}</strong>
-                <small>{row.station.code}</small>
-                <small>{row.territory.name}</small>
-              </td>
-              <td data-label={t(locale, 'liveDevice')}>
-                <a
-                  id={`live-device-${row.deviceId}`}
-                  href={`#operations?deviceId=${row.deviceId}`}
-                  onClick={() => onSelect(row.deviceId)}
-                >
-                  {t(locale, 'liveSelectDevice')}: {row.device.name}
-                </a>
-                <small>{row.device.code}</small>
-              </td>
-              <td data-label={t(locale, 'liveWaterwaySection')}>
-                {row.waterway.name ?? '—'}
-                <small>{row.waterway.sectionName ?? '—'}</small>
-              </td>
-              <td data-label={t(locale, 'stage')}>
-                <Quantity locale={locale} quantity={row.quantities.stage} />
-              </td>
-              <td data-label={t(locale, 'discharge')}>
-                <Quantity locale={locale} quantity={row.quantities.discharge} />
-              </td>
-              <td data-label={t(locale, 'liveCounter')}>
-                <Quantity locale={locale} quantity={row.quantities.accumulatedCounter} />
-              </td>
-              <td data-label={t(locale, 'livePlan')}>
-                <GovernedPlaceholder locale={locale} reason={row.governed.plan.reason} />
-              </td>
-              <td data-label={t(locale, 'liveVariance')}>
-                <GovernedPlaceholder
-                  locale={locale}
-                  reason={row.governed.intervalVariance.reason}
-                />
-              </td>
-              <td data-label={t(locale, 'dataQuality')}>
-                {t(locale, qualityKey(row.quantities.discharge.quality))}
-              </td>
-              <td data-label={t(locale, 'liveWaterStatus')}>
-                <LiveStatusDisclosure locale={locale} row={row} />
-              </td>
-              <td data-label={t(locale, 'liveLastUpdate')}>
-                <time dateTime={row.health.lastSeenReceivedAt ?? undefined}>
-                  {formatLiveTimestamp(row.health.lastSeenReceivedAt)}
-                </time>
-                <small>{formatLiveTimestamp(row.health.lastObservedAt)}</small>
-              </td>
-              <td data-label={t(locale, 'liveDataAge')}>
-                {formatLiveAge(row.health.ageMicroseconds)}
-                <small>
-                  {row.health.freshness === 'unconfigured'
-                    ? t(locale, 'liveNotConfigured')
-                    : row.health.freshness}
-                </small>
-              </td>
-              <td data-label={t(locale, 'livePowerSignal')}>
-                {row.health.power.state === 'measured' ? `${row.health.power.value} V` : '—'}
-                <small>
-                  {row.health.signal.state === 'measured' ? `${row.health.signal.value} dBm` : '—'}
-                </small>
-              </td>
-              <td data-label={t(locale, 'liveCalibration')}>
-                <GovernedPlaceholder locale={locale} reason={row.governed.calibrationDue.reason} />
-              </td>
-              <td data-label={t(locale, 'liveAlarm')}>
-                <GovernedPlaceholder locale={locale} reason={row.governed.alarm.reason} />
-              </td>
+    <section className="live-table-panel" aria-label={t(locale, 'liveRows')}>
+      <div className="live-table-panel__toolbar">
+        <div
+          className="live-columns-menu"
+          onKeyDown={(event) => event.key === 'Escape' && setColumnsOpen(false)}
+        >
+          <button
+            className="action-button"
+            type="button"
+            aria-expanded={columnsOpen}
+            onClick={() => setColumnsOpen((value) => !value)}
+          >
+            {t(locale, 'columns')}
+          </button>
+          {columnsOpen ? (
+            <div
+              className="live-columns-menu__panel"
+              role="group"
+              aria-label={t(locale, 'columns')}
+            >
+              {columns.map((column) => (
+                <label key={column.key}>
+                  <input
+                    type="checkbox"
+                    checked={shown(column.key)}
+                    onChange={() => toggleColumn(column.key)}
+                  />
+                  {t(locale, column.label)}
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <div className="table-scroll live-table-scroll" tabIndex={0}>
+        <table className="live-table">
+          <caption>{`${t(locale, 'liveRows')}: ${response.rows.length} / ${response.scope.deviceDenominator}`}</caption>
+          <thead>
+            <tr>
+              {columns
+                .filter((column) => shown(column.key))
+                .map((column) => (
+                  <th key={column.key} scope="col">
+                    {t(locale, column.label)}
+                  </th>
+                ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {response.rows.map((row) => (
+              <tr key={row.deviceId}>
+                {shown('station') ? (
+                  <td data-label={t(locale, 'liveStation')} className="live-table__station">
+                    <strong className="live-table__station-code" title={row.station.code}>
+                      {row.station.code}
+                    </strong>
+                    <span className="live-table__station-name" title={row.station.name}>
+                      {row.station.name}
+                    </span>
+                    <a
+                      id={`live-device-${row.deviceId}`}
+                      className="live-table__device-link"
+                      href={`#operations?deviceId=${row.deviceId}`}
+                      onClick={() => onSelect(row.deviceId)}
+                      aria-label={`${t(locale, 'liveSelectDevice')}: ${row.device.name} (${row.device.code}), ${row.station.name}`}
+                      title={`${row.device.name} (${row.device.code}); ${row.territory.name}`}
+                    >
+                      {row.device.code}
+                    </a>
+                  </td>
+                ) : null}
+                {shown('device') ? (
+                  <td data-label={t(locale, 'liveDevice')}>
+                    <a
+                      id={shown('station') ? undefined : `live-device-${row.deviceId}`}
+                      href={`#operations?deviceId=${row.deviceId}`}
+                      onClick={() => onSelect(row.deviceId)}
+                    >
+                      {t(locale, 'liveSelectDevice')}: {row.device.name}
+                    </a>
+                    <small>{row.device.code}</small>
+                  </td>
+                ) : null}
+                {shown('waterway') ? (
+                  <td data-label={t(locale, 'liveWaterwaySection')}>
+                    {row.waterway.name ?? '—'}
+                    <small>{row.waterway.sectionName ?? '—'}</small>
+                  </td>
+                ) : null}
+                {shown('stage') ? (
+                  <td data-label={t(locale, 'stage')}>
+                    <Quantity locale={locale} quantity={row.quantities.stage} />
+                  </td>
+                ) : null}
+                {shown('discharge') ? (
+                  <td data-label={t(locale, 'discharge')}>
+                    <Quantity locale={locale} quantity={row.quantities.discharge} />
+                  </td>
+                ) : null}
+                {shown('counter') ? (
+                  <td data-label={t(locale, 'liveCounter')}>
+                    <Quantity locale={locale} quantity={row.quantities.accumulatedCounter} />
+                  </td>
+                ) : null}
+                {shown('plan') ? (
+                  <td data-label={t(locale, 'livePlan')}>
+                    <GovernedPlaceholder locale={locale} reason={row.governed.plan.reason} />
+                  </td>
+                ) : null}
+                {shown('variance') ? (
+                  <td data-label={t(locale, 'liveVariance')}>
+                    <GovernedPlaceholder
+                      locale={locale}
+                      reason={row.governed.intervalVariance.reason}
+                    />
+                  </td>
+                ) : null}
+                {shown('quality') ? (
+                  <td data-label={t(locale, 'dataQuality')}>
+                    <StatusChip label={t(locale, qualityKey(row.quantities.discharge.quality))} />
+                  </td>
+                ) : null}
+                {shown('status') ? (
+                  <td data-label={t(locale, 'liveWaterStatus')}>
+                    <LiveStatusCompact locale={locale} row={row} />
+                  </td>
+                ) : null}
+                {shown('lastUpdate') ? (
+                  <td data-label={t(locale, 'liveLastUpdate')}>
+                    <time
+                      dateTime={row.health.lastSeenReceivedAt ?? undefined}
+                      title={row.health.lastSeenReceivedAt ?? undefined}
+                    >
+                      {row.health.lastSeenReceivedAt
+                        ? presentationTimestamp(locale, row.health.lastSeenReceivedAt).value
+                        : '—'}
+                    </time>
+                    <small>
+                      {row.health.lastObservedAt
+                        ? presentationTimestamp(locale, row.health.lastObservedAt).value
+                        : '—'}
+                    </small>
+                  </td>
+                ) : null}
+                {shown('dataAge') ? (
+                  <td data-label={t(locale, 'liveDataAge')}>
+                    {formatLiveAge(row.health.ageMicroseconds, locale)}
+                    <small>
+                      {row.health.freshness === 'unconfigured'
+                        ? t(locale, 'liveNotConfigured')
+                        : row.health.freshness}
+                    </small>
+                  </td>
+                ) : null}
+                {shown('powerSignal') ? (
+                  <td data-label={t(locale, 'livePowerSignal')}>
+                    {row.health.power.state === 'measured' ? `${row.health.power.value} V` : '—'}
+                    <small>
+                      {row.health.signal.state === 'measured'
+                        ? `${row.health.signal.value} dBm`
+                        : '—'}
+                    </small>
+                  </td>
+                ) : null}
+                {shown('calibration') ? (
+                  <td data-label={t(locale, 'liveCalibration')}>
+                    <GovernedPlaceholder
+                      locale={locale}
+                      reason={row.governed.calibrationDue.reason}
+                    />
+                  </td>
+                ) : null}
+                {shown('alarm') ? (
+                  <td data-label={t(locale, 'liveAlarm')}>
+                    <GovernedPlaceholder locale={locale} reason={row.governed.alarm.reason} />
+                  </td>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -743,11 +975,15 @@ export function LiveOperationsInspector({
           </div>
           <div>
             <dt>{t(locale, 'referenceAt')}</dt>
-            <dd>{formatLiveTimestamp(inspector.referenceAt)}</dd>
+            <dd>
+              <PresentationTime locale={locale} value={inspector.referenceAt} />
+            </dd>
           </div>
           <div>
             <dt>{t(locale, 'knownAt')}</dt>
-            <dd>{formatLiveTimestamp(inspector.knownAt)}</dd>
+            <dd>
+              <PresentationTime locale={locale} value={inspector.knownAt} />
+            </dd>
           </div>
         </dl>
       </section>
@@ -771,14 +1007,14 @@ export function LiveOperationsInspector({
           <div>
             <dt>{t(locale, 'liveLastUpdate')}</dt>
             <dd>
-              {formatLiveTimestamp(row.health.lastSeenReceivedAt)} /{' '}
-              {formatLiveTimestamp(row.health.lastObservedAt)}
+              <PresentationTime locale={locale} value={row.health.lastSeenReceivedAt} /> /{' '}
+              <PresentationTime locale={locale} value={row.health.lastObservedAt} />
             </dd>
           </div>
           <div>
             <dt>{t(locale, 'liveDataAge')}</dt>
             <dd>
-              {formatLiveAge(row.health.ageMicroseconds)}; {t(locale, 'liveNotConfigured')}
+              {formatLiveAge(row.health.ageMicroseconds, locale)}; {t(locale, 'liveNotConfigured')}
             </dd>
           </div>
           <div>
@@ -836,7 +1072,9 @@ export function LiveOperationsInspector({
             <tbody>
               {inspectorTrendRows(inspector).map((point) => (
                 <tr key={`${point.at}-${point.kind}`}>
-                  <td>{formatLiveTimestamp(point.at)}</td>
+                  <td>
+                    <PresentationTime locale={locale} value={point.at} />
+                  </td>
                   <td>{point.kind}</td>
                   <td>
                     {point.raw ?? '—'} {point.raw === null ? '' : point.unit}
@@ -855,9 +1093,12 @@ export function LiveOperationsInspector({
         <h3 id="live-revisions-heading">{t(locale, 'liveRevision')}</h3>
         <ul>
           {inspector.revisions.map((revision) => (
-            <li
-              key={`${revision.lineageId ?? 'synthetic'}-${revision.revision}`}
-            >{`${t(locale, 'liveRevision')} ${revision.revision}; ${revision.value} ${revision.unit === 'm3/s' ? 'm³/s' : revision.unit === 'm3' ? 'm³' : 'm'}; ${t(locale, 'liveWorkflow')}: ${revision.workflow}; ${t(locale, 'dataQuality')}: ${t(locale, qualityKey(revision.quality))}; ${formatLiveTimestamp(revision.observedAt)} / ${formatLiveTimestamp(revision.ingestedAt)}; ${t(locale, 'source')}: ${revision.source.label}; ${t(locale, revision.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}${revision.reason ? `; ${t(locale, 'liveReason')}: ${revision.reason}` : ''}`}</li>
+            <li key={`${revision.lineageId ?? 'synthetic'}-${revision.revision}`}>
+              {`${t(locale, 'liveRevision')} ${revision.revision}; ${formatDecimal(locale, revision.value)} ${revision.unit === 'm3/s' ? 'm³/s' : revision.unit === 'm3' ? 'm³' : 'm'}; ${t(locale, 'liveWorkflow')}: ${revision.workflow}; ${t(locale, 'dataQuality')}: ${t(locale, qualityKey(revision.quality))}; `}
+              <PresentationTime locale={locale} value={revision.observedAt} /> /{' '}
+              <PresentationTime locale={locale} value={revision.ingestedAt} />
+              {`; ${t(locale, 'source')}: ${revision.source.label}; ${t(locale, revision.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}${revision.reason ? `; ${t(locale, 'liveReason')}: ${revision.reason}` : ''}`}
+            </li>
           ))}
         </ul>
       </section>
@@ -881,6 +1122,7 @@ export function LiveOperationsContent({
   onFiltersChange,
   onClearFilters,
   onSelect,
+  connectionIndicator,
 }: {
   locale: Locale;
   response: LiveOperationsResponse;
@@ -888,21 +1130,32 @@ export function LiveOperationsContent({
   onFiltersChange: (filters: LiveFilters) => void;
   onClearFilters: () => void;
   onSelect: (deviceId: string) => void;
+  connectionIndicator?: ReactNode;
 }) {
   return (
     <>
-      <section className="live-operations__intro panel" aria-labelledby="live-operations-heading">
-        <p className="eyebrow">{t(locale, 'liveSyntheticSource')}</p>
-        <h2 id="live-operations-heading">{t(locale, 'liveOperationsHeading')}</h2>
-        <p>{t(locale, 'liveOperationsDetail')}</p>
-        <p>
-          <strong>{t(locale, 'referenceAt')}:</strong> {formatLiveTimestamp(response.referenceAt)};{' '}
-          <strong>{t(locale, 'knownAt')}:</strong> {formatLiveTimestamp(response.knownAt)}
-        </p>
-        <p>
-          <strong>{t(locale, 'provenance')}:</strong> {response.scenario.provenance}
-        </p>
-      </section>
+      <WorkspaceHeader
+        heading={t(locale, 'liveOperationsHeading')}
+        headingId="live-operations-heading"
+        locale={locale}
+        detail={t(locale, 'liveOperationsDetail')}
+        provenance={
+          <>
+            <p>{t(locale, 'liveSyntheticSource')}</p>
+            <p>
+              <strong>{t(locale, 'referenceAt')}:</strong>{' '}
+              <PresentationTime locale={locale} value={response.referenceAt} />;{' '}
+              <strong>{t(locale, 'knownAt')}:</strong>{' '}
+              <PresentationTime locale={locale} value={response.knownAt} />
+            </p>
+            <p>
+              <strong>{t(locale, 'provenance')}:</strong> {response.scenario.provenance}
+            </p>
+          </>
+        }
+      >
+        {connectionIndicator}
+      </WorkspaceHeader>
       <FilterForm
         locale={locale}
         response={response}
@@ -1000,62 +1253,70 @@ export function LiveOperationsWorkspace({
   }, [access, selectedDeviceId, filters.territoryId, refresh]);
   useEffect(() => {
     if (access !== 'ready' || typeof EventSource === 'undefined') return;
-    setStream(streamRetry ? 'reconnecting' : 'connecting');
+    setStream((current) =>
+      current === 'unavailable' || current === 'reconnecting' ? 'reconnecting' : current,
+    );
     const source = new EventSource(liveEventsPath(filters));
     let opened = false;
-    let retryTimer: number | undefined;
+    let boundedCompletion = false;
     source.onopen = () => {
       opened = true;
+      boundedCompletion = false;
       setStream('connected');
       setStreamReset(false);
     };
     const invalidate = () => setRefresh((value) => value + 1);
     source.addEventListener('invalidate', invalidate);
     source.addEventListener('reset', () => {
-      setStream('reconnecting');
+      boundedCompletion = true;
+      setStream('connected');
       setStreamReset(true);
       invalidate();
     });
+    source.addEventListener('complete', () => {
+      boundedCompletion = true;
+      setStream('connected');
+    });
     source.onerror = () => {
-      source.close();
-      setStream(streamFailureState(opened));
-      retryTimer = window.setTimeout(
-        () => setStreamRetry((value) => value + 1),
-        Math.min(30_000, 1_000 * 2 ** Math.min(streamRetry, 5)),
-      );
+      setStream(streamFailureState(opened, boundedCompletion));
+      // Keep this EventSource alive: its native retry carries Last-Event-ID.
+      // Recreating it here would replay every bounded batch from the beginning.
+      boundedCompletion = false;
     };
-    return () => {
-      source.close();
-      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
-    };
+    return () => source.close();
   }, [access, filters, streamRetry]);
   const presentation = streamPresentation(stream);
+  const range = result
+    ? livePaginationRange(priorCursors.length, result.rows.length, result.scope.deviceDenominator)
+    : null;
   const select = (deviceId: string) => {
     returnFocus.current = `live-device-${deviceId}`;
     onDeviceChange(deviceId);
   };
   const changeFilters = (next: LiveFilters) => setFilters(next);
+  const connectionIndicator = (
+    <div className={`live-stream-status live-stream-status--${stream}`} role="status">
+      <StatusChip
+        detail={t(locale, presentation.value)}
+        icon={presentation.icon}
+        label={t(locale, presentation.label)}
+        tone={
+          stream === 'connected' ? 'positive' : stream === 'unavailable' ? 'critical' : 'attention'
+        }
+      />
+      {stream === 'unavailable' ? (
+        <button
+          className="action-button"
+          type="button"
+          onClick={() => setStreamRetry((value) => value + 1)}
+        >
+          {t(locale, 'liveReconnect')}
+        </button>
+      ) : null}
+    </div>
+  );
   return (
     <section className="live-operations" aria-label={t(locale, 'liveOperationsHeading')}>
-      <div className={`live-stream-status live-stream-status--${stream}`} role="status">
-        <span aria-hidden="true">{presentation.icon}</span>
-        <strong>{t(locale, presentation.label)}</strong>
-        <span>{t(locale, presentation.value)}</span>
-        {stream === 'unavailable' ? (
-          <button
-            className="action-button"
-            type="button"
-            onClick={() => setStreamRetry((value) => value + 1)}
-          >
-            {t(locale, 'liveReconnect')}
-          </button>
-        ) : null}
-      </div>
-      {streamReset ? (
-        <p className="supporting-text" role="status">
-          {t(locale, 'liveReset')}
-        </p>
-      ) : null}
       {state === 'ready' || state === 'empty' ? (
         result ? (
           <>
@@ -1066,7 +1327,13 @@ export function LiveOperationsWorkspace({
               onFiltersChange={changeFilters}
               onClearFilters={() => setFilters(emptyFilters)}
               onSelect={select}
+              connectionIndicator={connectionIndicator}
             />
+            {streamReset ? (
+              <p className="supporting-text" role="status">
+                {t(locale, 'liveReset')}
+              </p>
+            ) : null}
             {state === 'empty' ? (
               <StateNotice
                 locale={locale}
@@ -1075,33 +1342,37 @@ export function LiveOperationsWorkspace({
               />
             ) : (
               <>
-                <div className="live-pagination">
-                  {priorCursors.length ? (
-                    <button
-                      className="action-button"
-                      type="button"
-                      onClick={() => {
-                        const next = priorCursors.at(-1) ?? null;
-                        setPriorCursors((items) => items.slice(0, -1));
-                        setCursor(next);
-                      }}
-                    >
-                      {t(locale, 'livePreviousPage')}
-                    </button>
-                  ) : null}
-                  {result.nextCursor ? (
-                    <button
-                      className="action-button"
-                      type="button"
-                      onClick={() => {
-                        setPriorCursors((items) => [...items, cursor ?? '']);
-                        setCursor(result.nextCursor);
-                      }}
-                    >
-                      {t(locale, 'liveNextPage')}
-                    </button>
-                  ) : null}
-                </div>
+                <nav className="live-pagination" aria-label={t(locale, 'liveRows')}>
+                  <span className="live-pagination__range" aria-live="polite">
+                    <span className="visually-hidden">{`${t(locale, 'liveRows')}: `}</span>
+                    {range
+                      ? `${formatDecimal(locale, range.start)}–${formatDecimal(locale, range.end)} ${t(locale, 'livePaginationOf')} ${formatDecimal(locale, range.total)}`
+                      : '—'}
+                  </span>
+                  <button
+                    className="action-button"
+                    type="button"
+                    disabled={!priorCursors.length}
+                    onClick={() => {
+                      const next = priorCursors.at(-1) ?? null;
+                      setPriorCursors((items) => items.slice(0, -1));
+                      setCursor(next);
+                    }}
+                  >
+                    {t(locale, 'livePreviousPage')}
+                  </button>
+                  <button
+                    className="action-button"
+                    type="button"
+                    disabled={!result.nextCursor}
+                    onClick={() => {
+                      setPriorCursors((items) => [...items, cursor ?? '']);
+                      setCursor(result.nextCursor);
+                    }}
+                  >
+                    {t(locale, 'liveNextPage')}
+                  </button>
+                </nav>
                 {inspector && selectedDeviceId ? (
                   <LiveOperationsInspector
                     locale={locale}

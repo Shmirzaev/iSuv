@@ -10,8 +10,8 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter @isuv/api --filter @isuv/web dev",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write apps packages scripts \"*.{md,json,mjs,yaml,yml}\"",
+    "format:check": "prettier --check apps packages scripts \"*.{md,json,mjs,yaml,yml}\"",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "pnpm -r test",

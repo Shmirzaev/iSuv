@@ -152,7 +152,7 @@ export function registerLiveOperationsRoutes(
         .header('cache-control', 'no-cache')
         .header('x-isuv-live-reconnect', 'Last-Event-ID')
         .header('x-isuv-live-batch-limit', '250');
-      return `${stream.reset ? `event: reset\ndata: ${JSON.stringify({ reason: 'cursor_expired', action: 'resync', snapshotUrl: '/api/v1/live-operations' })}\n\n` : ''}${stream.events.map((x) => `id: ${x.id}\nevent: invalidate\ndata: ${JSON.stringify({ deviceId: x.event.deviceId, source: 'device_health' })}\n\n`).join('')}: heartbeat\n\n`;
+      return `${stream.reset ? `event: reset\ndata: ${JSON.stringify({ reason: 'cursor_expired', action: 'resync', snapshotUrl: '/api/v1/live-operations' })}\n\n` : ''}${stream.events.map((x) => `id: ${x.id}\nevent: invalidate\ndata: ${JSON.stringify({ deviceId: x.event.deviceId, source: 'device_health' })}\n\n`).join('')}event: complete\ndata: ${JSON.stringify({ action: 'reconnect', cursor: stream.events.at(-1)?.id ?? v ?? null })}\n\n: heartbeat\n\n`;
     } catch (error) {
       req.log.error({ err: error }, 'Live operations stream failed');
       return reply

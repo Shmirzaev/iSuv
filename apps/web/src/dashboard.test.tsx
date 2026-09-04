@@ -139,7 +139,8 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
     />,
   );
   assert.match(markup, /SYNTHETIC \/ NON-OFFICIAL scenario/);
-  assert.match(markup, /2026-08-24 07:34:56.123456 UTC/);
+  assert.match(markup, /title="2026-08-24T07:34:56.123456Z"/);
+  assert.match(markup, /Aug 24, 2026, 12:34:56/);
   assert.match(markup, /immutable synthetic dashboard scenario/);
   assert.match(markup, /d5000000-0000-4000-8000-000000000001/);
   assert.match(markup, /Scenario methods and member sets/);
@@ -151,7 +152,7 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   for (const label of ['Today', 'Week', 'Month', 'Season', 'Year'])
     assert.match(markup, new RegExp(`>${label}</button>`));
   assert.match(markup, /12\.5<\/?span[^>]*> m³\/s/);
-  assert.match(markup, /<data value="1200\/1">1200<\/data> m³/);
+  assert.match(markup, /<data value="1200\/1">1,200<\/data>/);
   assert.match(markup, /<data value="100\/2">50<\/data> %/);
   assert.match(markup, /Scenario classified/);
   assert.match(markup, /Unconfigured/);
@@ -164,7 +165,7 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /Devices with unknown connection[^]*?1/);
   assert.match(markup, /Synthetic Zarafshan District/);
   assert.match(markup, /Territory identifier: a2000000-0000-4000-8000-000000000001/);
-  assert.match(markup, /2026-08-23 19:00:00\.000000 UTC — 2026-08-24 07:34:56\.123456 UTC/);
+  assert.match(markup, /title="2026-08-23T19:00:00\.000000Z — 2026-08-24T07:34:56\.123456Z"/);
   assert.match(
     markup,
     /<data value="900719925474099312345678">900,719,925,474,099,312,345,678<\/data> µs/,
@@ -186,8 +187,11 @@ test('dashboard defaults to a plain-language guided overview while retaining adv
     />,
   );
   assert.match(markup, /What should I do\?/);
-  assert.match(markup, /Check urgent alarms/);
-  assert.match(markup, /At a glance/);
+  assert.match(
+    markup,
+    /<li><div><strong>Check urgent alarms<\/strong><\/div><p>Start with critical alarms that may need acknowledgement or assignment\.<\/p><\/li>/,
+  );
+  assert.match(markup, /Operational overview/);
   assert.match(markup, /Stations needing attention[^]*?>2</);
   assert.match(markup, /Devices needing attention[^]*?>3</);
   assert.match(markup, /Delivery versus plan/);
@@ -196,8 +200,42 @@ test('dashboard defaults to a plain-language guided overview while retaining adv
   assert.match(markup, /href="#alarms"/);
   assert.match(markup, /aria-pressed="true"[^>]*>Simple<\/button>/);
   assert.match(markup, /aria-pressed="false"[^>]*>Detailed<\/button>/);
-  assert.doesNotMatch(markup, /Scenario identifier/);
+  assert.match(markup, /<details class="workspace-header__provenance">/);
+  assert.match(markup, /Scenario identifier/);
   assert.doesNotMatch(markup, /Exact duration \(microseconds\)/);
+});
+
+test('delivery versus plan renders a signed actual-minus-planned under-plan variance', () => {
+  const underPlanDashboard: DashboardResponse = {
+    ...dashboard,
+    comparison: {
+      state: 'scenario_classified',
+      actualM3: { numerator: '408200', denominator: '1', unit: 'm3' },
+      plannedM3: { numerator: '418000', denominator: '1', unit: 'm3' },
+      priorActualM3: { numerator: '410000', denominator: '1', unit: 'm3' },
+      source: 'synthetic_scenario',
+      reason: null,
+    },
+  };
+  const markup = renderToStaticMarkup(
+    <DashboardWorkspace
+      locale="en"
+      onPeriodChange={() => undefined}
+      onRetry={() => undefined}
+      period="today"
+      response={underPlanDashboard}
+      state="ready"
+    />,
+  );
+
+  assert.match(
+    markup,
+    /<dt>Variance<\/dt><dd><span aria-hidden="true">↓<\/span> <span><data value="-9800\/1">-9,800<\/data> m³<\/span><\/dd>/,
+  );
+  assert.doesNotMatch(
+    markup,
+    /<dt>Variance<\/dt><dd><span aria-hidden="true">↑<\/span> <span><data value="0\/1">0<\/data>/,
+  );
 });
 
 test('unavailable and unauthenticated dashboard views do not render values as normal data', () => {

@@ -163,32 +163,31 @@ test('live table renders full labels, explicit units/statuses, safe placeholders
   );
   for (const label of [
     'Station',
-    'Device',
-    'Waterway / section',
     'Stage',
     'Discharge',
-    'Accumulated counter',
     'Plan',
     'Interval variance',
-    'Data quality',
     'Water and device status',
     'Data age',
-    'Power / signal',
-    'Calibration',
     'Alarm / incident',
   ])
     assert.match(markup, new RegExp(label));
   assert.match(markup, /1\.25 m<\/strong>/);
   assert.match(markup, /1\.25 m³\/s<\/strong>/);
-  assert.match(markup, /1\.25 m³<\/strong>/);
+  assert.doesNotMatch(markup, /Accumulated counter<\/th>/);
   assert.match(markup, /Not configured/);
   assert.match(markup, /Synthetic scenario \/ non-official source/);
   assert.match(markup, /href="#operations\?deviceId=c2000000/);
+  assert.match(markup, /class="live-table__station-code"[^>]*>S-01<\/strong>/);
+  assert.match(markup, /class="live-table__station-name"[^>]*>Synthetic Station 01<\/span>/);
+  assert.match(markup, /class="live-table__device-link"[^>]*>D-01<\/a>/);
   assert.match(markup, /<form[^>]+aria-label="Filters"/);
-  assert.match(markup, /<select[^>]+id="live-filter-liveTerritory"/);
+  assert.match(markup, /role="combobox"/);
+  assert.match(markup, /<button[^>]*>Columns<\/button>/);
+  assert.match(markup, /<details class="workspace-header__provenance">/);
 });
 
-test('device health exposes independent offline, fault, current, stale, and no-data facts with text, icons, and values', () => {
+test('compact water/device status retains independent health facts in accessible text', () => {
   const base = response.rows[0]!;
   const healthResponse: LiveOperationsResponse = {
     ...response,
@@ -240,26 +239,20 @@ test('device health exposes independent offline, fault, current, stale, and no-d
       onSelect={() => undefined}
     />,
   );
-  for (const visibleState of [
-    'Connection: Communicating',
-    'Device fault: No fault reported',
-    'Data state: Current data condition',
-    'Connection: Offline',
-    'Device fault: Device fault / unreliable',
-    'Device fault: SYNTHETIC_FAULT',
-    'Data state: Stale data condition',
-    'Connection: Unknown',
-    'Device fault: Unknown',
-    'Data state: No data',
+  for (const accessibleState of [
+    'Device health: Communicating',
+    'No fault reported',
+    'Current data condition',
+    'Device health: Offline',
+    'SYNTHETIC_FAULT',
+    'Stale data condition',
+    'Device health: Unknown',
+    'No data',
   ])
-    assert.match(markup, new RegExp(visibleState));
-  assert.equal((markup.match(/aria-hidden="true"/g) ?? []).length > 12, true);
-  assert.equal((markup.match(/data-health-state=/g) ?? []).length, 9);
-  assert.equal((markup.match(/<details class="live-health-disclosure">/g) ?? []).length, 3);
-  assert.match(
-    markup,
-    /aria-label="Water and device status: Reported; Device health: Communicating · No fault reported · Current data condition; Not configured"/,
-  );
+    assert.match(markup, new RegExp(accessibleState));
+  assert.equal((markup.match(/class="live-status-compact"/g) ?? []).length, 3);
+  assert.equal((markup.match(/<details class="live-health-disclosure">/g) ?? []).length, 0);
+  assert.match(markup, /aria-label="Reported: Water and device status: Reported;/);
 });
 
 test('a valid empty filtered result retains the filters and clear action', () => {
@@ -277,6 +270,32 @@ test('a valid empty filtered result retains the filters and clear action', () =>
   assert.match(markup, /aria-label="Filters"/);
   assert.match(markup, />Clear filters<\/button>/);
   assert.match(markup, /<table class="live-table">/);
+});
+
+test('live quantities use locale grouping while retaining their explicit physical units', () => {
+  const groupedResponse: LiveOperationsResponse = {
+    ...response,
+    rows: [
+      {
+        ...response.rows[0]!,
+        quantities: {
+          ...response.rows[0]!.quantities,
+          discharge: { ...response.rows[0]!.quantities.discharge, value: '1250.256' },
+        },
+      },
+    ],
+  };
+  const markup = renderToStaticMarkup(
+    <LiveOperationsContent
+      locale="en"
+      response={groupedResponse}
+      filters={{}}
+      onFiltersChange={() => undefined}
+      onClearFilters={() => undefined}
+      onSelect={() => undefined}
+    />,
+  );
+  assert.match(markup, /1,250\.26/);
 });
 
 test('persistent inspector gives the heading focus target, raw/validated trend table, and explicit placeholders', () => {

@@ -7,6 +7,8 @@ import {
   reportIdFromHash,
   reportKinds,
   reportPath,
+  reportTemplateDescriptionKey,
+  reportTimestamp,
   reportsHash,
   reportsListPath,
 } from './reports-model.js';
@@ -65,4 +67,14 @@ test('the six report templates and their vocabulary are complete in all locales'
       'reportKindExecutiveSummary',
     ] as const)
       assert.ok(translations[locale][key].length > 0);
+});
+
+test('report templates have a localizable short description and timestamps use the presentation zone', () => {
+  assert.equal(
+    reportTemplateDescriptionKey('water_balance'),
+    'reportsTemplateWaterBalanceDescription',
+  );
+  const timestamp = reportTimestamp('2026-08-24T00:00:00.000000Z', 'en', 'Asia/Tashkent');
+  assert.match(timestamp, /2026/);
+  assert.doesNotMatch(timestamp, /00:00:00 UTC/);
 });

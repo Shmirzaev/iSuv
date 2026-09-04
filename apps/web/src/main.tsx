@@ -5,7 +5,6 @@ import {
   dashboardResponseSchema,
   type DashboardPeriod,
   sessionResponseSchema,
-  type Session,
 } from '@isuv/contracts';
 
 import {
@@ -14,9 +13,6 @@ import {
   areaLabel,
   canDiscoverAlarmWorkspace,
   dashboardIdentityState,
-  identityPresentation,
-  roleKey,
-  scopeKey,
   skipTargetId,
   type ApplicationArea,
   type IdentityState,
@@ -33,11 +29,12 @@ import { alarmCenterHash, alarmCenterSelectionFromHash } from './alarm-incident-
 import { MapNetworkWorkspace } from './map-network.js';
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
 import { initialLocale, translate, type Locale } from '@isuv/i18n';
-import { ShellChrome, StatusVocabulary } from './shell-semantics.js';
+import { ShellChrome, SyntheticDisclosure, type Theme } from './shell-semantics.js';
 import './styles.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';
+const themeStorageKey = 'isuv.theme';
 
 function browserInitialLocale(): Locale {
   if (typeof window === 'undefined') return initialLocale(null);
@@ -46,6 +43,17 @@ function browserInitialLocale(): Locale {
   } catch {
     return initialLocale(null);
   }
+}
+
+function browserInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'light';
+  try {
+    const stored = window.localStorage.getItem(themeStorageKey);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // The system preference remains a safe fallback when storage is unavailable.
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 const initialBrowserLocale = browserInitialLocale();
@@ -61,99 +69,10 @@ function areaFromHash(hash: string): ApplicationArea {
     : initialArea;
 }
 
-function statusLabel(locale: Locale, status: ReturnType<typeof identityPresentation>['status']) {
-  return translate(
-    locale,
-    status === 'information'
-      ? 'statusInformation'
-      : status === 'warning'
-        ? 'statusWarning'
-        : 'statusUnavailable',
-  );
-}
-
-function StatusNotice({
-  locale,
-  status,
-  title,
-  detail,
-}: {
-  locale: Locale;
-  status: 'information' | 'warning' | 'unavailable';
-  title: string;
-  detail: string;
-}) {
-  const icon = status === 'information' ? 'ℹ' : status === 'warning' ? '⚠' : '⊘';
-  return (
-    <div className={`status-notice status-notice--${status}`} role="status">
-      <span aria-hidden="true" className="status-notice__icon">
-        {icon}
-      </span>
-      <div>
-        <strong>{`${statusLabel(locale, status)}: ${title}`}</strong>
-        <p>{detail}</p>
-      </div>
-    </div>
-  );
-}
-
-function SessionScope({ locale, session }: { locale: Locale; session: Session }) {
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  return (
-    <dl className="identity-details">
-      <div>
-        <dt>{t('signedInAs')}</dt>
-        <dd>{session.user.displayName}</dd>
-      </div>
-      <div>
-        <dt>{t('organization')}</dt>
-        <dd>{session.organization.name}</dd>
-      </div>
-      <div className="identity-details__wide">
-        <dt>{t('activeRoles')}</dt>
-        <dd>
-          {session.currentGrants.length === 0 ? (
-            t('noActiveRoles')
-          ) : (
-            <ul className="grant-list">
-              {session.currentGrants.map((grant) => (
-                <li key={grant.id}>
-                  <strong>{t(roleKey(grant.role))}</strong>
-                  <span>{t(scopeKey(grant.scope))}</span>
-                  {grant.territoryId ? (
-                    <span>{`${t('territoryIdentifier')}: ${grant.territoryId}`}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </dd>
-      </div>
-    </dl>
-  );
-}
-
-function IdentityPanel({ locale, state }: { locale: Locale; state: IdentityState }) {
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const presentation = identityPresentation(state);
-  return (
-    <section aria-labelledby="identity-heading" className="panel">
-      <h2 id="identity-heading">{t('identity')}</h2>
-      <StatusNotice
-        locale={locale}
-        status={presentation.status}
-        title={t(presentation.title)}
-        detail={t(presentation.detail)}
-      />
-      {state.kind === 'authenticated' ? (
-        <SessionScope locale={locale} session={state.session} />
-      ) : null}
-    </section>
-  );
-}
-
 export function App() {
   const [locale, setLocale] = useState<Locale>(initialBrowserLocale);
+  const [theme, setTheme] = useState<Theme>(browserInitialTheme);
+  const [syntheticDismissed, setSyntheticDismissed] = useState(false);
   const [identity, setIdentity] = useState<IdentityState>({ kind: 'loading' });
   const [area, setArea] = useState<ApplicationArea>(() =>
     areaFromHash(typeof window === 'undefined' ? '' : window.location.hash),
@@ -186,6 +105,15 @@ export function App() {
       // A blocked storage backend must not prevent localization or shell access.
     }
   }, [locale]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem(themeStorageKey, theme);
+    } catch {
+      // A blocked storage backend must not prevent theme switching.
+    }
+  }, [theme]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -292,12 +220,14 @@ export function App() {
         navigation={accessibleNavigationItems(session)}
         onAreaChange={setArea}
         onLocaleChange={setLocale}
+        onThemeChange={setTheme}
+        session={session}
+        theme={theme}
       />
-      <StatusNotice
+      <SyntheticDisclosure
+        dismissed={syntheticDismissed}
         locale={locale}
-        status="warning"
-        title={t('syntheticData')}
-        detail={t('syntheticDetail')}
+        onDismiss={() => setSyntheticDismissed(true)}
       />
       <main id={skipTargetId} tabIndex={-1}>
         {area === 'dashboard' ? (
@@ -353,25 +283,6 @@ export function App() {
             <p>{t('plannedWorkAreaDetail')}</p>
           </section>
         )}
-        <IdentityPanel locale={locale} state={identity} />
-        <section aria-labelledby="measurements-heading" className="panel">
-          <h2 id="measurements-heading">{t('measurementBoundary')}</h2>
-          <dl className="measurement-list">
-            <div>
-              <dt>{t('stage')}</dt>
-              <dd>{t('stageUnit')}</dd>
-            </div>
-            <div>
-              <dt>{t('discharge')}</dt>
-              <dd>{t('dischargeUnit')}</dd>
-            </div>
-            <div>
-              <dt>{t('volume')}</dt>
-              <dd>{t('volumeUnit')}</dd>
-            </div>
-          </dl>
-          <StatusVocabulary locale={locale} />
-        </section>
       </main>
       <footer>{t('footer')}</footer>
     </div>

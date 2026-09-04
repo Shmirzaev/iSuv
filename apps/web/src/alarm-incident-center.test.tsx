@@ -86,7 +86,13 @@ const item: NonNullable<AlarmIncidentCenterResponse['panel']>['item'] = {
 };
 const selectedResponse: AlarmIncidentCenterResponse = {
   ...response,
-  items: [item],
+  items: [
+    {
+      ...item,
+      systemDeviceCondition: 'communication_loss',
+      waterCondition: 'under_allocation',
+    },
+  ],
   panel: {
     item,
     linkedAlarms: [
@@ -138,6 +144,8 @@ test('queue and panel keep automatic, human, evidence, quality, unit, and metric
     for (const key of [
       'alarmAutomaticState',
       'alarmIncidentState',
+      'alarmWaterUnderAllocation',
+      'alarmSystemCommunicationLoss',
       'alarmWaterCondition',
       'alarmSystemCondition',
       'alarmEvidenceDeferred',
@@ -170,9 +178,16 @@ test('renderer retains focus management, native filters, capability-gated mutati
     'unitBoundary',
     'textarea',
     'select',
+    'FilterPanel',
+    'StatusChip',
+    'presentationTimestamp',
+    'assignmentCandidates',
+    'userId.slice(0, 8)',
     'actionErrorKey',
     'onComplete(message)',
     'setRefresh((value) => value + 1)',
+    'alarm-center-table__chip',
+    'alarm-center-table__row',
   ])
     assert.ok(source.includes(marker), marker);
   assert.equal(source.includes('/clear'), false);

@@ -69,7 +69,7 @@ test('automatic alarm, human incident, severity, and evidence states never depen
     const value = evidencePresentation(state);
     assert.ok(value.icon && value.label && value.value);
   }
-  assert.equal(formatAlarmCenterMicros('1234567'), '1234567 µs');
+  assert.equal(formatAlarmCenterMicros('1234567'), '1,234,567 µs');
   assert.equal(formatAlarmCenterMicros(null), '—');
 });
 

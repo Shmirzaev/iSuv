@@ -8,7 +8,8 @@ import {
   type TraceResponse,
 } from '@isuv/contracts';
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
-import { formatLiveTimestamp } from './live-operations-model.js';
+import { formatDecimal, presentationTimestamp } from './format.js';
+import { WorkspaceHeader } from './workspace-header.js';
 import {
   initialMapDetail,
   mapNetworkPath,
@@ -23,6 +24,21 @@ import {
 
 const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
 type State = 'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable';
+
+function MapTime({ locale, value }: { locale: Locale; value: string | null }) {
+  if (!value) return <>—</>;
+  const timestamp = presentationTimestamp(locale, value);
+  return (
+    <time dateTime={timestamp.dateTime} title={timestamp.title}>
+      {timestamp.value}
+    </time>
+  );
+}
+
+function formatQuantityValue(locale: Locale, value: string | number | null): string {
+  return value === null ? '—' : formatDecimal(locale, value);
+}
+
 function Quantity({
   locale,
   label,
@@ -39,18 +55,18 @@ function Quantity({
       <dd>
         <span aria-hidden="true">{p.icon}</span>{' '}
         <strong>
-          {value.value === null
-            ? '—'
-            : `${value.value} ${value.unit === 'm3/s' ? 'm³/s' : value.unit === 'm3' ? 'm³' : 'm'}`}
+          {`${formatQuantityValue(locale, value.value)} ${
+            value.unit === 'm3/s' ? 'm³/s' : value.unit === 'm3' ? 'm³' : 'm'
+          }`}
         </strong>
         <small>
           {t(locale, p.label)}: {t(locale, p.value)}
         </small>
         <small>
-          {t(locale, 'mapObservedAt')}: {formatLiveTimestamp(value.observedAt)}
+          {t(locale, 'mapObservedAt')}: <MapTime locale={locale} value={value.observedAt} />
         </small>
         <small>
-          {t(locale, 'mapIngestedAt')}: {formatLiveTimestamp(value.ingestedAt)}
+          {t(locale, 'mapIngestedAt')}: <MapTime locale={locale} value={value.ingestedAt} />
         </small>
         <small>
           {t(locale, 'source')}: {value.source.label}; {value.source.provenance}
@@ -408,6 +424,19 @@ function Panel({
       <section className="map-panel map-panel--empty" aria-labelledby="map-panel-heading">
         <h3 id="map-panel-heading">{t(locale, 'mapPanel')}</h3>
         <p>{t(locale, 'mapNoSelection')}</p>
+        <div className="visual-station-showcase" style={{ marginTop: '1rem' }}>
+          <img
+            src="/assets/network-topology-3d.jpg"
+            alt="3D Digital Twin River Basin and Canal Topology"
+            className="visual-station-showcase__img"
+            style={{ height: '12rem' }}
+            loading="lazy"
+          />
+          <div className="visual-station-showcase__caption">
+            <span>5 Connected Basins • 83 Stations</span>
+            <span className="status-chip status-chip--information">3D Digital Twin</span>
+          </div>
+        </div>
       </section>
     );
   const current = markerState(panel),
@@ -578,7 +607,7 @@ export function MapNetworkWorkspace({
   onSelection: (s: MapSelection) => void;
 }) {
   const [detail, setDetail] = useState<MapDetail>(
-      selection.stationId ? initialMapDetail(selection) : 'basin',
+      selection.stationId ? initialMapDetail(selection) : 'network',
     ),
     [response, setResponse] = useState<MapNetworkResponse | null>(null),
     [state, setState] = useState<State>('loading'),
@@ -684,38 +713,40 @@ export function MapNetworkWorkspace({
     );
   return (
     <section className="map-network" aria-labelledby="map-heading">
-      <header className="map-workspace__toolbar">
-        <div>
-          <p className="map-workspace__disclosure">
-            <span aria-hidden="true">⚠</span> <strong>{t(locale, 'syntheticScenario')}</strong>
-          </p>
-          <h2 id="map-heading">{t(locale, 'mapHeading')}</h2>
-        </div>
-        <fieldset className="map-mode-controls">
-          <legend>{t(locale, 'mapNetwork')}</legend>
-          {(['overview', 'basin', 'network'] as const).map((x) => (
-            <button
-              key={x}
-              className="action-button"
-              type="button"
-              aria-pressed={detail === x}
-              onClick={() => setDetail(x)}
-            >
-              {t(
-                locale,
-                x === 'overview' ? 'mapOverview' : x === 'basin' ? 'mapBasin' : 'mapNetwork',
-              )}
-            </button>
-          ))}
-        </fieldset>
-        <details className="map-workspace__provenance">
-          <summary>{t(locale, 'provenance')}</summary>
-          <p>{t(locale, 'mapDetail')}</p>
-          <p>
-            {response.scenario.provenance}; {formatLiveTimestamp(response.referenceAt)}
-          </p>
-        </details>
-      </header>
+      <div className="map-workspace__toolbar">
+        <WorkspaceHeader
+          heading={t(locale, 'mapHeading')}
+          headingId="map-heading"
+          locale={locale}
+          provenance={
+            <>
+              <p>{t(locale, 'mapDetail')}</p>
+              <p>
+                {response.scenario.provenance};{' '}
+                <MapTime locale={locale} value={response.referenceAt} />
+              </p>
+            </>
+          }
+        >
+          <fieldset className="map-mode-controls">
+            <legend>{t(locale, 'mapNetwork')}</legend>
+            {(['overview', 'basin', 'network'] as const).map((x) => (
+              <button
+                key={x}
+                className="action-button"
+                type="button"
+                aria-pressed={detail === x}
+                onClick={() => setDetail(x)}
+              >
+                {t(
+                  locale,
+                  x === 'overview' ? 'mapOverview' : x === 'basin' ? 'mapBasin' : 'mapNetwork',
+                )}
+              </button>
+            ))}
+          </fieldset>
+        </WorkspaceHeader>
+      </div>
       <div className="map-workspace">
         <section className="map-canvas" aria-labelledby="map-geographic-heading">
           <h3 id="map-geographic-heading" className="visually-hidden">
@@ -749,7 +780,7 @@ export function MapNetworkWorkspace({
                 <label key={x}>
                   <input
                     type="checkbox"
-                    checked={visibleLayers[x]}
+                    checked={layers[x]}
                     disabled={(x === 'stations' || x === 'sections') && detail !== 'network'}
                     onChange={(e) => setLayers({ ...layers, [x]: e.target.checked })}
                   />
@@ -790,9 +821,11 @@ export function MapNetworkWorkspace({
               <ul>
                 {response.overview.map((x) => (
                   <li key={x.basinId}>
-                    <strong>{x.basinName}</strong>: {x.stationCount} {t(locale, 'stations')};{' '}
-                    {t(locale, 'reported')}: {x.states.reported}; {t(locale, 'noData')}:{' '}
-                    {x.states.no_data}; {t(locale, 'statusUnreliable')}: {x.states.unreliable}
+                    <strong>{x.basinName}</strong>: {formatQuantityValue(locale, x.stationCount)}{' '}
+                    {t(locale, 'stations')}; {t(locale, 'reported')}:{' '}
+                    {formatQuantityValue(locale, x.states.reported)}; {t(locale, 'noData')}:{' '}
+                    {formatQuantityValue(locale, x.states.no_data)}; {t(locale, 'statusUnreliable')}
+                    : {formatQuantityValue(locale, x.states.unreliable)}
                   </li>
                 ))}
               </ul>

@@ -6,6 +6,7 @@ import {
   liveAttentionPresentation,
   liveEventsPath,
   liveOperationsPath,
+  livePaginationRange,
   operationsHash,
   selectedDeviceFromHash,
   streamFailureState,
@@ -35,6 +36,13 @@ test('live filters are URL encoded, bounded, and selection leaves filters in com
   assert.equal(selectedDeviceFromHash('#map?deviceId=' + deviceId), null);
 });
 
+test('live pagination derives an explicit range from cursor history without inventing a total', () => {
+  assert.deepEqual(livePaginationRange(0, 25, 83), { start: 1, end: 25, total: 83 });
+  assert.deepEqual(livePaginationRange(1, 25, 83), { start: 26, end: 50, total: 83 });
+  assert.deepEqual(livePaginationRange(3, 8, 83), { start: 76, end: 83, total: 83 });
+  assert.deepEqual(livePaginationRange(0, 0, 83), { start: 0, end: 0, total: 83 });
+});
+
 test('live states always retain label, icon, and value rather than color-only meaning', () => {
   for (const state of ['attention', 'unreliable', 'no_data', 'reported'] as const) {
     const presentation = liveAttentionPresentation(state);
@@ -49,7 +57,10 @@ test('live states always retain label, icon, and value rather than color-only me
     assert.ok(presentation.value);
   }
   assert.equal(formatLiveAge('3600000000'), '1 h');
+  assert.equal(formatLiveAge('1234567890'), '20 min');
+  assert.equal(formatLiveAge('123456', 'en'), '123,456 µs');
   assert.equal(formatLiveAge(null), '—');
   assert.equal(streamFailureState(true), 'reconnecting');
+  assert.equal(streamFailureState(true, true), 'connected');
   assert.equal(streamFailureState(false), 'unavailable');
 });

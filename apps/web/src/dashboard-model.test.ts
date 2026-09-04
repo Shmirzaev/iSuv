@@ -40,14 +40,11 @@ test('dashboard status states always retain a readable label and icon', () => {
 test('exact volume and percentage values are not rounded through Number', () => {
   assert.equal(
     formatExactRational({ numerator: '900719925474099312346', denominator: '3' }),
-    '900719925474099312346 / 3',
+    '900,719,925,474,099,312,346 / 3',
   );
   assert.equal(formatExactRational({ numerator: '100', denominator: '2' }), '50');
   assert.equal(formatExactRational({ numerator: '-2', denominator: '4' }), '-0.5');
-  assert.equal(
-    formatDashboardTimestamp('2026-08-24T07:34:56.123456Z'),
-    '2026-08-24 07:34:56.123456 UTC',
-  );
+  assert.equal(formatDashboardTimestamp('2026-08-24T07:34:56.123456Z'), 'Aug 24, 2026, 12:34:56');
   assert.equal(
     formatExactDurationMicroseconds('900719925474099312345678'),
     '900,719,925,474,099,312,345,678',

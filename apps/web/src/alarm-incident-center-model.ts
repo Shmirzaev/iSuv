@@ -1,6 +1,7 @@
 import type { AlarmIncidentCenterItem, AlarmIncidentCenterQuery } from '@isuv/contracts';
 
-import type { TranslationKey } from '@isuv/i18n';
+import type { Locale, TranslationKey } from '@isuv/i18n';
+import { formatDecimal } from './format.js';
 
 export type AlarmCenterSelection = { alarmId: string | null; incidentId: string | null };
 export type AlarmCenterFilters = Pick<
@@ -75,8 +76,8 @@ export function formatAlarmCenterTimestamp(value: string | null): string {
 }
 
 /** Keep the database-owned integer visible rather than presenting a rounded SLA value. */
-export function formatAlarmCenterMicros(value: string | null): string {
-  return value === null ? '—' : `${value} µs`;
+export function formatAlarmCenterMicros(value: string | null, locale: Locale = 'en'): string {
+  return value === null ? '—' : `${formatDecimal(locale, value)} µs`;
 }
 
 type Presentation = { icon: string; label: TranslationKey; value: TranslationKey };

@@ -4,7 +4,9 @@ import type {
   AnalyticsResponse,
   DashboardPeriod,
 } from '@isuv/contracts';
-import type { TranslationKey } from '@isuv/i18n';
+import type { Locale, TranslationKey } from '@isuv/i18n';
+
+import { formatDecimal, formatPresentationTimestamp } from './format.js';
 
 export const analyticsPeriods: readonly DashboardPeriod[] = [
   'today',
@@ -103,10 +105,11 @@ export function analyticsMethodKey(
         : 'analyticsNotConfigured';
 }
 
-export function formatAnalyticsTimestamp(value: string): string {
-  return value.replace('T', ' ').replace('Z', ' UTC');
+export function formatAnalyticsTimestamp(value: string, locale: Locale = 'en'): string {
+  return formatPresentationTimestamp(locale, value);
 }
-export function formatMicros(value: string): string {
+export function formatMicros(value: string, locale: Locale = 'en'): string {
+  value = formatDecimal(locale, value);
   return `${value} µs`;
 }
 

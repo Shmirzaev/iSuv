@@ -155,6 +155,11 @@ test('analytics has accessible semantic equivalents and never presents forecast 
   assert.match(markup, /href="#operations\?deviceId=/);
   assert.doesNotMatch(markup, /control gate|send notification|create work order/i);
   assert.match(markup, /No forecast or AI operational truth is present/);
+  assert.equal(
+    [...markup.matchAll(/<h[23][^>]*>Planned versus actual delivery<\/h[23]>/g)].length,
+    1,
+  );
+  assert.equal([...markup.matchAll(/<h[23][^>]*>Data-quality coverage<\/h[23]>/g)].length, 1);
 });
 
 test('empty delivery retains balance, quality, and availability with localized defer reasons', () => {

@@ -46,7 +46,8 @@ export default defineConfig({
     },
     {
       name: 'Web',
-      command: 'pnpm --filter @isuv/web exec vite --host 127.0.0.1 --port 5177',
+      command:
+        'pnpm --filter @isuv/web exec vite --configLoader runner --host 127.0.0.1 --port 5177',
       url: webOrigin,
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,

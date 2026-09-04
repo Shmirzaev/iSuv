@@ -3,7 +3,6 @@ import {
   reportListResponseSchema,
   reportResponseSchema,
   type DashboardPeriod,
-  type ReportKind,
   type ReportSnapshot,
   type ReportSummary,
 } from '@isuv/contracts';
@@ -23,14 +22,48 @@ import {
   reportQualityKey,
   reportsHash,
   reportsListPath,
-  reportTimestamp,
+  reportTemplateDescriptionKey,
   type ReportFilters,
 } from './reports-model.js';
+import { presentationTimestamp } from './format.js';
+import { StatusChip, type StatusChipTone } from './status-chip.js';
+import { WorkspaceHeader } from './workspace-header.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable' | 'degraded';
 type ExportState = 'idle' | 'csv' | 'html' | 'failed';
 const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
+
+function ReportTime({ locale, value }: { locale: Locale; value: string }) {
+  const timestamp = presentationTimestamp(locale, value);
+  return (
+    <time dateTime={timestamp.dateTime} title={timestamp.title}>
+      {timestamp.value}
+    </time>
+  );
+}
+
+function reportQualityTone(value: ReportSummary['qualityState']): StatusChipTone {
+  return value === 'assessed' ? 'positive' : value === 'deferred' ? 'attention' : 'neutral';
+}
+
+function ReportQualityChip({
+  locale,
+  qualityState,
+}: {
+  locale: Locale;
+  qualityState: ReportSummary['qualityState'];
+}) {
+  const label = t(locale, reportQualityKey(qualityState));
+  return (
+    <StatusChip
+      detail={label}
+      icon={reportQualityIcon(qualityState)}
+      label={label}
+      tone={reportQualityTone(qualityState)}
+    />
+  );
+}
 
 function StateNotice({
   locale,
@@ -156,27 +189,43 @@ export function ReportTemplateForm({
       <fieldset disabled={busy}>
         <legend>{t(locale, 'reportsTemplates')}</legend>
         <p>{t(locale, 'reportsTemplatesDetail')}</p>
-        <div className="reports-template-form__grid">
-          <label htmlFor="reports-kind">
-            {t(locale, 'reportsKind')}
-            <select
-              id="reports-kind"
-              onChange={(event) =>
-                onChange({
-                  ...filters,
-                  kind: event.target.value as ReportKind,
-                  incidentId: event.target.value === 'incident' ? filters.incidentId : '',
-                })
-              }
-              value={filters.kind}
-            >
-              {reportKinds.map((kind) => (
-                <option key={kind} value={kind}>
+        <div className="reports-template-cards" role="radiogroup">
+          {reportKinds.map((kind) => {
+            const selected = filters.kind === kind;
+            return (
+              <label
+                aria-label={t(locale, reportKindKey(kind))}
+                className={
+                  selected
+                    ? 'reports-template-card reports-template-card--selected'
+                    : 'reports-template-card'
+                }
+                key={kind}
+              >
+                <input
+                  checked={selected}
+                  name="reports-kind"
+                  onChange={() =>
+                    onChange({
+                      ...filters,
+                      kind,
+                      incidentId: kind === 'incident' ? filters.incidentId : '',
+                    })
+                  }
+                  type="radio"
+                  value={kind}
+                />
+                <span className="reports-template-card__title">
                   {t(locale, reportKindKey(kind))}
-                </option>
-              ))}
-            </select>
-          </label>
+                </span>
+                <span className="reports-template-card__description">
+                  {t(locale, reportTemplateDescriptionKey(kind))}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="reports-template-form__grid">
           <label htmlFor="reports-period">
             {t(locale, 'reportsPeriod')}
             <select
@@ -265,13 +314,10 @@ function SnapshotList({
                     {t(locale, reportPeriodKey(report.period))}
                   </td>
                   <td data-label={t(locale, 'reportsQuality')}>
-                    <span className="reports-status">
-                      <span aria-hidden="true">{reportQualityIcon(report.qualityState)}</span>
-                      {t(locale, reportQualityKey(report.qualityState))}
-                    </span>
+                    <ReportQualityChip locale={locale} qualityState={report.qualityState} />
                   </td>
                   <td data-label={t(locale, 'reportsGeneratedAt')}>
-                    {reportTimestamp(report.generatedAt)}
+                    <ReportTime locale={locale} value={report.generatedAt} />
                   </td>
                   <td data-label={t(locale, 'reportsSelect')}>
                     <button id={focusId} onClick={() => onSelect(report, focusId)} type="button">
@@ -293,9 +339,9 @@ function SnapshotMetadata({ locale, report }: { locale: Locale; report: ReportSn
     ['reportsVersion', report.version],
     ['reportsTerritory', report.territoryId],
     ['reportsPeriod', t(locale, reportPeriodKey(report.period))],
-    ['reportsReferenceAt', reportTimestamp(report.referenceAt)],
-    ['reportsKnownAt', reportTimestamp(report.knownAt)],
-    ['reportsGeneratedAt', reportTimestamp(report.generatedAt)],
+    ['reportsReferenceAt', report.referenceAt],
+    ['reportsKnownAt', report.knownAt],
+    ['reportsGeneratedAt', report.generatedAt],
     ['reportsGenerator', report.generatedByUserId],
     ['reportsApproval', t(locale, 'reportsApprovalGeneratedNotApproved')],
     ['reportsMethod', `${report.method.id} v${report.method.version}`],
@@ -307,14 +353,21 @@ function SnapshotMetadata({ locale, report }: { locale: Locale; report: ReportSn
         {fields.map(([label, value]) => (
           <div key={label}>
             <dt>{t(locale, label)}</dt>
-            <dd>{value}</dd>
+            <dd className={typeof value === 'number' ? 'tabular-value' : undefined}>
+              {label === 'reportsReferenceAt' ||
+              label === 'reportsKnownAt' ||
+              label === 'reportsGeneratedAt' ? (
+                <ReportTime locale={locale} value={String(value)} />
+              ) : (
+                value
+              )}
+            </dd>
           </div>
         ))}
         <div>
           <dt>{t(locale, 'reportsQuality')}</dt>
-          <dd className="reports-status">
-            <span aria-hidden="true">{reportQualityIcon(report.qualityState)}</span>
-            {t(locale, reportQualityKey(report.qualityState))}
+          <dd>
+            <ReportQualityChip locale={locale} qualityState={report.qualityState} />
           </dd>
         </div>
       </dl>
@@ -418,33 +471,23 @@ export function ReportSnapshotDetail({
   const exporting = exportState === 'csv' || exportState === 'html';
   return (
     <article className="panel reports-detail" aria-labelledby="reports-detail-heading">
-      <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
-      <h2 id="reports-detail-heading">{t(locale, 'reportsDetailHeading')}</h2>
-      <p>
-        <strong>{t(locale, 'reportsKind')}:</strong> {t(locale, reportKindKey(report.kind))}
-      </p>
-      <p className="reports-authority">⚠ {t(locale, 'reportsSyntheticNonOfficial')}</p>
-      <p>{t(locale, 'reportsUncertaintyUnavailable')}</p>
-      <p>{t(locale, 'reportsResidualCaveat')}</p>
-      <p>{t(locale, 'reportsAvailabilityCaveat')}</p>
-      <p>{t(locale, 'reportsNoForecast')}</p>
-      <section aria-labelledby="reports-measurement-boundary-heading">
-        <h3 id="reports-measurement-boundary-heading">{t(locale, 'measurementBoundary')}</h3>
-        <dl className="reports-metadata">
-          <div>
-            <dt>{t(locale, 'stage')}</dt>
-            <dd>{t(locale, 'stageUnit')}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'discharge')}</dt>
-            <dd>{t(locale, 'dischargeUnit')}</dd>
-          </div>
-          <div>
-            <dt>{t(locale, 'volume')}</dt>
-            <dd>{t(locale, 'volumeUnit')}</dd>
-          </div>
-        </dl>
-      </section>
+      <header className="reports-detail__header">
+        <span className="status-chip status-chip--synthetic">
+          <span aria-hidden="true">◇</span> {t(locale, 'syntheticScenario')}
+        </span>
+        <h2 id="reports-detail-heading">{t(locale, 'reportsDetailHeading')}</h2>
+        <p>
+          <strong>{t(locale, 'reportsKind')}:</strong> {t(locale, reportKindKey(report.kind))}
+        </p>
+        <details className="reports-detail__provenance">
+          <summary>{t(locale, 'reportsProvenance')}</summary>
+          <p className="reports-authority">⚠ {t(locale, 'reportsSyntheticNonOfficial')}</p>
+          <p>{t(locale, 'reportsUncertaintyUnavailable')}</p>
+          <p>{t(locale, 'reportsResidualCaveat')}</p>
+          <p>{t(locale, 'reportsAvailabilityCaveat')}</p>
+          <p>{t(locale, 'reportsNoForecast')}</p>
+        </details>
+      </header>
       <SnapshotMetadata locale={locale} report={report} />
       <section aria-labelledby="reports-provenance-heading">
         <h3 id="reports-provenance-heading">{t(locale, 'reportsProvenance')}</h3>
@@ -659,12 +702,18 @@ export function ReportsWorkspace({
       aria-busy={generating || undefined}
       aria-labelledby="reports-heading"
     >
-      <header className="panel reports-intro">
-        <p className="eyebrow">{t(locale, 'syntheticScenario')}</p>
-        <h2 id="reports-heading">{t(locale, 'reportsHeading')}</h2>
-        <p>{t(locale, 'reportsDetail')}</p>
-        <p className="reports-authority">⚠ {t(locale, 'reportsSyntheticNonOfficial')}</p>
-      </header>
+      <WorkspaceHeader
+        detail={t(locale, 'reportsDetail')}
+        heading={t(locale, 'reportsHeading')}
+        headingId="reports-heading"
+        locale={locale}
+        provenance={
+          <>
+            <p>{t(locale, 'reportsSyntheticNonOfficial')}</p>
+            <p>{t(locale, 'reportsNoForecast')}</p>
+          </>
+        }
+      />
       <ReportTemplateForm
         busy={generating}
         filters={filters}

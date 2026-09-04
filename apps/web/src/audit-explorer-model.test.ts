@@ -5,7 +5,10 @@ import {
   auditEventPath,
   auditEventsPath,
   auditHash,
+  auditActionTranslationKey,
   defaultAuditFilters,
+  groupedAuditActions,
+  shortIdentifier,
 } from './audit-explorer-model.js';
 
 const id = 'a6000000-0000-4000-8000-000000000001';
@@ -32,4 +35,17 @@ test('audit paths are bounded, use the server-selected scope, and keep timestamp
     auditEventPath(id, 'a6000000-0000-4000-8000-000000000002'),
     `/api/v1/audit/events/${id}?territoryId=a6000000-0000-4000-8000-000000000002`,
   );
+});
+
+test('audit action values stay server-owned while the UI can group and localize them', () => {
+  const groups = groupedAuditActions();
+  assert.ok(groups.length > 1);
+  assert.equal(auditActionTranslationKey('incident.closed'), 'auditActionIncidentClosed');
+  assert.equal(
+    auditActionTranslationKey('observation.automatically_validated'),
+    'auditActionObservationAutomaticallyValidated',
+  );
+  assert.ok(groups.some(([, actions]) => actions.includes('incident.closed')));
+  assert.equal(shortIdentifier(id), 'a6000000');
+  assert.equal(shortIdentifier(null), '—');
 });

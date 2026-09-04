@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { AuditEvent } from '@isuv/contracts';
@@ -44,7 +45,7 @@ test('audit detail separates escaped immutable old and new state and provides a 
   assert.doesNotMatch(markup, /operate valve|control gate|send command/i);
 });
 
-test('audit filters are native, include exact identifiers and stay localized', () => {
+test('audit filters are collapsed by default, keep exact identifier controls, and stay localized', async () => {
   const markup = renderToStaticMarkup(
     <AuditFiltersForm
       busy={false}
@@ -53,19 +54,22 @@ test('audit filters are native, include exact identifiers and stay localized', (
       onApply={() => undefined}
     />,
   );
-  for (const id of [
-    'audit-action',
-    'audit-resource',
-    'audit-actor',
-    'audit-resource-id',
-    'audit-request-id',
-    'audit-from',
-    'audit-until',
+  assert.match(markup, /Audit filters \(0\)/);
+  assert.match(markup, /filter-panel__content" hidden=""/);
+  assert.match(markup, /id="audit-action"/);
+  const source = await readFile(new URL('./audit-explorer.tsx', import.meta.url), 'utf8');
+  for (const marker of [
+    'id="audit-action"',
+    'id="audit-resource"',
+    'id="audit-actor"',
+    'id="audit-resource-id"',
+    'id="audit-request-id"',
+    'type="datetime-local"',
+    'pattern={uuidPattern}',
+    '<optgroup',
+    'auditActionTranslationKey',
   ])
-    assert.match(markup, new RegExp(`id="${id}"`));
-  assert.match(markup, /type="datetime-local"/);
-  assert.equal((markup.match(/pattern=/g) ?? []).length, 2);
-  assert.match(markup, /maxLength="256"/);
+    assert.ok(source.includes(marker), marker);
   for (const locale of ['en', 'ru', 'uz'] as const)
     for (const key of [
       'auditHeading',
@@ -73,6 +77,7 @@ test('audit filters are native, include exact identifiers and stay localized', (
       'auditOldState',
       'auditNewState',
       'auditSyntheticNonOfficial',
+      'auditActionIncidentClosed',
     ] as const)
       assert.ok(translations[locale][key].length > 0);
 });

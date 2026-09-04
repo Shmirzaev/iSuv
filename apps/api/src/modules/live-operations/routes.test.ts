@@ -222,6 +222,8 @@ test('scope-safe live feed reuses descendant journal invalidations and cursor', 
   assert.deepEqual(territories, [ids.territory, ids.childTerritory]);
   assert.match(response.body, /id: 13/);
   assert.match(response.body, /event: invalidate/);
+  assert.match(response.body, /event: complete/);
+  assert.match(response.body, /"action":"reconnect"/);
   assert.match(response.body, /: heartbeat/);
   await app.close();
 });

@@ -4,7 +4,8 @@ import type {
   LiveOperationsResponse,
 } from '@isuv/contracts';
 
-import type { TranslationKey } from '@isuv/i18n';
+import type { Locale, TranslationKey } from '@isuv/i18n';
+import { formatDecimal } from './format.js';
 
 export type LiveFilters = Pick<
   LiveOperationsQuery,
@@ -44,6 +45,16 @@ export function liveOperationsPath(filters: LiveFilters, cursor?: string | null)
   if (cursor) search.set('cursor', cursor);
   search.set('limit', '25');
   return `/api/v1/live-operations?${search.toString()}`;
+}
+
+export function livePaginationRange(
+  priorPageCount: number,
+  rowCount: number,
+  total: number,
+  pageSize = 25,
+): { start: number; end: number; total: number } {
+  const start = rowCount === 0 ? 0 : priorPageCount * pageSize + 1;
+  return { start, end: rowCount === 0 ? 0 : Math.min(start + rowCount - 1, total), total };
 }
 
 export function liveInspectorPath(deviceId: string, territoryId?: string): string {
@@ -103,13 +114,13 @@ export function formatLiveTimestamp(value: string | null): string {
 }
 
 /** Does not infer a freshness threshold: this is an exact elapsed-age display only. */
-export function formatLiveAge(value: string | null): string {
+export function formatLiveAge(value: string | null, locale: Locale = 'en'): string {
   if (value === null) return '—';
   const micros = BigInt(value);
-  if (micros >= 3_600_000_000n) return `${micros / 3_600_000_000n} h`;
-  if (micros >= 60_000_000n) return `${micros / 60_000_000n} min`;
-  if (micros >= 1_000_000n) return `${micros / 1_000_000n} s`;
-  return `${micros} µs`;
+  if (micros >= 3_600_000_000n) return `${formatDecimal(locale, micros / 3_600_000_000n)} h`;
+  if (micros >= 60_000_000n) return `${formatDecimal(locale, micros / 60_000_000n)} min`;
+  if (micros >= 1_000_000n) return `${formatDecimal(locale, micros / 1_000_000n)} s`;
+  return `${formatDecimal(locale, micros)} µs`;
 }
 
 export function qualityKey(
@@ -138,9 +149,14 @@ export function rowLabel(row: LiveOperationsResponse['rows'][number]): string {
 
 export type StreamState = 'connecting' | 'connected' | 'reconnecting' | 'unavailable';
 
-/** A completed bounded SSE poll is a reconnect, while a connection that never opened is unavailable. */
-export function streamFailureState(opened: boolean): StreamState {
-  return opened ? 'reconnecting' : 'unavailable';
+/**
+ * The live endpoint deliberately closes a bounded stream after sending `reset`.
+ * That completion is not a disconnected feed. A stream that dies after opening
+ * without a reset is surfaced as reconnecting; one that never opens is unavailable.
+ */
+export function streamFailureState(opened: boolean, boundedCompletion = false): StreamState {
+  if (!opened) return 'unavailable';
+  return boundedCompletion ? 'connected' : 'reconnecting';
 }
 
 export function streamPresentation(state: StreamState): {

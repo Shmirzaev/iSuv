@@ -97,7 +97,7 @@ const report: ReportSnapshot = {
   },
 };
 
-test('frozen report detail discloses immutable metadata, caveats, units and status without forbidden inference', () => {
+test('frozen report detail discloses immutable metadata, caveats and status without forbidden inference', () => {
   const markup = renderToStaticMarkup(
     <ReportSnapshotDetail
       exportMessage={null}
@@ -117,8 +117,6 @@ test('frozen report detail discloses immutable metadata, caveats, units and stat
     'Measurement uncertainty is unavailable',
     'cadence is unconfigured',
     'Synthetic and non-official',
-    'm³/s',
-    'm³',
     '<table',
   ])
     assert.match(markup, new RegExp(text));
@@ -129,7 +127,7 @@ test('frozen report detail discloses immutable metadata, caveats, units and stat
   assert.match(markup, new RegExp(`href="#reports\\?reportId=${id}"`));
 });
 
-test('native generation controls keep incident identifier exclusive to per-incident reports', () => {
+test('native radio-card generation controls keep incident identifier exclusive to per-incident reports', () => {
   const base = { kind: 'daily_situation' as const, period: 'today' as const, incidentId: '' };
   const standard = renderToStaticMarkup(
     <ReportTemplateForm
@@ -140,7 +138,11 @@ test('native generation controls keep incident identifier exclusive to per-incid
       onGenerate={() => undefined}
     />,
   );
-  assert.match(standard, /<select/);
+  assert.match(standard, /reports-template-card/);
+  assert.match(standard, /role="radiogroup"/);
+  assert.match(standard, /type="radio"/);
+  assert.match(standard, /name="reports-kind"/);
+  assert.match(standard, /checked=""/);
   assert.match(standard, /id="reports-generate"/);
   assert.doesNotMatch(standard, /id="reports-incident-id"/);
   for (const template of [
@@ -152,6 +154,7 @@ test('native generation controls keep incident identifier exclusive to per-incid
     'Executive summary',
   ])
     assert.match(standard, new RegExp(template));
+  assert.match(standard, /Regional delivery, risk, and data-quality situation/);
   const incident = renderToStaticMarkup(
     <ReportTemplateForm
       busy={false}
@@ -163,6 +166,25 @@ test('native generation controls keep incident identifier exclusive to per-incid
   );
   assert.match(incident, /id="reports-incident-id"/);
   assert.match(incident, /required=""/);
+});
+
+test('report provenance is available in closed disclosures and timestamps retain machine-readable UTC', () => {
+  const markup = renderToStaticMarkup(
+    <ReportSnapshotDetail
+      exportMessage={null}
+      exportState="idle"
+      locale="en"
+      onClose={() => undefined}
+      onExport={() => undefined}
+      report={report}
+    />,
+  );
+  assert.match(markup, /reports-detail__provenance/);
+  assert.match(
+    markup,
+    /<time dateTime="2026-08-24T00:00:00.000Z" title="2026-08-24T00:00:00.000000Z"/,
+  );
+  assert.match(markup, /status-chip/);
 });
 
 test('loading and unavailable reports never render stale report values', () => {

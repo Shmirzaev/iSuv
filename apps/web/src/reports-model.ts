@@ -1,5 +1,6 @@
 import type { DashboardPeriod, ReportKind, ReportSnapshot, ReportSummary } from '@isuv/contracts';
 import type { TranslationKey } from '@isuv/i18n';
+import { formatPresentationTimestamp } from './format.js';
 
 export const reportKinds: readonly ReportKind[] = [
   'daily_situation',
@@ -106,8 +107,25 @@ export function reportQualityIcon(value: ReportSummary['qualityState']): string 
         : '⊘';
 }
 
-export function reportTimestamp(value: string): string {
-  return value.replace('T', ' ').replace('Z', ' UTC');
+export function reportTimestamp(
+  value: string,
+  locale: string = 'en',
+  timeZone: string = 'Asia/Tashkent',
+): string {
+  return formatPresentationTimestamp(locale as 'uz' | 'ru' | 'en', value, timeZone);
+}
+
+export function reportTemplateDescriptionKey(kind: ReportKind): TranslationKey {
+  return (
+    {
+      daily_situation: 'reportsTemplateDailySituationDescription',
+      allocation_compliance: 'reportsTemplateAllocationComplianceDescription',
+      water_balance: 'reportsTemplateWaterBalanceDescription',
+      device_availability: 'reportsTemplateDeviceAvailabilityDescription',
+      incident: 'reportsTemplateIncidentDescription',
+      executive_summary: 'reportsTemplateExecutiveSummaryDescription',
+    } as const
+  )[kind];
 }
 
 export function reportFileName(
