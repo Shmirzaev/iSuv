@@ -2,7 +2,7 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
-Last reviewed during P7-009 on 2026-09-04: the temporary Render adapter is a disposable, read-only, synthetic public demonstration only. Its fixed auditor identity and safe-method guard do not supply or substitute for accredited government OIDC/SAML/MFA, ingress/WAF, data-sovereignty approval, production secrets, monitoring, backups, HA/DR, or an approved RPO/RTO. B-001–B-008 remain open and continue to block authoritative government rollout claims.
+Last reviewed after the verified P7-009 Render deployment on 2026-09-04: the temporary Render adapter is a disposable, read-only, synthetic public demonstration only. Its fixed auditor identity and safe-method guard do not supply or substitute for official telemetry/GIS/policy inputs, accredited government OIDC/SAML/MFA, ingress/WAF, data-sovereignty approval, production secrets, monitoring, backups, HA/DR, or an approved RPO/RTO. B-001–B-008 remain open and continue to block authoritative government rollout claims.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |
 |---|---|---|---|---|---|---|---|
