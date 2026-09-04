@@ -63,6 +63,27 @@ See [local operations and recovery](docs/OPERATIONS.md) for the retained-target 
 
 The durable [software MVP acceptance evidence](docs/ACCEPTANCE_EVIDENCE.md) maps every required criterion to implementation and verification paths and separates completed software scope from official rollout dependencies.
 
+## Temporary public synthetic demo
+
+`render.yaml` defines a free Render web service and a disposable free PostgreSQL database. The
+web service serves the compiled Vite application and API from one origin, applies migrations, and
+replays the idempotent synthetic seed on startup. Render supplies `DATABASE_URL`; never upload the
+local `.env` file.
+
+The public mode is deliberately narrower than local development:
+
+- `NODE_ENV=production` remains mandatory and the local header identity stays disabled.
+- A fixed seeded **auditor** identity is resolved only when `ISUV_PUBLIC_DEMO=true`.
+- Every method other than `GET`, `HEAD`, and `OPTIONS` is rejected before body parsing or identity
+  resolution, so the public site cannot ingest telemetry, run the simulator, generate/export
+  reports, or mutate plans, alarms, incidents, identities, or audit state.
+- All visible operational content remains synthetic/nonofficial. This is not a production or
+  government-accredited deployment.
+
+Create the deployment from the repository Blueprint in Render. Verify `/health/live`,
+`/health/ready`, the operator shell, and a rejected mutation. Render free web services sleep when
+idle, and free databases are disposable and expire under Render's current free-tier policy.
+
 ## Failure modes and boundaries
 
 - `/health/live` reports process liveness; `/health/ready` reports database connectivity and returns 503 when PostgreSQL is unavailable. An explicit local `200 -> 503 -> 200` recovery drill is documented in [OPERATIONS.md](docs/OPERATIONS.md).

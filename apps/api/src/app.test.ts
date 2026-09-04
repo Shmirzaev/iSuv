@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
+import Fastify from 'fastify';
 import { API_BODY_LIMIT_BYTES, createApp } from './app.js';
 import type { IdentitySessionRepository } from './modules/identity/repository.js';
+import { registerWebAssets } from './web-assets.js';
 
 test('liveness is available without database access and preserves a bounded correlation id', async () => {
   const app = createApp(async () => undefined, false);
@@ -187,4 +192,75 @@ test('unexpected failures are normalized without exposing implementation details
   });
   assert.doesNotMatch(response.body, /sensitive database implementation detail/);
   await app.close();
+});
+
+test('public demo rejects unsafe methods before identity resolution', async () => {
+  let identityCalls = 0;
+  const app = createApp(async () => undefined, false, {
+    publicDemo: {
+      enabled: true,
+      environment: 'production',
+      userId: 'a3000000-0000-4000-8000-000000000008',
+    },
+    identityProvider: {
+      async resolve() {
+        identityCalls += 1;
+        return null;
+      },
+    },
+  });
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/v1/telemetry/simulator/run',
+    payload: {},
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().error.code, 'FORBIDDEN');
+  assert.equal(response.headers.allow, 'GET, HEAD, OPTIONS');
+  assert.equal(identityCalls, 0);
+  await app.close();
+});
+
+test('production web assets share the API origin and preserve reserved 404s', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'isuv-web-assets-'));
+  try {
+    await mkdir(join(root, 'assets'));
+    await writeFile(join(root, 'index.html'), '<!doctype html><main>iSuv demo</main>');
+    await writeFile(join(root, 'assets', 'app.js'), 'globalThis.isuv = true;');
+
+    const app = Fastify({ logger: false });
+    registerWebAssets(app, root);
+
+    const index = await app.inject({ method: 'GET', url: '/' });
+    assert.equal(index.statusCode, 200);
+    assert.match(index.body, /iSuv demo/);
+    assert.equal(index.headers['cache-control'], 'no-cache');
+
+    const asset = await app.inject({ method: 'GET', url: '/assets/app.js' });
+    assert.equal(asset.statusCode, 200);
+    assert.equal(asset.headers['content-type'], 'text/javascript; charset=utf-8');
+    assert.match(String(asset.headers['cache-control']), /immutable/);
+
+    const clientRoute = await app.inject({ method: 'GET', url: '/dashboard' });
+    assert.equal(clientRoute.statusCode, 200);
+    assert.match(clientRoute.body, /iSuv demo/);
+
+    for (const url of [
+      '/api',
+      '/api/unknown',
+      '/health',
+      '/health/unknown',
+      '/metrics',
+      '/metrics/unknown',
+    ]) {
+      const reserved = await app.inject({ method: 'GET', url });
+      assert.equal(reserved.statusCode, 404, url);
+      assert.doesNotMatch(reserved.headers['content-type'] ?? '', /text\/html/, url);
+    }
+    await app.close();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

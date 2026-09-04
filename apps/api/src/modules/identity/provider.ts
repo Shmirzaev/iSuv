@@ -27,6 +27,12 @@ export interface LocalDevelopmentIdentityProviderOptions {
   enabled?: boolean;
 }
 
+export interface PublicDemoIdentityProviderOptions {
+  environment?: string | undefined;
+  enabled?: boolean;
+  userId?: string | undefined;
+}
+
 export function createLocalDevelopmentIdentityProvider(
   options: LocalDevelopmentIdentityProviderOptions = {},
 ): IdentityProvider {
@@ -45,6 +51,38 @@ export function createLocalDevelopmentIdentityProvider(
       const candidate = Array.isArray(value) ? value[0] : value;
       if (!candidate || !uuidPattern.test(candidate)) return null;
       return { userId: candidate, provider: 'local-development' };
+    },
+  };
+}
+
+/**
+ * Fixed, server-owned identity for the explicitly read-only synthetic public demo.
+ * The application-level public-demo guard rejects every unsafe HTTP method before
+ * protected routes resolve this identity. Client headers are deliberately ignored.
+ */
+export function createPublicDemoIdentityProvider(
+  options: PublicDemoIdentityProviderOptions = {},
+): IdentityProvider {
+  const environment = (options.environment ?? process.env.NODE_ENV)?.trim().toLowerCase();
+  const enabled = options.enabled ?? process.env.ISUV_PUBLIC_DEMO === 'true';
+  const userId = options.userId ?? process.env.ISUV_PUBLIC_DEMO_USER_ID;
+
+  if (!enabled)
+    return {
+      async resolve() {
+        return null;
+      },
+    };
+  if (environment !== 'production') {
+    throw new Error('Public demo identity requires NODE_ENV=production.');
+  }
+  if (!userId || !uuidPattern.test(userId)) {
+    throw new Error('Public demo identity requires a valid fixed synthetic user ID.');
+  }
+
+  return {
+    async resolve() {
+      return { userId, provider: 'synthetic-public-demo-read-only' };
     },
   };
 }

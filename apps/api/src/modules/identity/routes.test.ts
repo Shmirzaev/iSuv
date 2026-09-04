@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Session } from '@isuv/contracts';
 import { createApp } from '../../app.js';
-import { createLocalDevelopmentIdentityProvider, type IdentityProvider } from './provider.js';
+import {
+  createLocalDevelopmentIdentityProvider,
+  createPublicDemoIdentityProvider,
+  type IdentityProvider,
+} from './provider.js';
 import type { IdentitySessionRepository } from './repository.js';
 
 const userId = 'a3000000-0000-4000-8000-000000000005';
@@ -133,4 +137,37 @@ test('an injected non-local identity provider remains usable at the identity bou
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().session.user.id, userId);
   await app.close();
+});
+
+test('public demo identity is production-only, fixed, and ignores client identity headers', async () => {
+  assert.throws(
+    () =>
+      createPublicDemoIdentityProvider({
+        enabled: true,
+        environment: 'development',
+        userId,
+      }),
+    /NODE_ENV=production/,
+  );
+  assert.throws(
+    () =>
+      createPublicDemoIdentityProvider({
+        enabled: true,
+        environment: 'production',
+        userId: 'not-a-user-id',
+      }),
+    /valid fixed synthetic user ID/,
+  );
+
+  const provider = createPublicDemoIdentityProvider({
+    enabled: true,
+    environment: 'production',
+    userId,
+  });
+  assert.deepEqual(
+    await provider.resolve({
+      headers: { 'x-isuv-user-id': 'a3000000-0000-4000-8000-000000000001' },
+    }),
+    { userId, provider: 'synthetic-public-demo-read-only' },
+  );
 });

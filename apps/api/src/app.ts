@@ -2,7 +2,11 @@ import cors from '@fastify/cors';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import { apiErrorSchema, healthStatusSchema } from '@isuv/contracts';
 import { checkDatabase } from './db/client.js';
-import { createLocalDevelopmentIdentityProvider } from './modules/identity/provider.js';
+import {
+  createLocalDevelopmentIdentityProvider,
+  createPublicDemoIdentityProvider,
+  type PublicDemoIdentityProviderOptions,
+} from './modules/identity/provider.js';
 import type { IdentityProvider } from './modules/identity/provider.js';
 import { PostgresIdentitySessionRepository } from './modules/identity/repository.js';
 import type { IdentitySessionRepository } from './modules/identity/repository.js';
@@ -84,6 +88,7 @@ export interface AppOptions {
   analyticsService?: PostgresAnalyticsService;
   reportService?: PostgresReportService;
   operationalMetricsRepository?: OperationalMetricsRepository;
+  publicDemo?: PublicDemoIdentityProviderOptions;
 }
 
 export function createApp(
@@ -102,10 +107,25 @@ export function createApp(
     requestTimeout: 30_000,
   });
   const processMetrics = new InProcessOperationalMetricsRegistry();
+  const publicDemoEnabled = options.publicDemo?.enabled ?? process.env.ISUV_PUBLIC_DEMO === 'true';
 
   void app.register(cors, { origin: false });
   app.addHook('onRequest', async (request) => {
     if (!/^[A-Za-z0-9._:-]{1,128}$/.test(request.id)) request.id = crypto.randomUUID();
+  });
+  app.addHook('onRequest', async (request, reply) => {
+    if (publicDemoEnabled && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+      reply.header('allow', 'GET, HEAD, OPTIONS');
+      return reply.code(403).send(
+        apiErrorSchema.parse({
+          error: {
+            code: 'FORBIDDEN',
+            message: 'This synthetic public demonstration is read-only.',
+            requestId: request.id,
+          },
+        }),
+      );
+    }
   });
   app.addHook('onSend', async (request, reply, payload) => {
     processMetrics.recordResponse(request.routeOptions?.url, reply.statusCode, payload);
@@ -176,7 +196,14 @@ export function createApp(
     }
   });
 
-  const identityProvider = options.identityProvider ?? createLocalDevelopmentIdentityProvider();
+  const identityProvider =
+    options.identityProvider ??
+    (publicDemoEnabled
+      ? createPublicDemoIdentityProvider({
+          ...options.publicDemo,
+          enabled: true,
+        })
+      : createLocalDevelopmentIdentityProvider());
   const identitySessionRepository =
     options.identitySessionRepository ??
     new PostgresIdentitySessionRepository(process.env.DATABASE_URL);
