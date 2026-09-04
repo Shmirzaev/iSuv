@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
     startCommand: pnpm db:migrate && pnpm db:seed && pnpm --filter @isuv/api start
     healthCheckPath: /health/live
     envVars:
