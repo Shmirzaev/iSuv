@@ -2,6 +2,8 @@
 
 Record only decisions that affect architecture, scope, policy, data meaning, security, or acceptance.
 
+P8-005, 2026-09-14: the user explicitly authorized deploying the current verified project to the existing Render demo, including the supplied reference maps and register. This is publication of the P8 reference UI, not a change to the D-015 read-only operational boundary. Reuse the free service and database with unchanged plan, region, identity and method restrictions. No new ADR or infrastructure purchase is needed.
+
 | ID | Date | Decision | Reason | Alternatives considered | Consequences | Status |
 |---|---|---|---|---|---|---|
 | D-001 | Initial | Version 1 is monitoring/decision support with synthetic telemetry; no physical control. | Safety and unavailable authorized OT inputs. | Direct control in MVP. | Control interfaces remain read-only/adapted. | Accepted |
