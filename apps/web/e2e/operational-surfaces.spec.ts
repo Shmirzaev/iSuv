@@ -240,7 +240,7 @@ test('map-first workspace keeps evidence compact and station markers interactive
   });
   page.on('pageerror', (error) => consoleErrors.push(error.message));
 
-  await page.goto('/#map');
+  await page.goto('/#map?view=demo');
   await chooseLocale(page, english);
   await expect(page.getByRole('heading', { name: 'Map and network' })).toBeVisible();
   await expect(page.locator('.workspace-header__provenance')).toContainText(

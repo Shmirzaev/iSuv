@@ -5,9 +5,9 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 ## Current state
 
 - Current phase: Software MVP complete; external rollout dependencies remain
-- Active task: none — P7-009 temporary read-only synthetic Render deployment is verified live
+- Active task: none — P8-001 supplied regional reference maps/register verified locally
 - Last verified deployment: Render deploy `dep-daddhkptb6fs73aagovg` of commit `e352746` at `https://isuv-synthetic-demo.onrender.com`
-- Overall MVP status: the accepted 34-of-34 software MVP remains complete; the read-only synthetic review deployment is live, and B-001–B-008 remain rollout-only dependencies
+- Overall MVP status: the accepted software MVP remains complete. P8-001 adds five supplied reference maps and 64 register records without changing synthetic operational history. B-002 is partially supplied; B-009 records source clarification. The public deployment above predates P8-001.
 
 ## Entries
 
@@ -51,6 +51,17 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 | 2026-09-04 | P7-009 | Deployed and externally verified the production-only read-only synthetic public demo on Render. | commits `c0f7a78`, `e352746`; Render deploy `dep-daddhkptb6fs73aagovg`; `https://isuv-synthetic-demo.onrender.com` | `pnpm verify` passes with 110 API, 46 domain, 40 contract, and 62 web tests plus security scan and both builds; production audit has no known vulnerabilities; Render applied 21 migrations and seeded 83 hotspots/devices plus 249 sensors; public shell/live/ready/session return 200; forged privileged identity remains the fixed auditor; simulator POST returns typed 403 | D-015 accepted; B-001–B-008 remain open because the disposable demo is not authoritative telemetry, accredited IAM/infrastructure, or an official government rollout | None — monitor free-tier sleep/expiry only while review access is needed |
 
 ## Resume protocol
+
+### P8-001 verification (2026-09-13)
+
+- Added `regional-reference` web modules, a provenance-preserving spreadsheet snapshot, five optimized map assets, reproducible extraction/preview scripts and an isolated browser test configuration. Dashboard links to the new default map. `#map?view=demo` and existing station links retain the synthetic network.
+- Reviewed both Excel files, all supplied map images and the single-page PDF. Recorded the CorelDRAW RIFF header/hash; no compatible decoder is available, so no CDR geometry is claimed. Detailed findings: `docs/REGIONAL_REFERENCE_REVIEW.md`.
+- Full `pnpm verify` passed with 110 API, 46 domain, 40 contract and 68 web tests, formatting, lint, type checks, security and both builds. Final targeted web tests pass 69/69 after adding the API-unavailable reference-view regression; final web build passes. Build emits an advisory chunk-size warning, not a failure.
+- Dedicated Chromium flow passes (rerun after mobile-space fix), covering map loading/zoom/keyboard scroll, 64-row reconciliation in UI, missing versus zero, filter/selection, all three languages, 320/390 px containment and light/dark screenshots. No new migration or operational database import occurs; database-dependent tests were not needed for this isolated reference change.
+- Import replay yields identical parsed JSON. Approximately 1.66 MB of WebP maps replaces the 51 MB valley source for browser use; originals remain untouched.
+- All newly started subagents were interrupted on the user's instruction. Subsequent review, implementation and verification were performed by the primary agent.
+- Local preview: `http://127.0.0.1:5182/#map`. The reference view remains usable if the operational API is unavailable. A proxy session probe timed out after 55 seconds; this is not represented as successful live backend verification.
+- D-016 / ADR-0013 accepted. B-002 partially supplied and B-009 open for dates, units, coordinate crosswalk and CDR export. Next step for operational use: obtain those missing source inputs. Changes saved locally; public deployment not updated in this task.
 
 At the beginning of every new run:
 

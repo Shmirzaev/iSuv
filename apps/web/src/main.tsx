@@ -26,11 +26,12 @@ import { AnalyticsWorkspace } from './analytics.js';
 import { ReportsWorkspace } from './reports.js';
 import { AuditExplorerWorkspace } from './audit-explorer.js';
 import { alarmCenterHash, alarmCenterSelectionFromHash } from './alarm-incident-center-model.js';
-import { MapNetworkWorkspace } from './map-network.js';
+import { RegionalMapWorkspace, RegionalReferenceLink } from './regional-reference.js';
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
 import { initialLocale, translate, type Locale } from '@isuv/i18n';
 import { ShellChrome, SyntheticDisclosure, type Theme } from './shell-semantics.js';
 import './styles.css';
+import './regional-reference.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';
@@ -230,6 +231,7 @@ export function App() {
         onDismiss={() => setSyntheticDismissed(true)}
       />
       <main id={skipTargetId} tabIndex={-1}>
+        {area === 'dashboard' ? <RegionalReferenceLink locale={locale} /> : null}
         {area === 'dashboard' ? (
           <DashboardWorkspace
             locale={locale}
@@ -247,7 +249,7 @@ export function App() {
             selectedDeviceId={selectedDeviceId}
           />
         ) : area === 'map' ? (
-          <MapNetworkWorkspace
+          <RegionalMapWorkspace
             access={dashboardIdentityState(identity)}
             locale={locale}
             onSelection={selectMapFeature}

@@ -1,0 +1,77 @@
+[
+  {
+    "id": "savay-area",
+    "fileName": "codex-clipboard-cf8c1886-8241-49f0-968e-ea91c94fc5c0.png",
+    "sha256": "e081d9e5c02f1a4b8a919a6a919fccf8027166bfb3281d53a8b7a9df47bcdf73",
+    "originalSize": [
+      1280,
+      905
+    ],
+    "displaySize": [
+      1280,
+      905
+    ],
+    "georeferenced": false
+  },
+  {
+    "id": "andijan-irrigation",
+    "fileName": "codex-clipboard-0b6e7109-c047-4a3b-89ec-e4d21fdf9be2.png",
+    "sha256": "2c0e836cbfa38d946c6df9cc3154b45ff2c7bf5c24d374521862bbead8269567",
+    "originalSize": [
+      1280,
+      869
+    ],
+    "displaySize": [
+      1280,
+      869
+    ],
+    "georeferenced": false
+  },
+  {
+    "id": "naryn-network",
+    "fileName": "codex-clipboard-7ce789e3-00f9-465b-808f-5bb54bb18dee.png",
+    "sha256": "b651616a57710c7af486d4dd481b091ef06aefd793c618218368bbbd805e2b29",
+    "originalSize": [
+      1280,
+      898
+    ],
+    "displaySize": [
+      1280,
+      898
+    ],
+    "georeferenced": false
+  },
+  {
+    "id": "fergana-valley",
+    "fileName": "Водий харитаси.jpg",
+    "sha256": "6c2dd0cd991fe84604a7a15cb8c9fc4bac95e32010024ee181137cdf8edb82e4",
+    "originalSize": [
+      30000,
+      25646
+    ],
+    "displaySize": [
+      3200,
+      2736
+    ],
+    "georeferenced": false
+  },
+  {
+    "id": "andijan-reference",
+    "fileName": "Харита.pdf",
+    "sha256": "acc3d11a437275ac098a7f9fb459eae385ae43d7fb48e3b7f40ac316d781445d",
+    "page": 1,
+    "displaySize": [
+      3200,
+      2263
+    ],
+    "georeferenced": false
+  },
+  {
+    "id": "savay-corel",
+    "fileName": "Савай.CDR",
+    "sha256": "08e70578f667bdd41918994ea744bb25255c00b214aaff522e3eb2eb27db962e",
+    "format": "CorelDRAW RIFF CDRD",
+    "status": "no_local_vector_decoder",
+    "georeferenced": false
+  }
+]

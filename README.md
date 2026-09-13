@@ -84,6 +84,18 @@ Create the deployment from the repository Blueprint in Render. Verify `/health/l
 `/health/ready`, the operator shell, and a rejected mutation. Render free web services sleep when
 idle, and free databases are disposable and expire under Render's current free-tier policy.
 
+## Supplied regional maps and register
+
+Open **Map and network → Regional maps and register** (`#map`) for the supplied Savay, Andijan and Fergana reference maps. Use zoom/pan or expand the map, then open **Water intake register** for 64 source-linked spreadsheet records. Filter by canal/source or search names and select a row to inspect original values, source cells and issues. This reference view is bundled with the client and remains available while the operational API starts.
+
+The existing 83-station synthetic network is available under **Synthetic network** (`#map?view=demo`), including its original station deep links. Operational dashboards continue to use synthetic data. Supplied spreadsheet values are undated reference figures, not approved allocations or live readings. Missing/ambiguous figures are retained explicitly. Station coordinates and map-number crosswalks are not supplied.
+
+See [source review and re-import commands](docs/REGIONAL_REFERENCE_REVIEW.md) and ADR-0013. Run the isolated reference browser checks without a database:
+
+```sh
+pnpm --filter @isuv/web exec playwright test --config playwright.regional.config.ts
+```
+
 ## Failure modes and boundaries
 
 - `/health/live` reports process liveness; `/health/ready` reports database connectivity and returns 503 when PostgreSQL is unavailable. An explicit local `200 -> 503 -> 200` recovery drill is documented in [OPERATIONS.md](docs/OPERATIONS.md).
