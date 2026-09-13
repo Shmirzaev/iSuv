@@ -1,5 +1,13 @@
 # Regional atlas artwork and source review
 
+## Current default: source-faithful Andijan map (P8-004, 2026-09-14)
+
+The generated background and approximate redraw described below are no longer the default workspace. The default now uses the actual detailed `Харита.pdf`, exported to `apps/web/public/regional-maps/andijan-detailed.svg` with original linework, glyphs and embedded images preserved. The PDF is different from the five-zone irrigation screenshot used by P8-002/P8-003; those earlier layers did not preserve its dense network. The new source index records 41 source label positions: 14 districts, 18 named pumps, three reservoirs and six hydro-junctions. All other source detail remains visible, including labels not indexed for direct navigation.
+
+The PDF, actual Andijan irrigation image and actual Savay map are directly selectable and use independent coordinate spaces. Click/district navigation, pan, wheel/pinch/keyboard zoom and fullscreen work on the original drawing. The other two regional references remain available in the gallery. No source-map symbol is promoted to a device or a measured observation. See ADR-0015 for reproduction and fidelity checks; the historical artwork notes below remain for provenance only.
+
+## Historical illustrated presentation
+
 Generated 2026-09-13 using the built-in image-generation tool. Its interface does not expose a model selector, so this work does not claim use of the requested exact model name “GPT Image 2.5”. No CLI/API key or external paid hosting was used.
 
 Selected output: `apps/web/public/regional-maps/atlas-terrain.png`. Original generated output remains under the local Codex generated-images directory. The image was visually inspected: it has no labels, borders or waterways; its soft field/terrain pattern is decorative only. Code draws the interactive features, with an approximate-reference notice.

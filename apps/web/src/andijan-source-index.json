@@ -1,0 +1,301 @@
+{
+  "source": "Харита.pdf",
+  "page": 1,
+  "sourceSha256": "acc3d11a437275ac098a7f9fb459eae385ae43d7fb48e3b7f40ac316d781445d",
+  "asset": "/regional-maps/andijan-detailed.svg",
+  "assetSha256": "1ccda40a54b46989df2ebc2ff889326bf223d7668f02727b981e0a3e10d6b34a",
+  "width": 841.92,
+  "height": 595.32,
+  "drawingObjects": 3841,
+  "coordinateSpace": "PDF page points; label bounds, not geographic feature boundaries",
+  "converter": "PyMuPDF 1.28.2; get_svg_image(text_as_path=True)",
+  "features": [
+    {
+      "id": "pdf-reservoir-0",
+      "name": "Андижон сув омбори",
+      "sourceLabel": "Андижон сув омбори",
+      "kind": "reservoir",
+      "bounds": [739.969, 293.1294, 769.2747, 296.7342]
+    },
+    {
+      "id": "pdf-pump-1",
+      "name": "н.ст. Дўстлик",
+      "sourceLabel": "н.ст. Дўстлик",
+      "kind": "pump",
+      "bounds": [367.8605, 71.0625, 388.276, 74.6934]
+    },
+    {
+      "id": "pdf-pump-2",
+      "name": "н.ст. Октябр",
+      "sourceLabel": "н.ст. Октябр",
+      "kind": "pump",
+      "bounds": [366.0266, 95.6241, 384.7282, 99.255]
+    },
+    {
+      "id": "pdf-pump-3",
+      "name": "н.ст. Хонобод",
+      "sourceLabel": "н.ст. Хонобод",
+      "kind": "pump",
+      "bounds": [712.3105, 269.2828, 732.8984, 272.9137]
+    },
+    {
+      "id": "pdf-pump-4",
+      "name": "н.ст. Гулбахор",
+      "sourceLabel": "н.ст. Гулбахор",
+      "kind": "pump",
+      "bounds": [538.5985, 280.8029, 560.0388, 284.4338]
+    },
+    {
+      "id": "pdf-pump-5",
+      "name": "н.ст. Раиш",
+      "sourceLabel": "н.ст. Раиш",
+      "kind": "pump",
+      "bounds": [446.0279, 361.4948, 462.5968, 365.1257]
+    },
+    {
+      "id": "pdf-pump-6",
+      "name": "н.ст. Заурак- I",
+      "sourceLabel": "н.ст. Заурак- I",
+      "kind": "pump",
+      "bounds": [463.8564, 347.212, 484.5245, 350.8429]
+    },
+    {
+      "id": "pdf-pump-7",
+      "name": "н.ст. Заурак- II",
+      "sourceLabel": "н.ст. Заурак- \nII",
+      "kind": "pump",
+      "bounds": [472.082, 330.9215, 493.6649, 334.5524]
+    },
+    {
+      "id": "pdf-pump-8",
+      "name": "н.ст. Хакент",
+      "sourceLabel": "н.ст. Хакент",
+      "kind": "pump",
+      "bounds": [432.9996, 337.9427, 452.0666, 341.5736]
+    },
+    {
+      "id": "pdf-pump-9",
+      "name": "н.ст. Экин-Текин",
+      "sourceLabel": "н.ст. Экин-Текин",
+      "kind": "pump",
+      "bounds": [436.8841, 277.0478, 462.8039, 280.6787]
+    },
+    {
+      "id": "pdf-pump-10",
+      "name": "н.ст. Улугнор",
+      "sourceLabel": "н.ст. Улугнор",
+      "kind": "pump",
+      "bounds": [455.4039, 235.2004, 476.0748, 238.8312]
+    },
+    {
+      "id": "pdf-pump-11",
+      "name": "н.ст. Оби-хаёт",
+      "sourceLabel": "н.ст.\nОби-хаёт",
+      "kind": "pump",
+      "bounds": [371.745, 259.5046, 386.9417, 266.8935]
+    },
+    {
+      "id": "pdf-pump-12",
+      "name": "н.ст. Бахт",
+      "sourceLabel": "н.ст.\nБахт",
+      "kind": "pump",
+      "bounds": [382.942, 300.3567, 391.2918, 307.7456]
+    },
+    {
+      "id": "pdf-pump-13",
+      "name": "н.ст. Заурак- -Падъем II",
+      "sourceLabel": "н.ст. Заурак- -Падъем \nII",
+      "kind": "pump",
+      "bounds": [344.7701, 346.2081, 379.5861, 349.839]
+    },
+    {
+      "id": "pdf-pump-14",
+      "name": "н.ст. -Падъем I",
+      "sourceLabel": "н.ст. -Падъем \nI",
+      "kind": "pump",
+      "bounds": [344.0865, 333.9358, 366.5843, 337.5667]
+    },
+    {
+      "id": "andijan",
+      "name": "Andijon",
+      "sourceLabel": "А Н Д И Ж О Н",
+      "kind": "district",
+      "bounds": [456.7736, 258.8551, 484.3248, 263.0143]
+    },
+    {
+      "id": "buloqboshi",
+      "name": "Buloqboshi",
+      "sourceLabel": "Б У Л О Қ Б О Ш И",
+      "kind": "district",
+      "bounds": [447.4002, 407.4575, 482.0217, 411.6167]
+    },
+    {
+      "id": "xojaobod",
+      "name": "Xo‘jaobod",
+      "sourceLabel": "Х Ў Ж А О Б О Д",
+      "kind": "district",
+      "bounds": [514.3707, 391.167, 544.8041, 395.3262]
+    },
+    {
+      "id": "paxtaobod",
+      "name": "Paxtaobod",
+      "sourceLabel": "П А Х Т А О Б О Д",
+      "kind": "district",
+      "bounds": [465.9122, 152.8581, 498.3986, 157.0173]
+    },
+    {
+      "id": "izboskan",
+      "name": "Izboskan",
+      "sourceLabel": "И З Б О С К А Н",
+      "kind": "district",
+      "bounds": [330.3695, 169.1458, 359.0551, 173.305]
+    },
+    {
+      "id": "baliqchi",
+      "name": "Baliqchi",
+      "sourceLabel": "Б А Л И Қ Ч И",
+      "kind": "district",
+      "bounds": [183.6299, 220.0164, 209.3475, 224.1756]
+    },
+    {
+      "id": "ulugnor",
+      "name": "Ulug‘nor",
+      "sourceLabel": "У Л У Ғ Н О Р",
+      "kind": "district",
+      "bounds": [99.9735, 260.86, 124.6631, 265.0192]
+    },
+    {
+      "id": "oltinkol",
+      "name": "Oltinko‘l",
+      "sourceLabel": "О Л Т И Н К Ў Л",
+      "kind": "district",
+      "bounds": [293.3429, 283.165, 323.2863, 287.3242]
+    },
+    {
+      "id": "boz",
+      "name": "Bo‘z",
+      "sourceLabel": "Б Ў З",
+      "kind": "district",
+      "bounds": [185.4586, 352.5799, 194.5715, 356.7391]
+    },
+    {
+      "id": "shahrixon",
+      "name": "Shahrixon",
+      "sourceLabel": "Ш А Х Р И Х О Н",
+      "kind": "district",
+      "bounds": [250.6029, 316.4954, 282.0302, 320.6546]
+    },
+    {
+      "id": "asaka",
+      "name": "Asaka",
+      "sourceLabel": "А С А К А",
+      "kind": "district",
+      "bounds": [360.0863, 369.3681, 377.6267, 373.5273]
+    },
+    {
+      "id": "marhamat",
+      "name": "Marhamat",
+      "sourceLabel": "М А Р Х А М А Т",
+      "kind": "district",
+      "bounds": [374.9434, 486.8966, 405.3084, 491.0558]
+    },
+    {
+      "id": "jalaquduq",
+      "name": "Jalaquduq",
+      "sourceLabel": "Ж А Л А Қ У Д У Қ",
+      "kind": "district",
+      "bounds": [521.6831, 295.4402, 555.8934, 299.5994]
+    },
+    {
+      "id": "qorgontepa",
+      "name": "Qo‘rg‘ontepa",
+      "sourceLabel": "Қ Ў Р Ғ О Н Т Е П А",
+      "kind": "district",
+      "bounds": [620.1991, 291.4333, 656.6851, 295.5925]
+    },
+    {
+      "id": "pdf-pump-29",
+      "name": "н.ст. БАК -I",
+      "sourceLabel": "н.ст.\nБАК \n-I",
+      "kind": "pump",
+      "bounds": [189.8074, 290.0779, 198.8523, 297.4668]
+    },
+    {
+      "id": "pdf-pump-30",
+      "name": "н.ст. БАК -II",
+      "sourceLabel": "н.ст.\nБАК\n \n-II",
+      "kind": "pump",
+      "bounds": [215.8615, 304.3636, 225.5896, 311.7525]
+    },
+    {
+      "id": "pdf-junction-31",
+      "name": "Г/уз. Шахрихонсой",
+      "sourceLabel": "Г/уз. \nШахрихонсой",
+      "kind": "junction",
+      "bounds": [265.6896, 323.1095, 283.9566, 329.4393]
+    },
+    {
+      "id": "pdf-junction-32",
+      "name": "Г/уз. Найман",
+      "sourceLabel": "Г/уз. Найман",
+      "kind": "junction",
+      "bounds": [300.89, 370.6506, 311.8136, 372.8849]
+    },
+    {
+      "id": "pdf-junction-33",
+      "name": "Г/уз. Сегаза",
+      "sourceLabel": "Г/уз.\nСегаза",
+      "kind": "junction",
+      "bounds": [337.4602, 386.9411, 343.2674, 391.4291]
+    },
+    {
+      "id": "pdf-junction-34",
+      "name": "Г/уз. Асака",
+      "sourceLabel": "Г/уз.\nАсака",
+      "kind": "junction",
+      "bounds": [371.5154, 385.9372, 376.6427, 390.4281]
+    },
+    {
+      "id": "pdf-pump-35",
+      "name": "н.ст. Раиш",
+      "sourceLabel": "н.ст. Раиш",
+      "kind": "pump",
+      "bounds": [390.4866, 400.0847, 407.0555, 403.7156]
+    },
+    {
+      "id": "pdf-reservoir-36",
+      "name": "Асака-адир сув омбори",
+      "sourceLabel": "Асака-адир\nсув омбори",
+      "kind": "reservoir",
+      "bounds": [341.3447, 429.0844, 354.6244, 434.6316]
+    },
+    {
+      "id": "pdf-reservoir-37",
+      "name": "Отчопар сув омбори",
+      "sourceLabel": "Отчопар\nсув омбори",
+      "kind": "reservoir",
+      "bounds": [487.8548, 269.1859, 500.3061, 273.956]
+    },
+    {
+      "id": "pdf-junction-38",
+      "name": "Г/уз. Қошариқ",
+      "sourceLabel": "Г/уз. Қошариқ",
+      "kind": "junction",
+      "bounds": [395.5138, 265.6573, 407.6145, 267.8917]
+    },
+    {
+      "id": "pdf-junction-39",
+      "name": "Г/уз. Куйганёр",
+      "sourceLabel": "Г/уз. Куйганёр",
+      "kind": "junction",
+      "bounds": [384.5464, 243.3494, 396.6252, 245.5838]
+    },
+    {
+      "id": "pdf-pump-40",
+      "name": "н.ст. Қўрғонтепа",
+      "sourceLabel": "н.ст. Қўрғонтепа",
+      "kind": "pump",
+      "bounds": [594.3668, 297.0935, 619.2766, 300.7244]
+    }
+  ]
+}

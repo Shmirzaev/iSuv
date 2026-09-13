@@ -33,6 +33,7 @@ import { ShellChrome, SyntheticDisclosure, type Theme } from './shell-semantics.
 import './styles.css';
 import './regional-reference.css';
 import './regional-atlas.css';
+import './andijan-source-map.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';

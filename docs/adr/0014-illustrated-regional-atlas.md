@@ -2,6 +2,8 @@
 
 Date: 2026-09-13. Status: Accepted.
 
+2026-09-14 update: ADR-0015 supersedes this ADR's default illustrated presentation with the source-faithful detailed Andijan PDF. The illustration-space and no-operational-import boundaries below remain applicable to retained reference navigation data.
+
 ## Context
 
 The user rejected a gallery-only map view and requested clickable areas that zoom into districts and rivers, with image-generated artwork. The supplied maps show related regional views at different scales, but contain no coordinate reference system or authoritative asset-to-register crosswalk. ADR-0013 continues to prohibit invented station coordinates or operational observations.

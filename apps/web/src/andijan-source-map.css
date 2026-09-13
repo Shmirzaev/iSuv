@@ -1,0 +1,242 @@
+.andijan-source-map {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 8px 32px #132f4710;
+}
+.source-map-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  flex-wrap: wrap;
+}
+.source-map-toolbar label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 0;
+}
+.source-map-toolbar select {
+  max-width: 100%;
+  min-height: 44px;
+}
+.source-map-finder {
+  flex: 1;
+}
+.source-map-toolbar button {
+  font-size: 0.8rem;
+}
+.source-map-canvas {
+  position: relative;
+  height: max(480px, 70vh);
+  background: #fff;
+  overflow: hidden;
+}
+.source-map-canvas > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: zoom-in;
+  user-select: none;
+}
+.source-map-canvas > svg:active {
+  cursor: grabbing;
+}
+.source-map-hit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+.source-map-hit:hover,
+.source-map-hit:focus-visible,
+.source-map-hit.is-selected {
+  fill: #008ac013;
+  stroke: #005e89;
+  outline: none;
+}
+.source-map-hit.is-waterway {
+  fill: none;
+  stroke-width: 18;
+  pointer-events: stroke;
+}
+.source-map-hit.is-waterway:hover,
+.source-map-hit.is-waterway:focus-visible,
+.source-map-hit.is-waterway.is-selected {
+  stroke: #005e8960;
+}
+.source-map-zoom {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 3px 12px #10283b26;
+}
+.source-map-zoom button {
+  border: 0;
+  border-radius: 0;
+  min-width: 44px;
+  font-size: 1.4rem;
+}
+.source-map-zoom output {
+  text-align: center;
+  font-size: 0.7rem;
+  padding: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.source-map-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: var(--surface);
+  color: var(--text);
+}
+.source-map-selection {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  width: min(340px, calc(100% - 5rem));
+  max-height: 45%;
+  overflow: auto;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px #122b4024;
+}
+.source-map-selection > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.source-map-selection p {
+  font-size: 0.75rem;
+  margin: 0.4rem 0;
+  color: var(--text-secondary);
+}
+.source-map-selection button {
+  font-size: 0.8rem;
+}
+.source-map-footer {
+  border-top: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+}
+.source-map-footer p {
+  margin: 0;
+}
+.source-map-footer > p {
+  flex-basis: 100%;
+  color: var(--text);
+}
+.source-map-footer details {
+  margin-left: auto;
+}
+.source-map-footer details[open] {
+  flex-basis: 100%;
+}
+.source-map-footer details p {
+  margin: 0.5rem 0;
+}
+.source-map-record-links {
+  display: flex;
+  gap: 0.5rem;
+}
+.andijan-source-map:fullscreen {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.andijan-source-map:fullscreen .source-map-canvas {
+  flex: 1;
+  min-height: 180px;
+  height: auto;
+}
+.andijan-source-map:fullscreen .source-map-footer {
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .source-map-toolbar {
+    padding: 0.6rem;
+    gap: 0.5rem;
+  }
+  .source-map-toolbar label {
+    width: 100%;
+  }
+  .source-map-finder {
+    flex: auto;
+  }
+  .source-map-toolbar > button {
+    margin-left: auto;
+  }
+  .source-map-canvas {
+    height: auto;
+    min-height: 0;
+  }
+  .source-map-canvas > svg {
+    height: auto;
+  }
+  .source-map-zoom {
+    position: relative;
+    inset: auto;
+    display: flex;
+    align-items: center;
+    width: max-content;
+    max-width: 100%;
+    margin: 0.35rem auto;
+    box-shadow: none;
+    flex-shrink: 0;
+  }
+  .source-map-selection {
+    position: relative;
+    inset: auto;
+    width: auto;
+    max-height: 170px;
+    border-radius: 0;
+    box-shadow: none;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+  .andijan-source-map:fullscreen .source-map-canvas {
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .andijan-source-map:fullscreen .source-map-canvas > svg {
+    flex: 1;
+    min-height: 150px;
+    height: 0;
+  }
+  .andijan-source-map:fullscreen .source-map-selection {
+    flex-shrink: 0;
+  }
+  .source-map-footer {
+    padding: 0.6rem;
+  }
+  .source-map-footer details {
+    margin-left: 0;
+  }
+}

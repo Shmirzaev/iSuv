@@ -8,7 +8,7 @@ import {
 } from './regional-reference.js';
 import { regionalReferenceData } from './regional-reference-data.js';
 import { regionalWords } from './regional-reference-i18n.js';
-import { atlasWords } from './regional-atlas-i18n.js';
+import { sourceMapWords } from './andijan-source-i18n.js';
 
 test('regional workspace renders supplied map controls and reference distinctions in every locale', () => {
   for (const locale of ['en', 'ru', 'uz'] as const) {
@@ -18,14 +18,16 @@ test('regional workspace renders supplied map controls and reference distinction
     assert.ok(html.includes(w.note));
     assert.ok(html.includes(w.zoomIn));
     assert.ok(html.includes(w.register));
-    assert.ok(html.includes(atlasWords[locale].reference));
-    assert.ok(html.includes(atlasWords[locale].hint));
-    assert.match(html, /data-scene="andijan"/);
-    assert.match(html, /href="\/regional-maps\/atlas-terrain.png"/);
+    assert.ok(html.includes(sourceMapWords[locale].reference));
+    assert.ok(html.includes(sourceMapWords[locale].hint));
+    assert.match(html, /data-source-view="andijan-pdf"/);
+    assert.match(html, /href="\/regional-maps\/andijan-detailed.svg"/);
+    assert.doesNotMatch(html, /atlas-terrain.png/);
     assert.match(html, /src="\/regional-maps\/savay-area.webp"/);
     assert.match(html, /value="fergana-valley"/);
-    assert.match(html, /class="atlas-place-search"/);
-    assert.match(html, /class="atlas-lake"/);
+    assert.match(html, /class="source-map-finder"/);
+    assert.match(html, /Харита.pdf/);
+    assert.equal((html.match(/data-kind="district"/g) ?? []).length, 14);
     assert.ok(!html.includes('SYN-HOTSPOT'));
   }
 });

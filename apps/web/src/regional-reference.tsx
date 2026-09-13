@@ -7,7 +7,7 @@ import {
   type ReferenceRecord,
 } from './regional-reference-data.js';
 import { regionalWords, type RegionalWord } from './regional-reference-i18n.js';
-import { RegionalAtlas } from './regional-atlas.js';
+import { AndijanSourceMap } from './andijan-source-map.js';
 import { atlasWords } from './regional-atlas-i18n.js';
 
 const maps: { id: string; label: RegionalWord; source: string }[] = [
@@ -313,7 +313,7 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
       </div>
       <p className="regional-summary">{w.summary}</p>
       <div hidden={showRegister}>
-        <RegionalAtlas
+        <AndijanSourceMap
           locale={locale}
           onRecords={(value) => {
             setCanal(value);

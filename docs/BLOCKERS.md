@@ -2,6 +2,8 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
+P8-004 review, 2026-09-14: the detailed Andijan PDF has now been inspected directly and its original drawing exported without a geographic redraw. There is no blocker to displaying its fine canal network or navigating source district/feature labels. B-002/B-009 remain open: source page coordinates are not GPS, historical labels are not a verified current asset register, and PDF pumps/reservoir labels cannot be joined to telemetry or workbook rows without authoritative inputs. No external input is required to use the corrected reference viewer.
+
 P8-003 review, 2026-09-13: the supplied drawing supports 33 numbered reference marks and three pump symbols, but still provides no verified mark-to-workbook or pump-to-device crosswalk. New interactive reference icons do not close B-002/B-009. Names/transliterations and approximate drawing positions must be confirmed before official import. No blocker prevents adding these clearly labeled visual reference layers.
 
 P8-002 review, 2026-09-13: B-002/B-009 remain open for authoritative geographic/operational import. They do not block the new interactive illustrated atlas: manually traced pixel-space areas and waterways support reference navigation and named-canal register links. Generated terrain is decorative; neither the artwork nor the clickable areas establish surveyed boundaries, elevations, flow directions or intake coordinates. No new external input is required for this reference UI slice.

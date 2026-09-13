@@ -60,6 +60,9 @@
     "fileName": "Харита.pdf",
     "sha256": "acc3d11a437275ac098a7f9fb459eae385ae43d7fb48e3b7f40ac316d781445d",
     "page": 1,
+    "vectorAsset": "/regional-maps/andijan-detailed.svg",
+    "vectorIndex": "apps/web/src/andijan-source-index.json",
+    "vectorPreparation": "scripts/prepare-andijan-vector.py",
     "displaySize": [
       3200,
       2263
