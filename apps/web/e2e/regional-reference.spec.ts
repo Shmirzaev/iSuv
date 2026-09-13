@@ -54,26 +54,84 @@ test('supplied reference maps and workbook register are accessible, responsive, 
   await page.addInitScript(() => localStorage.setItem('isuv.locale', 'en'));
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto('/#map');
-  await expect(
-    page.getByRole('heading', { name: 'Savay and Oqbura-say', exact: true }),
-  ).toBeVisible();
-  const image = page.locator('.regional-map-image img');
-  await expect(image).toHaveJSProperty('complete', true);
-  expect(await image.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(1000);
-  expect((await page.locator('.regional-map-scroll').boundingBox())!.height).toBeGreaterThan(440);
-  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  await expect(page.locator('.regional-zoom output')).toHaveText('150%');
-  await expect
-    .poll(() =>
-      page.locator('.regional-map-scroll').evaluate((el) => el.scrollWidth > el.clientWidth),
-    )
-    .toBe(true);
-  await page.locator('.regional-map-scroll').focus();
+  await expect(page.getByRole('heading', { name: 'Explore Andijan', exact: true })).toBeVisible();
+  const atlas = page.locator('.atlas-canvas > svg');
+  await expect(atlas).toHaveAttribute('data-scene', 'andijan');
+  await expect(atlas.locator('.atlas-area')).toHaveCount(5);
+  expect((await page.locator('.atlas-canvas').boundingBox())!.height).toBeGreaterThan(440);
+  const initialView = await atlas.getAttribute('viewBox');
+  await page.locator('.atlas-zoom').getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await expect(atlas).not.toHaveAttribute('viewBox', initialView!);
+  const zoomView = await atlas.getAttribute('viewBox');
+  await atlas.focus();
   await page.keyboard.press('ArrowRight');
+  await expect(atlas).not.toHaveAttribute('viewBox', zoomView!);
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
+  await expect(atlas).toHaveAttribute('viewBox', initialView!);
+  await atlas.hover();
+  await page.mouse.wheel(0, -200);
+  await expect(atlas).not.toHaveAttribute('viewBox', initialView!);
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
+  await atlas.scrollIntoViewIfNeeded();
+  const mapBox = (await atlas.boundingBox())!;
+  await page.mouse.move(mapBox.x + 40, mapBox.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(mapBox.x + 95, mapBox.y + 130, { steps: 5 });
+  await page.mouse.up();
+  await expect(atlas).not.toHaveAttribute('viewBox', initialView!);
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
+  await page.getByRole('button', { name: 'Full-screen map', exact: true }).click();
   await expect
-    .poll(() => page.locator('.regional-map-scroll').evaluate((el) => el.scrollLeft))
-    .toBeGreaterThan(0);
-  await page.getByRole('button', { name: 'Fit map', exact: true }).click();
+    .poll(() => page.evaluate(() => document.fullscreenElement?.className))
+    .toBe('regional-atlas');
+  await page.getByRole('button', { name: 'Exit full screen', exact: true }).click();
+  await page.screenshot({ path: info.outputPath('atlas-andijan-desktop.png'), fullPage: true });
+  await atlas.getByRole('button', { name: 'Savay · Oqbura-soy', exact: true }).click();
+  await expect(atlas).toHaveAttribute('data-scene', 'savay');
+  await expect(atlas.locator('.atlas-area')).toHaveCount(3);
+  const detailView = await atlas.getAttribute('viewBox');
+  await page
+    .locator('.atlas-feature-bar')
+    .getByRole('button', { name: 'Qo‘rg‘ontepa', exact: true })
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(atlas).not.toHaveAttribute('viewBox', detailView!);
+  await expect(page.locator('.atlas-breadcrumbs')).toContainText('Qo‘rg‘ontepa');
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  // Click an actual river segment, not only its equivalent list button.
+  await atlas.scrollIntoViewIfNeeded();
+  const riverPoint = await atlas.evaluate((element) => {
+    const point = new DOMPoint(527, 422).matrixTransform(
+      (element as SVGSVGElement).getScreenCTM()!,
+    );
+    return { x: point.x, y: point.y };
+  });
+  await page.mouse.click(riverPoint.x, riverPoint.y);
+  await expect(page.locator('.atlas-waterway-card')).toContainText('61 reference records');
+  await page.getByRole('button', { name: 'Full-screen map', exact: true }).click();
+  await page.getByRole('button', { name: 'Open spreadsheet records', exact: false }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
+  await expect(page.getByRole('searchbox')).toBeFocused();
+  await expect(page.locator('.regional-table-scroll tbody tr')).toHaveCount(61);
+  await page.getByRole('button', { name: 'Back to map', exact: true }).click();
+  await page
+    .locator('.atlas-feature-bar')
+    .getByRole('button', { name: '≈ Oqbura-soy', exact: true })
+    .click();
+  await expect(page.locator('.atlas-waterway-card')).toBeFocused();
+  await expect(page.locator('.atlas-waterway-card')).toContainText('3 reference records');
+  await page.getByRole('button', { name: 'Open spreadsheet records', exact: false }).click();
+  await expect(page.locator('.regional-table-scroll tbody tr')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Back to map', exact: true }).click();
+  await expect(atlas).toHaveAttribute('data-scene', 'savay');
+  await page.getByRole('button', { name: 'Close details' }).click();
+  await page.getByRole('checkbox', { name: 'Original background' }).check();
+  await expect(atlas.locator('image')).toHaveAttribute('href', '/regional-maps/savay-area.webp');
+  await page.getByRole('checkbox', { name: 'Original background' }).uncheck();
+  await page.screenshot({ path: info.outputPath('atlas-savay-desktop.png'), fullPage: true });
+  // Original source gallery stays available, but is no longer the default map.
+  await page.locator('.atlas-source-gallery > summary').click();
+  const image = page.locator('.regional-map-image img');
   for (const map of [
     'andijan-irrigation',
     'andijan-reference',
@@ -91,8 +149,9 @@ test('supplied reference maps and workbook register are accessible, responsive, 
       )
       .toBe(true);
   }
-  await page.screenshot({ path: info.outputPath('regional-map-desktop.png'), fullPage: true });
+  await page.locator('.atlas-source-gallery > summary').click();
   await page.getByRole('button', { name: 'Water intake register (64)' }).click();
+  await page.getByRole('combobox', { name: 'Canal', exact: true }).selectOption('');
   await expect(page.locator('.regional-table-scroll tbody tr')).toHaveCount(64);
   await page.getByRole('button', { name: 'Насос 1', exact: true }).click();
   await expect(page.locator('.regional-inspector')).toBeFocused();
@@ -121,14 +180,24 @@ test('supplied reference maps and workbook register are accessible, responsive, 
     true,
   );
   await page.screenshot({ path: info.outputPath('regional-map-mobile.png'), fullPage: true });
+  expect((await page.locator('.atlas-canvas').boundingBox())!.height).toBeLessThan(350);
+  await page
+    .locator('.atlas-feature-bar')
+    .getByRole('button', { name: '≈ Oqbura-soy', exact: true })
+    .click();
+  await expect(page.locator('.atlas-waterway-card')).toContainText('3 reference records');
+  await page.getByRole('button', { name: 'Open spreadsheet records', exact: false }).click();
+  await expect(page.locator('.regional-table-scroll tbody tr')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Back to map', exact: true }).click();
+  await page.getByRole('button', { name: 'Close details' }).click();
   await page.getByRole('button', { name: 'Change color theme', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.screenshot({ path: info.outputPath('regional-map-dark-mobile.png'), fullPage: true });
   await page.getByRole('button', { name: 'Change color theme', exact: true }).click();
   await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('ru');
-  await expect(page.getByRole('heading', { name: 'Савай и Окбура-сой' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Карта Андижана' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Язык', exact: true }).selectOption('uz');
-  await expect(page.getByRole('heading', { name: 'Savay va Oqbura-soy' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Andijon xaritasi' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Til', exact: true }).selectOption('en');
   await page
     .locator('.regional-view-tabs')
@@ -140,8 +209,36 @@ test('supplied reference maps and workbook register are accessible, responsive, 
     .locator('.regional-view-tabs')
     .getByRole('link', { name: 'Regional maps and register', exact: true })
     .click();
-  await expect(
-    page.getByRole('heading', { name: 'Savay and Oqbura-say', exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Explore Andijan', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('touch navigation opens the region and its supplied records without a geographic lookup', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await page.route('**/api/v1/session', (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: { code: 'UNAVAILABLE', message: 'Unavailable', requestId: 'touch-test' } },
+    }),
+  );
+  await page.addInitScript(() => localStorage.setItem('isuv.locale', 'en'));
+  await page.goto('/#map');
+  const atlas = page.locator('.atlas-canvas > svg');
+  await atlas.getByRole('button', { name: 'Savay · Oqbura-soy', exact: true }).tap();
+  await expect(atlas).toHaveAttribute('data-scene', 'savay');
+  await page
+    .locator('.atlas-feature-bar')
+    .getByRole('button', { name: '≈ Savay', exact: true })
+    .tap();
+  await page.getByRole('button', { name: 'Open spreadsheet records', exact: false }).tap();
+  await expect(page.locator('.regional-table-scroll tbody tr')).toHaveCount(61);
+  await expect(page.locator('.regional-table-scroll')).not.toContainText('SYN-HOTSPOT');
+  await context.close();
 });

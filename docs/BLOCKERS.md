@@ -2,6 +2,8 @@
 
 A blocker should not stop independent implementation. Record it, choose a safe adapter/fixture/assumption where allowed, and continue.
 
+P8-002 review, 2026-09-13: B-002/B-009 remain open for authoritative geographic/operational import. They do not block the new interactive illustrated atlas: manually traced pixel-space areas and waterways support reference navigation and named-canal register links. Generated terrain is decorative; neither the artwork nor the clickable areas establish surveyed boundaries, elevations, flow directions or intake coordinates. No new external input is required for this reference UI slice.
+
 Last reviewed after the verified P7-009 Render deployment on 2026-09-04: the temporary Render adapter is a disposable, read-only, synthetic public demonstration only. Its fixed auditor identity and safe-method guard do not supply or substitute for official telemetry/GIS/policy inputs, accredited government OIDC/SAML/MFA, ingress/WAF, data-sovereignty approval, production secrets, monitoring, backups, HA/DR, or an approved RPO/RTO. B-001–B-008 remain open and continue to block authoritative government rollout claims.
 
 | ID | Date | Area | Missing input/decision | Why it blocks | Safe temporary approach | Owner | Status |

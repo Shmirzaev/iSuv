@@ -1,5 +1,9 @@
 # Autonomous MVP Task Graph
 
+- [x] **P8-002 — Interactive supplied-region atlas**
+  Depends: P8-001. Exit: Andijan irrigation areas are clickable; Savay–Oqbura opens a detailed district/waterway scene; district selection changes the map view; named Savay/Oqbura waterways open the correctly filtered reference register. Pan, zoom, reset, breadcrumbs, keyboard and mobile navigation work. Original maps remain available for comparison. Generated artwork is explicitly decorative; pixel-space approximations never become authoritative GIS or live telemetry. Preserve all 64 source-linked records. Required evidence: model/SSR tests, desktop/mobile browser interactions, localization, format/lint/types/security/units/build and self-review. No subagents per user instruction.
+  Evidence: five clickable irrigation areas, three district areas and two source-scale scenes; named rivers/canals link only Savay (61) and Oqbura (3) to the unchanged register. Built-in image generation supplied a reviewed decorative terrain asset; ADR-0014 and artwork prompt/source notes document the non-geographic boundary. `pnpm verify` passes (110 API, 46 domain, 40 contract, 71 web tests and both builds). Chromium 2/2 passes actual area/river clicks, mouse-wheel and keyboard zoom/pan, drag, fullscreen-to-register exit, source comparison, filter/selection lineage, three locales, dark mode, 320/390 px layout and touch input with unavailable session. Self-review fixed river hit-target interference and full-screen navigation; no database/API/operational data changes. Local preview remains on port 5182; no publication claimed.
+
 Status: `[ ]` todo, `[~]` in progress, `[x]` verified, `[!]` blocked.
 
 The primary agent may split tasks further. It must preserve IDs/dependencies, add measurable exit evidence, and keep only one active owner per overlapping file area.

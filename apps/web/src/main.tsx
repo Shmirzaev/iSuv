@@ -32,6 +32,7 @@ import { initialLocale, translate, type Locale } from '@isuv/i18n';
 import { ShellChrome, SyntheticDisclosure, type Theme } from './shell-semantics.js';
 import './styles.css';
 import './regional-reference.css';
+import './regional-atlas.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';

@@ -7,6 +7,8 @@ import {
   type ReferenceRecord,
 } from './regional-reference-data.js';
 import { regionalWords, type RegionalWord } from './regional-reference-i18n.js';
+import { RegionalAtlas } from './regional-atlas.js';
+import { atlasWords } from './regional-atlas-i18n.js';
 
 const maps: { id: string; label: RegionalWord; source: string }[] = [
   { id: 'savay-area', label: 'savayMap', source: 'Savay project-area image' },
@@ -284,17 +286,21 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
   const [source, setSource] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const inspector = useRef<HTMLElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const records = filterReferenceRecords(query, canal, source);
   const record = records.find((item) => item.id === selected);
   useEffect(() => {
     if (record) inspector.current?.focus();
   }, [record]);
+  useEffect(() => {
+    if (showRegister) searchInput.current?.focus();
+  }, [showRegister]);
   return (
     <section className="regional-workspace" aria-labelledby="regional-heading">
       <div className="regional-heading">
         <div>
           <span className="regional-source-label">{w.supplied}</span>
-          <h2 id="regional-heading">{w.title}</h2>
+          <h2 id="regional-heading">{atlasWords[locale].title}</h2>
         </div>
         <button
           type="button"
@@ -306,14 +312,29 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
         </button>
       </div>
       <p className="regional-summary">{w.summary}</p>
-      {!showRegister ? (
-        <ReferenceMap locale={locale} />
-      ) : (
+      <div hidden={showRegister}>
+        <RegionalAtlas
+          locale={locale}
+          onRecords={(value) => {
+            setCanal(value);
+            setQuery('');
+            setSource('');
+            setSelected(null);
+            setShowRegister(true);
+          }}
+        />
+        <details className="atlas-source-gallery">
+          <summary>{atlasWords[locale].sources}</summary>
+          <ReferenceMap locale={locale} />
+        </details>
+      </div>
+      {showRegister ? (
         <div className="regional-register" id="regional-register">
           <div className="regional-filter-bar">
             <label>
               {w.search}
               <input
+                ref={searchInput}
                 type="search"
                 value={query}
                 onChange={(event) => {
@@ -415,7 +436,7 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
             </aside>
           </div>
         </div>
-      )}
+      ) : null}
       <p className="regional-reference-note">{w.note}</p>
       <details className="regional-provenance">
         <summary>{w.source}</summary>

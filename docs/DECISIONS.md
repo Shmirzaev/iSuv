@@ -23,4 +23,6 @@ Record only decisions that affect architecture, scope, policy, data meaning, sec
 
 Add new rows and create an ADR in `docs/adr/` for decisions with meaningful technical trade-offs.
 
+P8-002, 2026-09-13: D-017 / ADR-0014 accepts an interactive source-derived illustration-space atlas and decorative generated terrain. Pixel paths and click navigation are not operational GIS, authorization territories or a hydraulic graph. Named canal sections may open the supplied register, but individual intake positions remain unknown. The explicit no-subagent instruction governs this task. No new public deployment or domain-data import is authorized by this UI update.
+
 Last reviewed during P8-001 on 2026-09-13. D-016/ADR-0013 adds supplied regional reference maps and register records without changing D-015's read-only public-demo boundary or upgrading undated spreadsheet figures to operational observations. B-002 is partially supplied; B-009 records remaining source clarification. D-013–D-015 security and rollout limits continue to apply.

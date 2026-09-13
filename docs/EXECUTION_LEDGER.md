@@ -5,9 +5,20 @@ The primary Codex agent updates this after every completed or blocked task. Keep
 ## Current state
 
 - Current phase: Software MVP complete; external rollout dependencies remain
-- Active task: none — P8-001 supplied regional reference maps/register verified locally
+- Active task: none — P8-002 interactive illustrated regional atlas verified locally. Single primary agent; no subagents per user instruction.
 - Last verified deployment: Render deploy `dep-daddhkptb6fs73aagovg` of commit `e352746` at `https://isuv-synthetic-demo.onrender.com`
-- Overall MVP status: the accepted software MVP remains complete. P8-001 adds five supplied reference maps and 64 register records without changing synthetic operational history. B-002 is partially supplied; B-009 records source clarification. The public deployment above predates P8-001.
+- Overall MVP status: the accepted software MVP remains complete. P8-001 adds five supplied reference maps and 64 register records; P8-002 replaces the default gallery with interactive area/district/waterway navigation. Synthetic operational history is unchanged. B-002 is partially supplied; B-009 records source clarification. The public deployment above predates both P8 tasks.
+
+## P8-002 — Interactive illustrated regional atlas, 2026-09-13
+
+- Reviewed the supplied Andijan irrigation-system and Savay project-area previews and their relationship to the valley/PDF/network references. Added two source-scale SVG scenes with five irrigation-system areas, three detailed district areas, named waterways, breadcrumbs, selected-waterway cards and filtered reference-register navigation. All geometry is approximate illustration pixels, not geographic coordinates or the domain accounting graph.
+- Built-in image generation produced `apps/web/public/regional-maps/atlas-terrain.png` (2,178,555 bytes; SHA-256 `990239a5ffdde2304b8a08cd363a7bb3a0875e7eed5a01c06d46f178c8fe933f`). Visually reviewed the output. The image contains decorative terrain only; the tool did not allow selecting the user-named exact model. Full prompt and source interpretation: `docs/REGIONAL_ATLAS_ARTWORK.md`. D-017 / ADR-0014 records the architectural boundary.
+- Original maps remain available under collapsed comparison tools. Original background toggles within the active scene. Savay opens 61 records (including the separate supplement); Oqbura opens 3. Other waterways show no supplied records. No individual intake coordinates, official boundaries, elevations, hydraulic directions, timestamps, or telemetry have been invented. Existing snapshots, APIs, migrations and synthetic operations are unchanged.
+- Self-review and browser checks found/fixed a river hit target obstructing overview-area selection, excessive mobile vertical margins, focus loss on opening the register, and register navigation from fullscreen. Area selection has priority in the overview; river selection is enabled on the closer map and via named buttons. Register navigation preserves map state and exits fullscreen safely.
+- `pnpm verify` passed: formatting, ESLint, TypeScript, tracked-file security check, 110 API tests, 46 domain tests, 40 contract tests, 71 web tests, API build and web production build. The existing >500 kB JS chunk-size advisory remains non-blocking (about 755 kB minified, 195 kB gzip). This is a client-only slice; database migration/integration suites were not rerun because database/API files and contracts did not change.
+- `pnpm --filter @isuv/web exec playwright test --config playwright.regional.config.ts` passed 2/2, covering real SVG region/river clicks, matching record counts, wheel/drag/keyboard camera movement, breadcrumb return, fullscreen and safe fullscreen exit into register, original backgrounds, all five source previews, register lineage/blank-value details, three locales, light/dark, 320/390 px containment and touch navigation with an unavailable session. Screenshots are under `tmp/regional-browser-results/`; desktop/detail/mobile images were inspected.
+- Local app remains available at `http://127.0.0.1:5182/#map`; opening its browser preview was requested through the app. No git push, public deployment, real infrastructure access or new external cost was initiated. `.claude/` and `output/` are unrelated user files and remain untracked/untouched.
+- Next action: user review of the local atlas. Authoritative GIS/intake positioning still needs B-002/B-009 source-owner inputs; publication of this change is not part of the current task.
 
 ## Entries
 

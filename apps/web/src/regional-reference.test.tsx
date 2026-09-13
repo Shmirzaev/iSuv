@@ -8,6 +8,7 @@ import {
 } from './regional-reference.js';
 import { regionalReferenceData } from './regional-reference-data.js';
 import { regionalWords } from './regional-reference-i18n.js';
+import { atlasWords } from './regional-atlas-i18n.js';
 
 test('regional workspace renders supplied map controls and reference distinctions in every locale', () => {
   for (const locale of ['en', 'ru', 'uz'] as const) {
@@ -17,6 +18,10 @@ test('regional workspace renders supplied map controls and reference distinction
     assert.ok(html.includes(w.note));
     assert.ok(html.includes(w.zoomIn));
     assert.ok(html.includes(w.register));
+    assert.ok(html.includes(atlasWords[locale].reference));
+    assert.ok(html.includes(atlasWords[locale].hint));
+    assert.match(html, /data-scene="andijan"/);
+    assert.match(html, /href="\/regional-maps\/atlas-terrain.png"/);
     assert.match(html, /src="\/regional-maps\/savay-area.webp"/);
     assert.equal((html.match(/<option /g) ?? []).length, 5);
     assert.ok(!html.includes('SYN-HOTSPOT'));
