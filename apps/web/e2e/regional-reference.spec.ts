@@ -58,6 +58,8 @@ test('supplied reference maps and workbook register are accessible, responsive, 
   const atlas = page.locator('.atlas-canvas > svg');
   await expect(atlas).toHaveAttribute('data-scene', 'andijan');
   await expect(atlas.locator('.atlas-area')).toHaveCount(5);
+  await expect(atlas.locator('.atlas-lake')).toHaveCount(3);
+  await expect(atlas.locator('.atlas-settlement')).toHaveCount(13);
   expect((await page.locator('.atlas-canvas').boundingBox())!.height).toBeGreaterThan(440);
   const initialView = await atlas.getAttribute('viewBox');
   await page.locator('.atlas-zoom').getByRole('button', { name: 'Zoom in', exact: true }).click();
@@ -89,6 +91,8 @@ test('supplied reference maps and workbook register are accessible, responsive, 
   await atlas.getByRole('button', { name: 'Savay · Oqbura-soy', exact: true }).click();
   await expect(atlas).toHaveAttribute('data-scene', 'savay');
   await expect(atlas.locator('.atlas-area')).toHaveCount(3);
+  await expect(atlas.locator('.atlas-pump')).toHaveCount(3);
+  await expect(atlas.locator('.atlas-point')).toHaveCount(33);
   const detailView = await atlas.getAttribute('viewBox');
   await page
     .locator('.atlas-feature-bar')
@@ -125,10 +129,48 @@ test('supplied reference maps and workbook register are accessible, responsive, 
   await page.getByRole('button', { name: 'Back to map', exact: true }).click();
   await expect(atlas).toHaveAttribute('data-scene', 'savay');
   await page.getByRole('button', { name: 'Close details' }).click();
+  await page.locator('.atlas-layer-menu > summary').click();
   await page.getByRole('checkbox', { name: 'Original background' }).check();
   await expect(atlas.locator('image')).toHaveAttribute('href', '/regional-maps/savay-area.webp');
   await page.getByRole('checkbox', { name: 'Original background' }).uncheck();
+  await page.locator('.atlas-layer-menu > summary').click();
   await page.screenshot({ path: info.outputPath('atlas-savay-desktop.png'), fullPage: true });
+  await page
+    .getByRole('combobox', { name: 'Go to a place…', exact: true })
+    .selectOption('pump-savay-1');
+  await expect(page.locator('.atlas-waterway-card')).toContainText('НС Савай 1');
+  await expect(page.locator('.atlas-waterway-card')).toContainText(
+    'No live readings or operating status supplied.',
+  );
+  await expect(
+    page
+      .locator('.atlas-waterway-card')
+      .getByRole('button', { name: 'Open spreadsheet records', exact: false }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Close details' }).click();
+  await page
+    .getByRole('combobox', { name: 'Go to a place…', exact: true })
+    .selectOption('point-33');
+  await expect(page.locator('.atlas-waterway-card')).toContainText(
+    'Not matched to an Excel row or a sensor.',
+  );
+  await page.screenshot({ path: info.outputPath('atlas-source-point-detail.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Close details' }).click();
+  await page.locator('.atlas-layer-menu > summary').click();
+  await page.getByRole('checkbox', { name: 'Numbered source points', exact: true }).uncheck();
+  await expect(atlas.locator('.atlas-point')).toHaveCount(0);
+  await page.getByRole('checkbox', { name: 'Roads', exact: true }).uncheck();
+  await expect(atlas.locator('.atlas-road')).toHaveCount(0);
+  await page.getByRole('checkbox', { name: 'Roads', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Numbered source points', exact: true }).check();
+  await page.locator('.atlas-layer-menu > summary').click();
+  await page
+    .getByRole('combobox', { name: 'Go to a place…', exact: true })
+    .selectOption('place-21');
+  await expect(page.locator('.atlas-waterway-card')).toContainText('Chilchibod');
+  await expect(atlas.locator('.atlas-settlement')).toHaveCount(30);
+  await page.getByRole('button', { name: 'Close details' }).click();
+  await page.getByRole('button', { name: 'Reset view', exact: true }).click();
   // Original source gallery stays available, but is no longer the default map.
   await page.locator('.atlas-source-gallery > summary').click();
   const image = page.locator('.regional-map-image img');

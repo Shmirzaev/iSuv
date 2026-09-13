@@ -23,7 +23,9 @@ test('regional workspace renders supplied map controls and reference distinction
     assert.match(html, /data-scene="andijan"/);
     assert.match(html, /href="\/regional-maps\/atlas-terrain.png"/);
     assert.match(html, /src="\/regional-maps\/savay-area.webp"/);
-    assert.equal((html.match(/<option /g) ?? []).length, 5);
+    assert.match(html, /value="fergana-valley"/);
+    assert.match(html, /class="atlas-place-search"/);
+    assert.match(html, /class="atlas-lake"/);
     assert.ok(!html.includes('SYN-HOTSPOT'));
   }
 });

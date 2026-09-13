@@ -17,6 +17,7 @@ export type AtlasWaterway = {
   label: [number, number];
   areas: string[];
   register?: 'savay' | 'oqbura';
+  minor?: boolean;
 };
 export type AtlasScene = {
   id: 'andijan' | 'savay';
@@ -128,6 +129,29 @@ export const andijanScene: AtlasScene = {
       label: [246, 400],
       areas: ['ulugnor'],
     },
+    {
+      id: 'naryn',
+      name: 'Norin',
+      path: 'M487 78 C442 112 428 141 384 151 S318 156 291 174 S215 198 176 190',
+      label: [325, 155],
+      areas: ['ulugnor', 'qoradaryo'],
+    },
+    {
+      id: 'south-fergana',
+      name: 'Janubiy Farg‘ona kanali',
+      path: 'M698 599 C664 615 647 642 617 656 S567 671 522 667 S448 688 407 667 L351 642',
+      label: [543, 692],
+      areas: ['shahrixon', 'savay-area'],
+      minor: true,
+    },
+    {
+      id: 'aravonsoy',
+      name: 'Aravonsoy',
+      path: 'M718 706 Q685 689 654 679 T595 646 Q578 635 573 610',
+      label: [621, 719],
+      areas: ['savay-area', 'shahrixon'],
+      minor: true,
+    },
   ],
 };
 
@@ -148,7 +172,7 @@ export const savayScene: AtlasScene = {
     },
     {
       id: 'jalalquduq',
-      name: 'Jalaquduq',
+      name: 'Jalalquduq',
       color: '#e2afb3',
       label: [666, 385],
       bounds: [302, 242, 625, 380],
@@ -222,10 +246,72 @@ export const savayScene: AtlasScene = {
       label: [344, 566],
       areas: ['xojaobod'],
     },
+    {
+      id: 'salpi',
+      name: 'Solpi',
+      path: 'M220 452 Q234 473 234 500 L253 529 L267 550 Q281 565 282 578',
+      label: [272, 516],
+      areas: ['xojaobod'],
+      minor: true,
+    },
+    {
+      id: 'beshtol',
+      name: 'Besh tol',
+      path: 'M588 454 Q604 489 608 527 L630 549 Q659 565 685 591 L722 604 L755 628 L791 649',
+      label: [663, 578],
+      areas: ['jalalquduq', 'xojaobod'],
+      minor: true,
+    },
+    {
+      id: 'kandva',
+      name: 'Kandva',
+      path: 'M384 712 Q412 690 452 673 L488 652 Q515 633 550 622',
+      label: [411, 690],
+      areas: ['xojaobod'],
+      minor: true,
+    },
+    {
+      id: 'chilpi',
+      name: 'Chilpi shod',
+      path: 'M556 657 L584 634 Q612 631 635 640 L671 645 Q695 633 738 646',
+      label: [600, 660],
+      areas: ['xojaobod'],
+      minor: true,
+    },
+    {
+      id: 'kattastroy',
+      name: 'Kattastroy tashlamasi',
+      path: 'M1091 82 Q1083 116 1085 146 L1080 192 L1072 258',
+      label: [1098, 219],
+      areas: ['qorgontepa'],
+      minor: true,
+    },
   ],
 };
 
 export function viewForArea(area: AtlasArea): [number, number, number, number] {
   const [x, y, width, height] = area.bounds;
   return [x - 40, y - 40, width + 80, height + 80];
+}
+
+/** Round drawn river elbows only. Does not alter the stored source tracing or infer direction. */
+export function displayWaterwayPath(path: string): string {
+  if (/[^ML\d\s.,-]/.test(path)) return path;
+  const points = Array.from(
+    path.matchAll(/[ML]\s*(-?[\d.]+)[ ,]+(-?[\d.]+)/g),
+    (match) => [Number(match[1]), Number(match[2])] as const,
+  );
+  if (points.length < 3) return path;
+  let result = `M${points[0]![0]} ${points[0]![1]}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const current = points[i]!,
+      before = points[i - 1]!,
+      after = points[i + 1]!;
+    const x1 = current[0] + (before[0] - current[0]) * 0.16;
+    const y1 = current[1] + (before[1] - current[1]) * 0.16;
+    const x2 = current[0] + (after[0] - current[0]) * 0.16;
+    const y2 = current[1] + (after[1] - current[1]) * 0.16;
+    result += ` L${x1} ${y1} Q${current[0]} ${current[1]} ${x2} ${y2}`;
+  }
+  return `${result} L${points.at(-1)![0]} ${points.at(-1)![1]}`;
 }

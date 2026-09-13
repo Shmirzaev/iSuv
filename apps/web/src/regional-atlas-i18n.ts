@@ -1,5 +1,19 @@
 import type { Locale } from '@isuv/i18n';
 const en = {
+  layers: 'Map layers',
+  towns: 'Towns & villages',
+  roads: 'Roads',
+  pumps: 'Pumping stations',
+  points: 'Numbered source points',
+  findPlace: 'Go to a place…',
+  landmark: 'Map feature',
+  point: 'Source point',
+  landmarkNote:
+    'Position redrawn from the supplied map, not surveyed. No live readings or operating status supplied.',
+  pointNote: 'Number on the original map. Not matched to an Excel row or a sensor.',
+  originalLabel: 'Original label',
+  reservoirs: 'Reservoirs',
+  kyrgyzstan: 'KYRGYZSTAN',
   title: 'Explore Andijan',
   valley: 'Fergana Valley',
   andijan: 'Andijan',
@@ -34,6 +48,20 @@ const en = {
 };
 type Words = { [K in keyof typeof en]: string };
 const ru: Words = {
+  layers: 'Слои карты',
+  towns: 'Города и сёла',
+  roads: 'Дороги',
+  pumps: 'Насосные станции',
+  points: 'Номера на исходной карте',
+  findPlace: 'Перейти к месту…',
+  landmark: 'Объект на карте',
+  point: 'Точка исходной карты',
+  landmarkNote:
+    'Место перерисовано с исходной карты, не подтверждено съёмкой. Текущие показания и рабочее состояние не предоставлены.',
+  pointNote: 'Номер на исходной карте. Не сопоставлен со строкой Excel или датчиком.',
+  originalLabel: 'Исходная надпись',
+  reservoirs: 'Водохранилища',
+  kyrgyzstan: 'КЫРГЫЗСТАН',
   title: 'Карта Андижана',
   valley: 'Ферганская долина',
   andijan: 'Андижан',
@@ -66,6 +94,20 @@ const ru: Words = {
   registerCount: 'справочных записей',
 };
 const uz: Words = {
+  layers: 'Xarita qatlamlari',
+  towns: 'Shahar va qishloqlar',
+  roads: 'Yo‘llar',
+  pumps: 'Nasos stansiyalari',
+  points: 'Asl xaritadagi raqamlar',
+  findPlace: 'Joyga o‘tish…',
+  landmark: 'Xaritadagi obyekt',
+  point: 'Asl xarita nuqtasi',
+  landmarkNote:
+    'Joy berilgan xaritadan qayta chizilgan, geodezik tasdiqlanmagan. Jonli o‘lchov yoki ishlash holati berilmagan.',
+  pointNote: 'Asl xaritadagi raqam. Excel qatori yoki sensorga bog‘lanmagan.',
+  originalLabel: 'Asl yozuv',
+  reservoirs: 'Suv omborlari',
+  kyrgyzstan: 'QIRG‘IZISTON',
   title: 'Andijon xaritasi',
   valley: 'Farg‘ona vodiysi',
   andijan: 'Andijon',
