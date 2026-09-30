@@ -34,6 +34,10 @@ import './styles.css';
 import './regional-reference.css';
 import './regional-atlas.css';
 import './andijan-source-map.css';
+import './live-finish.css';
+import './workspace-finish.css';
+import './finish.css';
+import './map-polish.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';
@@ -226,11 +230,13 @@ export function App() {
         onThemeChange={setTheme}
         session={session}
         theme={theme}
-      />
-      <SyntheticDisclosure
-        dismissed={syntheticDismissed}
-        locale={locale}
-        onDismiss={() => setSyntheticDismissed(true)}
+        syntheticDisclosure={
+          <SyntheticDisclosure
+            dismissed={syntheticDismissed}
+            locale={locale}
+            onDismiss={() => setSyntheticDismissed(true)}
+          />
+        }
       />
       <main id={skipTargetId} tabIndex={-1}>
         {area === 'dashboard' ? <RegionalReferenceLink locale={locale} /> : null}
@@ -272,8 +278,8 @@ export function App() {
           <AuditExplorerWorkspace access={dashboardIdentityState(identity)} locale={locale} />
         ) : (
           <section aria-labelledby="workspace-heading" className="panel">
-            <p className="eyebrow">{t('currentArea')}</p>
             <h2 id="workspace-heading">{t(areaLabel(area))}</h2>
+            <p className="supporting-text">{t('currentArea')}</p>
             <p>{t('workspaceDetail')}</p>
             {canDiscoverAlarmWorkspace(session) ? (
               <>

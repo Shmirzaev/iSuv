@@ -14,6 +14,7 @@ interface FilterPanelProps {
   filtersLabel: string;
   onClear?: () => void;
   search?: ReactNode;
+  trailingControls?: ReactNode;
 }
 
 /** Shared filter disclosure: search and active choices remain visible while the full form stays compact. */
@@ -24,6 +25,7 @@ export function FilterPanel({
   filtersLabel,
   onClear,
   search,
+  trailingControls,
 }: FilterPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const contentId = useId();
@@ -55,6 +57,7 @@ export function FilterPanel({
             {clearLabel}
           </button>
         ) : null}
+        {trailingControls}
       </div>
       <div className="filter-panel__content" hidden={!expanded} id={contentId}>
         {children}

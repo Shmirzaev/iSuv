@@ -32,6 +32,7 @@ import { formatNumber, presentationTimestamp } from './format.js';
 import { FilterPanel, type ActiveFilter } from './filter-panel.js';
 import { StatusChip, type StatusChipTone } from './status-chip.js';
 import { WorkspaceHeader } from './workspace-header.js';
+import { GlyphIcon, Icon } from './icons.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'inaccessible' | 'unavailable' | 'degraded';
@@ -109,7 +110,7 @@ function StateNotice({
   return (
     <section aria-live="polite" className={`status-notice status-notice--${tone}`}>
       <span aria-hidden="true" className="status-notice__icon">
-        {icon}
+        <GlyphIcon glyph={icon} />
       </span>
       <div>
         <h2>{t(locale, heading)}</h2>
@@ -136,9 +137,14 @@ function StatusValue({
   locale: Locale;
 }) {
   const tone: StatusChipTone =
-    label === 'alarmSeverityCritical'
+    label === 'alarmSeverityCritical' || label === 'alarmAutomaticActive'
       ? 'critical'
-      : label === 'alarmSeverityWarning' || label === 'alarmSeverityAdvisory'
+      : label === 'alarmSeverityWarning' ||
+          label === 'alarmSeverityAdvisory' ||
+          label === 'alarmEvidenceUnassessable' ||
+          label === 'alarmEvidenceMissing' ||
+          label === 'alarmEvidencePending' ||
+          label === 'alarmEvidenceDeferred'
         ? 'attention'
         : label === 'alarmAutomaticCleared' ||
             label === 'incidentResolved' ||
@@ -146,7 +152,15 @@ function StatusValue({
             label === 'alarmEvidenceAssessable'
           ? 'positive'
           : 'information';
-  return <StatusChip detail={t(locale, value)} icon={icon} label={t(locale, label)} tone={tone} />;
+  return (
+    <StatusChip
+      detail={t(locale, value)}
+      hatch={label === 'alarmEvidenceUnassessable' || label === 'alarmEvidenceMissing'}
+      icon={<GlyphIcon glyph={icon} />}
+      label={t(locale, label)}
+      tone={tone}
+    />
+  );
 }
 
 function ConditionChip({
@@ -166,13 +180,29 @@ function ConditionChip({
       : systemConditionKey(condition as AlarmIncidentCenterItem['systemDeviceCondition']),
   );
   const heading = t(locale, type === 'water' ? 'alarmWaterCondition' : 'alarmSystemCondition');
-  const unassessed = condition === 'not_assessed' || condition === 'unassessable';
   return (
     <StatusChip
       detail={`${heading}: ${label}`}
-      icon={type === 'water' ? '≈' : '⌁'}
+      icon={
+        <Icon
+          name={
+            condition === 'not_assessed' || condition === 'unconfigured'
+              ? 'not_configured'
+              : condition === 'sensor_frozen'
+                ? 'stale'
+                : condition === 'unassessable'
+                  ? 'unreliable'
+                  : type === 'water'
+                    ? 'operations'
+                    : 'fault'
+          }
+        />
+      }
       label={label}
-      tone={unassessed ? 'neutral' : type === 'system' ? 'attention' : 'information'}
+      tone="attention"
+      hatch={['unassessable', 'sensor_frozen', 'sensor_impossible', 'power_problem'].includes(
+        condition,
+      )}
     />
   );
 }
@@ -183,6 +213,37 @@ function Timestamp({ locale, value }: { locale: Locale; value: string | null }) 
   return (
     <time dateTime={timestamp.dateTime} title={timestamp.title}>
       {timestamp.value}
+    </time>
+  );
+}
+
+/** The queue reference time is the authoritative cutoff for an alarm's displayed age. */
+function AlarmAge({
+  detectedAt,
+  locale,
+  referenceAt,
+}: {
+  detectedAt: string;
+  locale: Locale;
+  referenceAt: string;
+}) {
+  const detected = Date.parse(detectedAt);
+  const reference = Date.parse(referenceAt);
+  if (Number.isNaN(detected) || Number.isNaN(reference))
+    return <Timestamp locale={locale} value={detectedAt} />;
+  const seconds = Math.max(0, Math.floor((reference - detected) / 1000));
+  const [amount, unit]: [number, Intl.RelativeTimeFormatUnit] =
+    seconds >= 86_400
+      ? [Math.floor(seconds / 86_400), 'day']
+      : seconds >= 3_600
+        ? [Math.floor(seconds / 3_600), 'hour']
+        : [Math.floor(seconds / 60), 'minute'];
+  return (
+    <time dateTime={detectedAt} title={`${detectedAt}; ${referenceAt}`}>
+      {new Intl.RelativeTimeFormat(locale, { numeric: 'always', style: 'short' }).format(
+        -amount,
+        unit,
+      )}
     </time>
   );
 }
@@ -426,38 +487,58 @@ export function AlarmCenterQueue({
   response,
   selection,
   onSelect,
+  filters,
+  onFilterChange,
+  onFilterClear,
 }: {
   locale: Locale;
   response: AlarmIncidentCenterResponse;
   selection: AlarmCenterSelection;
   onSelect: (item: AlarmIncidentCenterItem) => void;
+  filters?: AlarmCenterFilters;
+  onFilterChange?: (next: AlarmCenterFilters) => void;
+  onFilterClear?: () => void;
 }) {
   return (
-    <section className="alarm-center-queue panel" aria-labelledby="alarm-center-queue-heading">
-      <h3 id="alarm-center-queue-heading">{t(locale, 'alarmCenterQueue')}</h3>
-      <p>
-        {t(locale, 'alarmCenterQueueCount')}:{' '}
-        {formatNumber(locale, response.scope.queueDenominator)}
-      </p>
+    <section className="alarm-center-queue" aria-labelledby="alarm-center-queue-heading">
+      <header className="alarm-center-queue__header">
+        <div>
+          <h3 id="alarm-center-queue-heading">{t(locale, 'alarmCenterQueue')}</h3>
+          <p>
+            {t(locale, 'alarmCenterQueueCount')}:{' '}
+            {formatNumber(locale, response.scope.queueDenominator)}
+          </p>
+        </div>
+        {filters && onFilterChange && onFilterClear ? (
+          <FilterForm
+            filters={filters}
+            locale={locale}
+            onChange={onFilterChange}
+            onClear={onFilterClear}
+          />
+        ) : null}
+      </header>
       <div
         aria-label={t(locale, 'alarmCenterQueue')}
         className="table-scroll alarm-center-table-scroll"
         role="region"
         tabIndex={0}
       >
-        <table className="alarm-center-table">
+        <table className="alarm-center-table alarm-center-register">
           <caption>{t(locale, 'alarmCenterQueueDetail')}</caption>
           <thead>
             <tr>
-              <th>{t(locale, 'alarmEventType')}</th>
               <th>{t(locale, 'alarmSeverity')}</th>
-              <th>{t(locale, 'alarmAutomaticState')}</th>
-              <th>{t(locale, 'alarmIncidentState')}</th>
+              <th>{t(locale, 'alarmEventType')}</th>
+              <th>{t(locale, 'liveColumnStation')}</th>
+              <th>{t(locale, 'territory')}</th>
+              <th>
+                {t(locale, 'alarmAutomaticState')} / {t(locale, 'alarmIncidentState')}
+              </th>
               <th>{t(locale, 'alarmWaterCondition')}</th>
               <th>{t(locale, 'alarmSystemCondition')}</th>
-              <th>{t(locale, 'territory')}</th>
+              <th>{t(locale, 'liveColumnDataAge')}</th>
               <th>{t(locale, 'alarmAssignee')}</th>
-              <th>{t(locale, 'alarmDetectedAt')}</th>
               <th>{t(locale, 'alarmEvidenceAssessment')}</th>
               <th>{t(locale, 'alarmCenterSelect')}</th>
             </tr>
@@ -473,25 +554,32 @@ export function AlarmCenterQueue({
                 : selection.alarmId === item.alarmId;
               return (
                 <tr className="alarm-center-table__row" key={item.alarmId}>
+                  <td className="alarm-center-table__chip" data-label={t(locale, 'alarmSeverity')}>
+                    <StatusValue locale={locale} {...severity} />
+                  </td>
                   <td
                     className="alarm-center-table__event"
                     data-label={t(locale, 'alarmEventType')}
                   >
                     {t(locale, eventTypeKey(item.eventType))}
                   </td>
-                  <td className="alarm-center-table__chip" data-label={t(locale, 'alarmSeverity')}>
-                    <StatusValue locale={locale} {...severity} />
+                  <td
+                    className="alarm-center-table__station"
+                    data-label={t(locale, 'liveColumnStation')}
+                  >
+                    <span className="alarm-center-table__unavailable">
+                      {t(locale, 'notAvailable')}
+                    </span>
+                  </td>
+                  <td className="alarm-center-table__territory" data-label={t(locale, 'territory')}>
+                    <span title={item.territory.name}>{item.territory.name}</span>
+                    <small title={item.territory.code}>{item.territory.code}</small>
                   </td>
                   <td
-                    className="alarm-center-table__chip"
-                    data-label={t(locale, 'alarmAutomaticState')}
+                    className="alarm-center-table__lifecycle"
+                    data-label={`${t(locale, 'alarmAutomaticState')} / ${t(locale, 'alarmIncidentState')}`}
                   >
                     <StatusValue locale={locale} {...automatic} />
-                  </td>
-                  <td
-                    className="alarm-center-table__chip"
-                    data-label={t(locale, 'alarmIncidentState')}
-                  >
                     <StatusValue locale={locale} {...incident} />
                   </td>
                   <td
@@ -510,9 +598,15 @@ export function AlarmCenterQueue({
                       type="system"
                     />
                   </td>
-                  <td className="alarm-center-table__territory" data-label={t(locale, 'territory')}>
-                    <span title={item.territory.name}>{item.territory.name}</span>
-                    <small title={item.territory.code}>{item.territory.code}</small>
+                  <td
+                    className="alarm-center-table__age"
+                    data-label={t(locale, 'liveColumnDataAge')}
+                  >
+                    <AlarmAge
+                      detectedAt={item.detectedAt}
+                      locale={locale}
+                      referenceAt={response.referenceAt}
+                    />
                   </td>
                   <td
                     className="alarm-center-table__assignee"
@@ -523,12 +617,6 @@ export function AlarmCenterQueue({
                       locale={locale}
                       userId={item.assignedUserId}
                     />
-                  </td>
-                  <td
-                    className="alarm-center-table__timestamp"
-                    data-label={t(locale, 'alarmDetectedAt')}
-                  >
-                    <Timestamp locale={locale} value={item.detectedAt} />
                   </td>
                   <td
                     className="alarm-center-table__chip"
@@ -704,7 +792,7 @@ function ActionForm({
     }
   };
   return (
-    <form className="alarm-center-action-form" onSubmit={submit}>
+    <form className="alarm-center-action-form alarm-center-ledger-form" onSubmit={submit}>
       <h4>{t(locale, label[action])}</h4>
       {needsAssignee ? (
         <label>
@@ -734,7 +822,11 @@ function ActionForm({
       </label>
       {state === 'error' ? <p role="alert">{error}</p> : null}
       <div className="alarm-center-action-form__buttons">
-        <button className="action-button" disabled={state === 'sending'} type="submit">
+        <button
+          className="action-button action-button--primary"
+          disabled={state === 'sending'}
+          type="submit"
+        >
           {state === 'sending' ? t(locale, 'alarmActionSending') : t(locale, 'alarmActionSubmit')}
         </button>
         <button className="action-button" type="button" onClick={onCancel}>
@@ -749,7 +841,17 @@ function Evidence({ item, locale }: { item: AlarmIncidentCenterItem; locale: Loc
   const evidence = evidencePresentation(item.evidence.assessment);
   const result = item.evidence.result ? JSON.stringify(item.evidence.result) : null;
   return (
-    <section aria-labelledby="alarm-evidence-heading">
+    <section
+      aria-labelledby="alarm-evidence-heading"
+      className={
+        item.evidence.qualityState === 'unknown' ||
+        item.evidence.qualityState === 'unavailable' ||
+        item.evidence.assessment === 'unassessable' ||
+        item.evidence.assessment === 'missing'
+          ? 'alarm-center-evidence--unreliable'
+          : undefined
+      }
+    >
       <h3 id="alarm-evidence-heading">{t(locale, 'alarmEvidence')}</h3>
       <StatusValue locale={locale} {...evidence} />
       <dl className="alarm-center-details">
@@ -781,7 +883,7 @@ function Evidence({ item, locale }: { item: AlarmIncidentCenterItem; locale: Loc
       </dl>
       {item.evidence.reason ? (
         <p className="alarm-center-unconfigured">
-          <span aria-hidden="true">⚙</span> <strong>{t(locale, 'alarmEvidenceReason')}</strong>:{' '}
+          <GlyphIcon glyph="⚙" /> <strong>{t(locale, 'alarmEvidenceReason')}</strong>:{' '}
           {item.evidence.reason}
         </p>
       ) : null}
@@ -1039,15 +1141,23 @@ export function AlarmCenterPanel({
       <section aria-labelledby="alarm-timeline-heading">
         <h3 id="alarm-timeline-heading">{t(locale, 'alarmImmutableTimeline')}</h3>
         {panel.timeline.length ? (
-          <ol className="alarm-center-timeline">
+          <ol className="alarm-center-timeline alarm-center-timeline--ledger">
             {panel.timeline.map((entry) => (
-              <li key={entry.sequence}>
-                <strong>{`${entry.sequence}. ${t(locale, `alarmTimeline${entry.kind.replace(/(^|_)([a-z])/g, (_, __, letter: string) => letter.toUpperCase())}` as TranslationKey)}`}</strong>
-                <span>
+              <li className="alarm-center-timeline__entry" key={entry.sequence}>
+                <strong className="alarm-center-timeline__sequence">{entry.sequence}</strong>
+                <span className="alarm-center-timeline__event">
+                  {t(
+                    locale,
+                    `alarmTimeline${entry.kind.replace(/(^|_)([a-z])/g, (_, __, letter: string) => letter.toUpperCase())}` as TranslationKey,
+                  )}
+                </span>
+                <span className="alarm-center-timeline__time">
                   <Timestamp locale={locale} value={entry.occurredAt} />
                 </span>
-                <span>{entry.reason}</span>
-                {entry.body ? <span>{entry.body}</span> : null}
+                <span className="alarm-center-timeline__reason">{entry.reason}</span>
+                {entry.body ? (
+                  <span className="alarm-center-timeline__body">{entry.body}</span>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -1191,7 +1301,7 @@ export function AlarmIncidentCenterWorkspace({
           aria-label={t(locale, 'alarmCenterDegraded')}
         >
           <span aria-hidden="true" className="status-notice__icon">
-            !
+            <GlyphIcon glyph="!" />
           </span>
           <div>
             <strong>{t(locale, 'alarmCenterDegraded')}</strong>
@@ -1199,16 +1309,18 @@ export function AlarmIncidentCenterWorkspace({
           </div>
         </section>
       ) : null}
-      <FilterForm
-        filters={filters}
-        locale={locale}
-        onChange={changeFilters}
-        onClear={() => changeFilters(emptyAlarmCenterFilters)}
-      />
+      {state === 'empty' ? (
+        <FilterForm
+          filters={filters}
+          locale={locale}
+          onChange={changeFilters}
+          onClear={() => changeFilters(emptyAlarmCenterFilters)}
+        />
+      ) : null}
       {state === 'empty' ? (
         <section className="status-notice status-notice--information" aria-live="polite">
           <span aria-hidden="true" className="status-notice__icon">
-            —
+            <GlyphIcon glyph="—" />
           </span>
           <div>
             <h3>{t(locale, 'alarmCenterEmpty')}</h3>
@@ -1218,7 +1330,10 @@ export function AlarmIncidentCenterWorkspace({
       ) : (
         <>
           <AlarmCenterQueue
+            filters={filters}
             locale={locale}
+            onFilterChange={changeFilters}
+            onFilterClear={() => changeFilters(emptyAlarmCenterFilters)}
             response={response}
             selection={selection}
             onSelect={select}

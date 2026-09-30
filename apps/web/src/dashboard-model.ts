@@ -110,6 +110,44 @@ export function formatExactRational(
 }
 
 /**
+ * Rounds a rational quantity with integer arithmetic. This is display-only;
+ * callers retain the numerator/denominator as the exact audit value.
+ */
+export function formatRationalFixed(
+  value: { numerator: string; denominator: string },
+  fractionDigits: number,
+  locale: Locale = 'en',
+  signed = false,
+): string {
+  const numerator = BigInt(value.numerator);
+  const rawDenominator = BigInt(value.denominator);
+  if (rawDenominator === 0n)
+    throw new RangeError('A rational quantity requires a nonzero denominator.');
+  const denominator = rawDenominator < 0n ? -rawDenominator : rawDenominator;
+  if (signed && numerator === 0n) return '0';
+  const sign =
+    numerator !== 0n && numerator < 0n !== rawDenominator < 0n
+      ? '-'
+      : signed && numerator !== 0n
+        ? '+'
+        : '';
+  const scale = 10n ** BigInt(fractionDigits);
+  const absolute = numerator < 0n ? -numerator : numerator;
+  const scaled = absolute * scale;
+  let rounded = scaled / denominator;
+  const remainder = scaled % denominator;
+  if (remainder * 2n >= denominator) rounded += 1n;
+  const whole = rounded / scale;
+  const fractional = rounded % scale;
+  const decimal =
+    new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === 'decimal')
+      ?.value ?? '.';
+  const formattedWhole = formatDecimal(locale, whole);
+  if (fractionDigits === 0) return `${sign}${formattedWhole}`;
+  return `${sign}${formattedWhole}${decimal}${fractional.toString().padStart(fractionDigits, '0')}`;
+}
+
+/**
  * Format the server's integer duration without ever converting it to Number.
  * Dashboard intervals can be longer than JavaScript's safe integer range.
  */

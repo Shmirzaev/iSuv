@@ -1,0 +1,535 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T17:14:42.063Z",
+  "title": "Design System: iSuv Limnigraph Register",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Chart Paper",
+        "canonical": "#f1f5f3",
+        "oklch": "oklch(96.7% 0.005 165)",
+        "dark": "#101c2a",
+        "tonalRamp": [
+          "#090c0b",
+          "#232624",
+          "#404341",
+          "#5f6260",
+          "#808381",
+          "#a2a6a4",
+          "#c6cac8",
+          "#ecefed"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#fafcfb",
+        "oklch": "oklch(98.9% 0.002 165)",
+        "dark": "#152638",
+        "tonalRamp": [
+          "#0a0b0b",
+          "#242525",
+          "#414242",
+          "#606261",
+          "#818382",
+          "#a4a5a4",
+          "#c8cac9",
+          "#edefee"
+        ]
+      },
+      "ledger-tint": {
+        "role": "neutral",
+        "displayName": "Ledger Tint",
+        "canonical": "#e7eeeb",
+        "oklch": "oklch(94.3% 0.008 169)",
+        "dark": "#1d3040",
+        "tonalRamp": [
+          "#080c0a",
+          "#212624",
+          "#3e4341",
+          "#5d6360",
+          "#7e8481",
+          "#a0a7a4",
+          "#c4cbc8",
+          "#e9f0ed"
+        ]
+      },
+      "ink": {
+        "role": "primary",
+        "displayName": "Survey Ink",
+        "canonical": "#12253f",
+        "oklch": "oklch(26.3% 0.055 257)",
+        "dark": "#e5efeb",
+        "tonalRamp": [
+          "#000a22",
+          "#12253f",
+          "#2f435f",
+          "#4d6381",
+          "#6d84a4",
+          "#8fa7c8",
+          "#b3cbed",
+          "#e5effe"
+        ]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "#30455b",
+        "oklch": "oklch(38.3% 0.046 250)",
+        "dark": "#c8dbd6",
+        "tonalRamp": [
+          "#000b1e",
+          "#12263b",
+          "#2f445a",
+          "#4d637b",
+          "#6e859e",
+          "#90a8c2",
+          "#b3cce7",
+          "#e3f0fe"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#506573",
+        "oklch": "oklch(49.5% 0.034 238)",
+        "dark": "#aabeb8",
+        "tonalRamp": [
+          "#000d18",
+          "#142734",
+          "#314552",
+          "#4f6472",
+          "#708694",
+          "#92a9b8",
+          "#b6cddd",
+          "#dff2fe"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#8a9e99",
+        "oklch": "oklch(68.2% 0.024 179)",
+        "dark": "#6f8d85",
+        "tonalRamp": [
+          "#010e0b",
+          "#182925",
+          "#344642",
+          "#536661",
+          "#748782",
+          "#96aaa5",
+          "#bacfc9",
+          "#dff4ef"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#bbc9c3",
+        "oklch": "oklch(82.3% 0.017 168)",
+        "dark": "#425e58",
+        "tonalRamp": [
+          "#050e0a",
+          "#1d2823",
+          "#394540",
+          "#58655f",
+          "#798680",
+          "#9ba9a3",
+          "#bfcdc7",
+          "#e4f2ec"
+        ]
+      },
+      "mm-grid": {
+        "role": "neutral",
+        "displayName": "Millimetre Grid",
+        "canonical": "#8fbfb0",
+        "oklch": "oklch(76.6% 0.055 174)",
+        "dark": "#8fbfb0",
+        "tonalRamp": [
+          "#000f0a",
+          "#012d23",
+          "#1d4c3f",
+          "#3e6c5f",
+          "#5f8d7f",
+          "#81b1a2",
+          "#a5d5c6",
+          "#c9fbeb"
+        ]
+      },
+      "plan-blue": {
+        "role": "primary",
+        "displayName": "Plan Blue",
+        "canonical": "#3a5a8c",
+        "oklch": "oklch(46.7% 0.090 259)",
+        "dark": "#a5bfe7",
+        "tonalRamp": [
+          "#000729",
+          "#052350",
+          "#234171",
+          "#416194",
+          "#6183b8",
+          "#83a6de",
+          "#aacbff",
+          "#e5efff"
+        ]
+      },
+      "plan-blue-deep": {
+        "role": "primary",
+        "displayName": "Plan Blue Deep",
+        "canonical": "#28436f",
+        "oklch": "oklch(38.4% 0.082 260)",
+        "dark": "#c6d8f2",
+        "tonalRamp": [
+          "#00062b",
+          "#0a234c",
+          "#27416d",
+          "#456190",
+          "#6583b4",
+          "#87a6d9",
+          "#abcbfd",
+          "#e6effe"
+        ]
+      },
+      "plan-blue-wash": {
+        "role": "primary",
+        "displayName": "Plan Blue Wash",
+        "canonical": "#e2e9f0",
+        "oklch": "oklch(93.1% 0.012 248)",
+        "dark": "#263e58",
+        "tonalRamp": [
+          "#070c10",
+          "#21262b",
+          "#3d4348",
+          "#5c6268",
+          "#7d8389",
+          "#9fa6ac",
+          "#c3cad1",
+          "#e8eff6"
+        ]
+      },
+      "correction-red": {
+        "role": "secondary",
+        "displayName": "Correction Red",
+        "canonical": "#b3261e",
+        "oklch": "oklch(50.1% 0.178 29)",
+        "dark": "#ff9c91",
+        "tonalRamp": [
+          "#200000",
+          "#4d0101",
+          "#800304",
+          "#b0221b",
+          "#d84c3f",
+          "#fd7565",
+          "#fdb4a9",
+          "#fee9e5"
+        ]
+      },
+      "correction-wash": {
+        "role": "secondary",
+        "displayName": "Correction Wash",
+        "canonical": "#f8e8e5",
+        "oklch": "oklch(94.3% 0.018 30)",
+        "dark": "#492c30",
+        "tonalRamp": [
+          "#120807",
+          "#2d2220",
+          "#4b3f3c",
+          "#6b5e5b",
+          "#8d7f7c",
+          "#b0a19e",
+          "#d5c5c2",
+          "#faeae7"
+        ]
+      },
+      "stamp-brown": {
+        "role": "tertiary",
+        "displayName": "Stamp Brown",
+        "canonical": "#504c3f",
+        "oklch": "oklch(41.6% 0.021 93)",
+        "dark": "#d2c9b3",
+        "tonalRamp": [
+          "#0e0b03",
+          "#292519",
+          "#464235",
+          "#656154",
+          "#878274",
+          "#a9a596",
+          "#cec9ba",
+          "#f3eedf"
+        ]
+      },
+      "stamp-wash": {
+        "role": "tertiary",
+        "displayName": "Stamp Wash",
+        "canonical": "#efeee7",
+        "oklch": "oklch(94.8% 0.009 100)",
+        "dark": "#34372f",
+        "tonalRamp": [
+          "#0c0b07",
+          "#262520",
+          "#43423d",
+          "#62615b",
+          "#83827c",
+          "#a6a59f",
+          "#cac9c3",
+          "#f0efe8"
+        ]
+      },
+      "record-green": {
+        "role": "tertiary",
+        "displayName": "Record Green",
+        "canonical": "#304f49",
+        "oklch": "oklch(40.1% 0.038 181)",
+        "dark": "#b4d2c7",
+        "tonalRamp": [
+          "#000f0c",
+          "#0b2b26",
+          "#2a4943",
+          "#496962",
+          "#698a83",
+          "#8cada6",
+          "#afd2ca",
+          "#d4f7f0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "Workspace h1 only (600, 24px, 1.15)."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Section h2, opened by a 2px ink top rule (600, 17px)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Table text and workspace prose at 0.875rem; document base is 1rem."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase 11px column heads and status chips, 0.035em tracking."
+      },
+      "figures": {
+        "displayName": "Figures",
+        "purpose": "Station codes, identifiers, quantities and axis values in Cascadia Mono / Consolas with tabular numerals."
+      }
+    },
+    "shadows": [
+      {
+        "name": "none",
+        "value": "none",
+        "purpose": "--shadow-sm, --shadow, --shadow-md, --shadow-lg all resolve to none; compatibility tokens only. Depth is rules and tint."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "140ms ease",
+        "purpose": "Background, border-color and colour changes on controls and links."
+      },
+      {
+        "name": "popover-fade",
+        "value": "140ms ease-out (opacity 0 to 1, translateY -4px to 0)",
+        "purpose": "Shell popover entrance."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition and animation duration 0.01ms",
+        "purpose": "prefers-reduced-motion: reduce collapses all motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "36rem"
+      },
+      {
+        "name": "narrow",
+        "value": "52rem"
+      },
+      {
+        "name": "tablet",
+        "value": "58rem"
+      },
+      {
+        "name": "register-stack",
+        "value": "70rem"
+      },
+      {
+        "name": "wide",
+        "value": "80rem"
+      }
+    ],
+    "hatch": {
+      "definition": "Chips, cells and workspace bands: 8px SVG tile, path M-2 2L2-2 M0 8L8 0 M6 10L10 6, stroke #8fbfb0, stroke-opacity .35 to .45, 1px. Strip chart: 7px pattern rotated 45deg, 0.8 stroke in --border-strong.",
+      "reservedFor": [
+        "NO DATA",
+        "UNRELIABLE",
+        "FAULT",
+        "STALE",
+        "UNASSESSABLE"
+      ]
+    },
+    "focusRing": "2px solid var(--focus) (#3a5a8c light, #a5bfe7 dark), offset 2px",
+    "themes": {
+      "light": "paper",
+      "dark": "night chart (prefers-color-scheme: dark or data-theme=dark)"
+    },
+    "rules": {
+      "rulings": [
+        "3px double ink/strong border: sheet and column heads, stamps, popovers",
+        "2px ink: h2 top rule, focus on panes",
+        "1px rule/hairline: rows and dividers"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Ledger Table",
+      "kind": "custom",
+      "refersTo": "ledger-head",
+      "description": "Station register: double-ruled head, units in column heads, mono tabular figures, hatched NO DATA cell.",
+      "html": "<table class=\"ds-ledger\"><thead><tr><th>Station</th><th>Stage (m)</th><th>Discharge (m3/s)</th><th>Volume (m3)</th></tr></thead><tbody><tr><td class=\"ds-ledger__station\"><span class=\"ds-ledger__code\">SV-014</span><span class=\"ds-ledger__name\">Main canal head</span></td><td class=\"ds-ledger__fig\">2.41</td><td class=\"ds-ledger__fig\">18.60</td><td class=\"ds-ledger__fig\">1 604 120</td></tr><tr><td class=\"ds-ledger__station\"><span class=\"ds-ledger__code\">SV-027</span><span class=\"ds-ledger__name\">Distributary 3</span></td><td class=\"ds-ledger__fig ds-ledger__gap\" colspan=\"3\"><span class=\"ds-ledger__plate\">NO DATA</span></td></tr></tbody></table>",
+      "css": ".ds-ledger { border-collapse: collapse; width: 100%; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--text); background: var(--surface); }\n.ds-ledger th { background: var(--raised); color: var(--text); font-size: 11px; font-weight: 700; letter-spacing: 0.035em; line-height: 1.3; text-transform: uppercase; text-align: right; padding: 0.25rem 0.375rem; border-block: 3px double var(--border-strong); border-inline-end: 1px solid var(--border); }\n.ds-ledger th:first-child { text-align: left; }\n.ds-ledger td { padding: 0.25rem 0.375rem; border-bottom: 1px solid var(--border); border-inline-end: 1px solid var(--border); height: 2.5rem; }\n.ds-ledger__station { border-inline-end: 3px double var(--border-strong); min-width: 10rem; line-height: 1.15; }\n.ds-ledger__code { display: block; font-family: 'Cascadia Mono', Consolas, 'Liberation Mono', monospace; font-weight: 750; }\n.ds-ledger__name { display: block; font-size: 0.75rem; color: var(--muted); }\n.ds-ledger__fig { text-align: right; font-family: 'Cascadia Mono', Consolas, 'Liberation Mono', monospace; }\n.ds-ledger__gap { text-align: center; background-color: var(--surface); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.4' stroke-width='1'/%3E%3C/svg%3E\"); }\n.ds-ledger__plate { background: var(--surface); border: 1px solid var(--text); padding: 1px 6px; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.025em; }\n.ds-ledger tbody tr:hover { background: var(--raised); }"
+    },
+    {
+      "name": "Status Chip (normal)",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Text label plus 16px SVG icon; tone by border and wash, never colour alone. Plain (not hatched) for normal states.",
+      "html": "<span class=\"ds-chip ds-chip--positive\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M3 8l3 3 7-7\"/></svg><span>On plan</span></span> <span class=\"ds-chip ds-chip--neutral\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M2 2h12v12H2z M5 8h6\"/></svg><span>Not configured</span></span>",
+      "css": ".ds-icon { display: inline-block; flex: 0 0 16px; vertical-align: -3px; }\n.ds-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.65rem; border-radius: 0; font-size: 0.75rem; font-weight: 700; line-height: 1.2; letter-spacing: 0.025em; text-transform: uppercase; color: var(--text); }\n.ds-chip--positive { background: var(--success-soft); border: 1px solid var(--success); }\n.ds-chip--neutral { background: var(--raised); border: 1px solid var(--border); color: var(--text-secondary); }"
+    },
+    {
+      "name": "Status Chip (abnormal, hatched)",
+      "kind": "chip",
+      "refersTo": "status-chip-critical",
+      "description": "Hatch is reserved for NO DATA, UNRELIABLE, FAULT, STALE, UNASSESSABLE; always paired with text and icon.",
+      "html": "<span class=\"ds-chip-abn\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M2 2h12v12H2z M5 8h6\"/></svg><span>No data</span></span> <span class=\"ds-chip-abn ds-chip-abn--fault\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M8 2l6 6-6 6-6-6z M8 5v4 M8 11v.1\"/></svg><span>Device fault</span></span>",
+      "css": ".ds-icon { display: inline-block; flex: 0 0 16px; vertical-align: -3px; }\n.ds-chip-abn { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.65rem; border-radius: 0; font-size: 0.75rem; font-weight: 700; line-height: 1.2; letter-spacing: 0.025em; text-transform: uppercase; color: var(--text); background-color: var(--surface); border: 1px solid var(--border-strong); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.4' stroke-width='1'/%3E%3C/svg%3E\"); }\n.ds-chip-abn--fault { background-color: var(--danger-soft); border-color: var(--danger); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-filled, square, for the one main action in a sheet.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Generate report</button>",
+      "css": ".ds-btn-primary { background: var(--text); color: var(--surface); border: 1px solid var(--text); border-radius: 0; min-height: 2.25rem; padding: 0.45rem 0.85rem; font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 140ms ease; }\n.ds-btn-primary:hover { background: var(--text-secondary); }\n.ds-btn-primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }\n.ds-btn-primary:active { background: var(--text); }\n.ds-btn-primary:disabled { background: var(--raised); color: var(--muted); cursor: default; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Outlined on Sheet; secondary actions. Disabled uses a dashed border.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Clear filters</button>",
+      "css": ".ds-btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: 0; min-height: 2.25rem; padding: 0.45rem 0.85rem; font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 140ms ease, border-color 140ms ease; }\n.ds-btn-ghost:hover { background: var(--raised); border-color: var(--text); }\n.ds-btn-ghost:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }\n.ds-btn-ghost:disabled { color: var(--muted); border-style: dashed; cursor: default; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Ledger Tint field with a 1px rule; focus lifts to Sheet with a Plan Blue edge.",
+      "html": "<label class=\"ds-search\"><span class=\"ds-search__label\">Search stations</span><input class=\"ds-search__input\" type=\"search\" placeholder=\"Code or name\" /></label>",
+      "css": ".ds-search { display: grid; gap: 0.25rem; font-size: 0.875rem; color: var(--text); }\n.ds-search__label { font-size: 11px; font-weight: 700; letter-spacing: 0.035em; text-transform: uppercase; color: var(--muted); }\n.ds-search__input { width: 100%; background: var(--raised); color: var(--text); border: 1px solid var(--border-strong); border-radius: 2px; padding: 0.5rem 0.75rem; font: inherit; font-size: 0.875rem; transition: background 140ms ease, border-color 140ms ease; }\n.ds-search__input::placeholder { color: var(--muted); }\n.ds-search__input:focus { background: var(--surface); border-color: var(--accent); }\n.ds-search__input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Navigation Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Sidebar rail row with hairline bottom rule; active item is filled Survey Ink with an underlined label.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspaces\"><a class=\"ds-nav__item\" href=\"#dashboard\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M1 8h3l2-5 3 10 2-5h4\"/></svg><span>Dashboard</span></a><a class=\"ds-nav__item ds-nav__item--active\" href=\"#live\" aria-current=\"page\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M1 8h3l2-5 3 10 2-5h4\"/></svg><span>Live Operations</span></a><a class=\"ds-nav__item\" href=\"#map\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M2 3l4-1 4 2 4-1v10l-4 1-4-2-4 1z M6 2v10 M10 4v10\"/></svg><span>Map &amp; Network</span></a></nav>",
+      "css": ".ds-icon { display: inline-block; flex: 0 0 16px; vertical-align: -3px; }\n.ds-nav { display: grid; background: var(--sidebar); border-right: 1px solid var(--sidebar-border); width: 15rem; }\n.ds-nav__item { display: flex; align-items: center; gap: 0.75rem; min-height: 2.75rem; padding: 0.65rem 0.85rem; color: var(--sidebar-text); font-size: 0.875rem; font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--sidebar-border); border-radius: 0; }\n.ds-nav__item:hover { background: var(--surface); color: var(--text); }\n.ds-nav__item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }\n.ds-nav__item--active, .ds-nav__item--active:hover { background: var(--sidebar-active); color: var(--surface); text-decoration: underline; text-underline-offset: 4px; }"
+    },
+    {
+      "name": "Synthetic Stamp",
+      "kind": "custom",
+      "refersTo": "stamp-synthetic",
+      "description": "Rubber-stamp box: 3px double red rule, uppercase text, diamond icon. Marks synthetic data and provenance.",
+      "html": "<span class=\"ds-stamp\" role=\"note\"><svg class=\"ds-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M8 2l6 6-6 6-6-6z M8 5v4 M8 11v.1\"/></svg><span>Synthetic demo data</span></span>",
+      "css": ".ds-icon { display: inline-block; flex: 0 0 16px; vertical-align: -3px; }\n.ds-stamp { display: inline-flex; align-items: center; gap: 0.25rem; background: var(--surface); color: var(--text); border: 3px double var(--danger); border-radius: 0; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }\n.ds-stamp .ds-icon { color: var(--danger); }"
+    },
+    {
+      "name": "Strip Chart",
+      "kind": "custom",
+      "refersTo": "ledger-head",
+      "description": "Recorder strip on millimetre paper: minor/major grid, ink trace, 2px now pen line, hatched true gap with NO DATA plate.",
+      "html": "<div class=\"ds-strip\" role=\"img\" aria-label=\"Stage (m), 24 hours to now, with a gap between 12:00 and 15:00\"><svg viewBox=\"0 0 320 120\" width=\"320\" height=\"120\" aria-hidden=\"true\"><defs><pattern id=\"ds-strip-hatch\" width=\"7\" height=\"7\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"7\" stroke=\"var(--border-strong)\" stroke-width=\"0.8\"/></pattern></defs><rect x=\"28\" y=\"8\" width=\"280\" height=\"88\" fill=\"var(--surface)\"/><g stroke=\"var(--grid)\" stroke-width=\"0.4\" opacity=\"0.5\"><path d=\"M38 8V96 M48 8V96 M58 8V96 M78 8V96 M88 8V96 M98 8V96 M118 8V96 M128 8V96 M138 8V96 M158 8V96 M168 8V96 M178 8V96 M198 8V96 M208 8V96 M218 8V96 M238 8V96 M248 8V96 M258 8V96 M278 8V96 M288 8V96 M298 8V96 M28 30H308 M28 52H308 M28 74H308\"/></g><g stroke=\"var(--grid)\" stroke-width=\"0.8\"><path d=\"M68 8V96 M108 8V96 M148 8V96 M188 8V96 M228 8V96 M268 8V96\"/></g><rect x=\"138\" y=\"8\" width=\"60\" height=\"88\" fill=\"url(#ds-strip-hatch)\"/><path d=\"M138 8V96 M198 8V96 M138 14H198\" fill=\"none\" stroke=\"var(--text)\" stroke-width=\"1\" vector-effect=\"non-scaling-stroke\"/><rect x=\"146\" y=\"74\" width=\"44\" height=\"16\" fill=\"var(--surface)\" stroke=\"var(--text)\"/><text x=\"168\" y=\"86\" text-anchor=\"middle\" class=\"ds-strip__tag\">NO DATA</text><path d=\"M28 60 L48 56 L68 58 L88 50 L108 46 L128 48 L138 47\" fill=\"none\" stroke=\"var(--text)\" stroke-width=\"1.5\"/><path d=\"M198 40 L218 36 L238 38 L258 34 L280 32 L308 30\" fill=\"none\" stroke=\"var(--text)\" stroke-width=\"1.5\"/><path d=\"M308 8V96\" stroke=\"var(--text)\" stroke-width=\"2\"/><g class=\"ds-strip__tick\" text-anchor=\"middle\"><text x=\"28\" y=\"112\">00:00</text><text x=\"108\" y=\"112\">08:00</text><text x=\"188\" y=\"112\">16:00</text><text x=\"268\" y=\"112\">00:00</text></g><text x=\"306\" y=\"20\" text-anchor=\"end\" class=\"ds-strip__tag\">NOW</text><text x=\"2\" y=\"18\" class=\"ds-strip__tick\">m</text></svg></div>",
+      "css": ".ds-strip { border: 1px solid var(--border-strong); background: var(--surface); max-width: 100%; overflow-x: auto; }\n.ds-strip svg { display: block; }\n.ds-strip__tag { fill: var(--text); font-size: 10px; font-weight: 700; font-family: inherit; letter-spacing: 0.04em; }\n.ds-strip__tick { fill: var(--muted); font-size: 10px; font-family: 'Cascadia Mono', Consolas, 'Liberation Mono', monospace; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Limnigraph Register",
+    "overview": "The console is a hydrological yearbook crossed with a strip-chart recorder. The record itself is the interface: each station is a ruled ledger row, each reading a figure in a column whose head names its unit, and the time axis is a real millimetre grid on paper that runs to a pen-edge \"now\" line. There are no cards, no KPI tiles, no rounded panels. Sections are separated by rules, and the trust state of every reading is printed on it: a stamp box for synthetic or provenance text, a hatched band for paper where the pen recorded nothing.\n\nThe mood is calm, exact and unhurried, a survey office rather than a product demo. Density is ledger-tight. Ink is a deep blue-black on cool chart-paper white; a second blue marks reference values; a single correction red appears only for struck originals, over or alarm conditions and stamps. No-data and unreliable evidence must never resemble a normal reading, so hatch is reserved for exactly those states.\n\nThe dark theme is the same instrument at night: a \"night chart\" of deep blue-black paper with the same pale teal millimetre grid. Status never relies on colour alone; every state carries text, an SVG icon and (when abnormal evidence) a pattern.",
+    "keyCharacteristics": [
+      "Ledger, not dashboard: double-ruled column heads, hairline row rules, figures in tabular monospace.",
+      "Millimetre grid (#8fbfb0) belongs only to chart axes; it is never wallpaper.",
+      "Hatch (45-degree diagonal line pattern) means NO DATA, UNRELIABLE, FAULT, STALE or UNASSESSABLE, and nothing else.",
+      "Square corners (radius 0, at most 2px on text inputs), no shadows, no gradients in the chrome.",
+      "Status = text label + 16px square-cap SVG icon + pattern where abnormal; never colour alone.",
+      "Stamp boxes (3px double red rule) carry synthetic-data and provenance declarations.",
+      "Units live in column heads and beside figures: stage (m), discharge (m3/s), volume (m3)."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Rule",
+        "body": "Survey Ink carries traces, figures, the active state and every heavy rule. A new accent is a new pen colour; do not add one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Correction-Only Red Rule",
+        "body": "Correction Red is for struck originals, over/alarm conditions and stamps. It is never a decorative accent and never a generic \"error\" wash across a surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Grid-Is-an-Axis Rule",
+        "body": "The teal millimetre grid appears only as a chart time axis (and as hatch strokes). It must never be used as background texture on a page, card or hero.",
+        "section": "colors"
+      },
+      {
+        "name": "The Unit-In-The-Head Rule",
+        "body": "A column or axis names its unit (m, m3/s, m3) in its head or label; a figure is never shown without its unit context. Stage, discharge and volume are never merged into one column or label.",
+        "section": "typography"
+      },
+      {
+        "name": "The Typewriter Figures Rule",
+        "body": "Every measured number, code and identifier is set in the figures face with tabular numerals.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ruled-Not-Raised Rule",
+        "body": "Hierarchy is built with rules (double for a sheet or head, hairline for a row) and tonal tint, never with shadows, blur or gradients.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hatch-Means-Abnormal-Evidence Rule",
+        "body": "Hatch is reserved for NO DATA, UNRELIABLE, FAULT, STALE and UNASSESSABLE. A chip is hatched only through an explicit data-hatched evidence flag; tone (attention or critical) alone never adds hatch. Normal or merely \"not configured\" states stay plain.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Stamp Rule",
+        "body": "Synthetic-data and provenance declarations are stamp boxes: 3px double Correction Red rule, Sheet fill, uppercase text, plus an SVG diamond icon.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do build hierarchy with rules: a 3px double ink rule for a sheet or column head, a 1px Rule for a row, a 2px ink rule to open an h2.",
+      "Do set every measured figure, station code and identifier in Cascadia Mono / Consolas with tabular numerals, right-aligned in its column.",
+      "Do show status as text + 16px SVG icon (+ hatch for abnormal evidence); give every state a readable label.",
+      "Do label synthetic or provenance information with a stamp box and keep the data cutoff in the running header.",
+      "Do keep stage (m), discharge (m3/s) and volume (m3) in separate columns or tracks, each with its unit in the head.",
+      "Do keep targets at least 24px on desktop and 44px at 36rem and below, with the 2px Plan Blue focus ring at 2px offset.",
+      "Do distinguish plain paper (\"No 24-hour history supplied\") from hatched true gaps."
+    ],
+    "donts": [
+      "Don't use shadows, gradients, glass or rounded panels in the chrome; radius stays 0 (2px only for text inputs). The source-map artwork in the Map workspace keeps its own lake gradient and is not part of this system.",
+      "Don't use the blue-accent KPI-card dashboard template: no stat tiles, cards-in-cards, or side-stripe accents.",
+      "Don't apply hatch to normal, positive, over, under or merely unconfigured states.",
+      "Don't rely on colour alone to show a state, and never render a no-data or unreliable reading in normal ink weight.",
+      "Don't use the teal grid as a page background or decoration.",
+      "Don't introduce a new accent colour or a second display typeface; there is one ink, one reference blue and one correction red.",
+      "Don't describe or present synthetic data as real government telemetry."
+    ]
+  }
+}

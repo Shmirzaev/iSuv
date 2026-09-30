@@ -1,10 +1,10 @@
 .andijan-source-map {
   margin-top: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--surface);
-  box-shadow: 0 8px 32px #132f4710;
+  box-shadow: none;
 }
 .source-map-toolbar {
   display: flex;
@@ -77,10 +77,10 @@
   top: 1rem;
   display: grid;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   background: var(--surface);
   overflow: hidden;
-  box-shadow: 0 3px 12px #10283b26;
+  box-shadow: none;
 }
 .source-map-zoom button {
   border: 0;
@@ -114,8 +114,8 @@
   padding: 0.6rem 0.9rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 4px 20px #122b4024;
+  border-radius: 0;
+  box-shadow: none;
 }
 .source-map-selection > div {
   display: flex;
@@ -238,5 +238,144 @@
   }
   .source-map-footer details {
     margin-left: 0;
+  }
+}
+
+/* Limnigraph Register chrome. Do not apply these rules to the embedded source artwork or hit targets. */
+.andijan-source-map {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.source-map-toolbar {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 3px double var(--border);
+}
+.source-map-toolbar label {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.source-map-toolbar select,
+.source-map-toolbar button {
+  min-height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.source-map-toolbar button {
+  padding: 0.45rem 0.6rem;
+}
+.source-map-toolbar button:hover {
+  background: var(--accent-soft);
+}
+.source-map-toolbar select:focus-visible,
+.source-map-toolbar button:focus-visible,
+.source-map-zoom button:focus-visible,
+.source-map-selection button:focus-visible,
+.source-map-footer a:focus-visible,
+.source-map-footer summary:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.source-map-zoom {
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.source-map-zoom button {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.source-map-zoom output {
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+}
+.source-map-loading {
+  border: 3px double var(--border);
+  background: var(--surface);
+}
+.source-map-loading button {
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--ink, var(--text));
+  color: var(--surface);
+}
+.source-map-selection {
+  padding: 0.65rem 0.75rem;
+  border: 3px double var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.source-map-selection > div {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.source-map-selection p {
+  color: var(--text-secondary);
+}
+.source-map-selection button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.source-map-selection button:not([aria-label]) {
+  background: var(--ink, var(--text));
+  color: var(--surface);
+}
+.source-map-footer {
+  padding: 0.55rem 0.75rem;
+  border-top: 3px double var(--border);
+  color: var(--text-secondary);
+}
+.source-map-footer > p {
+  color: var(--text);
+}
+.source-map-footer details {
+  padding: 0.35rem 0.5rem;
+  border: 3px double var(--border);
+}
+.source-map-footer summary {
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.source-map-record-links button {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.andijan-source-map:fullscreen {
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 640px) {
+  .source-map-toolbar {
+    padding: 0.55rem;
+  }
+  .source-map-selection {
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    box-shadow: none;
+  }
+  .source-map-footer {
+    padding: 0.55rem;
   }
 }

@@ -15,7 +15,7 @@ test('workspace header keeps provenance available in a closed native disclosure'
     />,
   );
   assert.match(markup, /<header class="workspace-header">/);
-  assert.match(markup, /<h2 id="operations-heading">Operations<\/h2>/);
+  assert.match(markup, /<h1 id="operations-heading">Operations<\/h1>/);
   assert.match(markup, /<details class="workspace-header__provenance">/);
   assert.doesNotMatch(markup, /<details[^>]+open/);
 });

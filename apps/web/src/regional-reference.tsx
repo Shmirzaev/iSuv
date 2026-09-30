@@ -299,8 +299,8 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
     <section className="regional-workspace" aria-labelledby="regional-heading">
       <div className="regional-heading">
         <div>
-          <span className="regional-source-label">{w.supplied}</span>
           <h2 id="regional-heading">{atlasWords[locale].title}</h2>
+          <span className="regional-source-label">{w.supplied}</span>
         </div>
         <button
           type="button"

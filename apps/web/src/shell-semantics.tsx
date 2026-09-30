@@ -1,6 +1,15 @@
-import { useEffect, useId, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+  type ReactNode,
+} from 'react';
 
 import type { Session } from '@isuv/contracts';
+import { Icon, GlyphIcon } from './icons.js';
 import { locales, translate, type Locale, type TranslationKey } from '@isuv/i18n';
 
 import {
@@ -24,17 +33,8 @@ interface ShellChromeProps {
   onThemeChange: Dispatch<SetStateAction<Theme>>;
   session: Session | null;
   theme: Theme;
+  syntheticDisclosure?: ReactNode;
 }
-
-const navIcons: Record<ApplicationArea, string> = {
-  dashboard: '▦',
-  operations: '◉',
-  map: '⌁',
-  alarms: '!',
-  analytics: '▥',
-  reports: '▤',
-  audit: '◌',
-};
 
 function CloseOnEscape({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -87,7 +87,7 @@ function UserMenu({ locale, session }: { locale: Locale; session: Session | null
         title={t('identity')}
         type="button"
       >
-        <span aria-hidden="true">◉</span>
+        <Icon name="identity" />
         <span className="visually-hidden">{t('identity')}</span>
       </button>
       {open ? <CloseOnEscape onClose={() => setOpen(false)} /> : null}
@@ -211,6 +211,7 @@ export function ShellChrome({
   onThemeChange,
   session,
   theme,
+  syntheticDisclosure,
 }: ShellChromeProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const t = (key: TranslationKey) => translate(locale, key);
@@ -225,7 +226,7 @@ export function ShellChrome({
       >
         <a className="product-mark" href="#dashboard" onClick={() => onAreaChange('dashboard')}>
           <span aria-hidden="true" className="product-mark__icon">
-            ≈
+            <Icon name="operations" />
           </span>
           <span className="product-mark__wordmark">{t('applicationShortName')}</span>
         </a>
@@ -243,7 +244,7 @@ export function ShellChrome({
                   title={t(item.label)}
                 >
                   <span aria-hidden="true" className="primary-navigation__icon">
-                    {navIcons[item.area]}
+                    <Icon name={item.area} />
                   </span>
                   <span>{t(item.label)}</span>
                 </a>
@@ -269,17 +270,17 @@ export function ShellChrome({
           title={drawerOpen ? t('menuClose') : t('navigationToggle')}
           type="button"
         >
-          <span aria-hidden="true">☰</span>
+          <Icon name="menu" />
           <span className="visually-hidden">
             {drawerOpen ? t('menuClose') : t('navigationToggle')}
           </span>
         </button>
-        <div className="topbar__area">
-          <span className="eyebrow topbar__area-label">{t('currentArea')}</span>
+        <div className="topbar__area visually-hidden">
+          <span className="visually-hidden topbar__area-label">{t('currentArea')}</span>
           <strong className="topbar__area-name">{t(areaLabel(area))}</strong>
         </div>
         <span aria-describedby="synthetic-badge-description" className="synthetic-badge">
-          <span aria-hidden="true">◆</span>
+          <Icon name="synthetic" />
           {t('syntheticBadge')}
         </span>
         <span className="visually-hidden" id="synthetic-badge-description">
@@ -307,11 +308,12 @@ export function ShellChrome({
             title={t('themeToggle')}
             type="button"
           >
-            <span aria-hidden="true">{theme === 'light' ? '◐' : '☼'}</span>
+            <Icon name="theme" />
           </button>
           <ReferenceMenu locale={locale} />
           <UserMenu locale={locale} session={session} />
         </div>
+        {syntheticDisclosure}
       </header>
     </>
   );
@@ -327,16 +329,24 @@ export function SyntheticDisclosure({
   onDismiss: () => void;
 }) {
   const t = (key: TranslationKey) => translate(locale, key);
-  if (dismissed) return null;
+  if (dismissed)
+    return (
+      <details className="synthetic-notice synthetic-notice--collapsed">
+        <summary>
+          <Icon name="synthetic" /> {t('syntheticData')}
+        </summary>
+        <p>{t('syntheticDetail')}</p>
+      </details>
+    );
   return (
     <section className="synthetic-notice" role="status">
-      <span aria-hidden="true">◆</span>
+      <Icon name="synthetic" />
       <div>
         <strong>{t('syntheticData')}</strong>
         <p>{t('syntheticDetail')}</p>
       </div>
       <button aria-label={t('dismissSyntheticNotice')} onClick={onDismiss} type="button">
-        ×
+        <Icon name="close" />
       </button>
     </section>
   );
@@ -359,7 +369,7 @@ export function StatusVocabulary({ locale }: { locale: Locale }) {
         {statuses.map((status) => (
           <li data-status={status.key} key={status.key}>
             <span aria-hidden="true" className="status-vocabulary__icon">
-              {status.icon}
+              <GlyphIcon glyph={status.icon} />
             </span>
             <strong>{t(status.key)}</strong>
             <span>{t(status.value)}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  liveOperationsResponseSchema,
   mapNetworkResponseSchema,
   playbackResponseSchema,
   traceResponseSchema,
@@ -8,8 +9,16 @@ import {
   type TraceResponse,
 } from '@isuv/contracts';
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
-import { formatDecimal, presentationTimestamp } from './format.js';
+import {
+  formatDecimal,
+  formatMeasurementValue,
+  measurementUnitLabel,
+  presentationTimestamp,
+  type MeasurementUnit,
+} from './format.js';
 import { WorkspaceHeader } from './workspace-header.js';
+import { Icon, GlyphIcon } from './icons.js';
+import { joinProvenance } from './provenance-text.js';
 import {
   initialMapDetail,
   mapNetworkPath,
@@ -26,7 +35,12 @@ const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
 type State = 'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable';
 
 function MapTime({ locale, value }: { locale: Locale; value: string | null }) {
-  if (!value) return <>—</>;
+  if (!value)
+    return (
+      <span aria-label={t(locale, 'notAvailable')}>
+        <GlyphIcon glyph="-" />
+      </span>
+    );
   const timestamp = presentationTimestamp(locale, value);
   return (
     <time dateTime={timestamp.dateTime} title={timestamp.title}>
@@ -39,6 +53,19 @@ function formatQuantityValue(locale: Locale, value: string | number | null): str
   return value === null ? '—' : formatDecimal(locale, value);
 }
 
+function stripTerminalPunctuation(value: string): string {
+  return value.trim().replace(/[\s;.,:]+$/u, '');
+}
+
+type PanelQuantity =
+  | NonNullable<MapNetworkResponse['panel']>['stage']
+  | NonNullable<MapNetworkResponse['panel']>['discharge']
+  | NonNullable<MapNetworkResponse['panel']>['counter'];
+
+function mapUnit(unit: MeasurementUnit): string {
+  return measurementUnitLabel(unit);
+}
+
 function Quantity({
   locale,
   label,
@@ -46,20 +73,31 @@ function Quantity({
 }: {
   locale: Locale;
   label: TranslationKey;
-  value: NonNullable<MapNetworkResponse['panel']>['stage'];
+  value: PanelQuantity;
 }) {
   const p = mapStatePresentation(value.state);
+  const unit = mapUnit(value.unit);
+  const reading = value.value;
   return (
-    <div className={`map-quantity map-quantity--${value.state}`}>
-      <dt>{t(locale, label)}</dt>
+    <div className={`map-quantity map-quantity--${value.state}`} data-state={value.state}>
+      <dt>
+        {t(locale, label)} <span className="map-quantity__unit">({unit})</span>
+      </dt>
       <dd>
-        <span aria-hidden="true">{p.icon}</span>{' '}
-        <strong>
-          {`${formatQuantityValue(locale, value.value)} ${
-            value.unit === 'm3/s' ? 'm³/s' : value.unit === 'm3' ? 'm³' : 'm'
-          }`}
-        </strong>
-        <small>
+        <GlyphIcon glyph={p.icon} />{' '}
+        {reading === null ? (
+          <strong className="map-quantity__unavailable">{t(locale, 'notAvailable')}</strong>
+        ) : (
+          <data
+            className="map-quantity__reading"
+            value={reading}
+            title={reading}
+            aria-label={`${t(locale, label)}: ${reading} ${unit}`}
+          >
+            {formatMeasurementValue(locale, reading, value.unit)} {unit}
+          </data>
+        )}
+        <small className="map-quantity__status">
           {t(locale, p.label)}: {t(locale, p.value)}
         </small>
         <small>
@@ -69,13 +107,21 @@ function Quantity({
           {t(locale, 'mapIngestedAt')}: <MapTime locale={locale} value={value.ingestedAt} />
         </small>
         <small>
-          {t(locale, 'source')}: {value.source.label}; {value.source.provenance}
+          {t(locale, 'source')}: {joinProvenance([value.source.label, value.source.provenance])}
         </small>
       </dd>
     </div>
   );
 }
 type UnconfiguredValue = NonNullable<MapNetworkResponse['panel']>['targetDischarge'];
+
+function unconfiguredUnit(label: TranslationKey): MeasurementUnit | null {
+  if (label === 'mapTargetDischarge') return 'm3/s';
+  if (label === 'deliveredVolume' || label === 'plannedVolume' || label === 'unexplainedBalance')
+    return 'm3';
+  return null;
+}
+
 function Unconfigured({
   locale,
   label,
@@ -85,11 +131,18 @@ function Unconfigured({
   label: TranslationKey;
   value: UnconfiguredValue;
 }) {
+  const unit = unconfiguredUnit(label);
   return (
     <div className="map-unconfigured">
-      <dt>{t(locale, label)}</dt>
+      <dt>
+        {t(locale, label)}{' '}
+        {unit ? <span className="map-quantity__unit">({mapUnit(unit)})</span> : null}
+      </dt>
       <dd>
-        <span aria-hidden="true">⚙</span> <strong>{t(locale, 'mapUnconfigured')}</strong>
+        <span className="map-quantity__glyph" aria-hidden="true">
+          <Icon name="not_configured" />
+        </span>{' '}
+        <strong>{t(locale, 'mapUnconfigured')}</strong>
         <small>{value.reason}</small>
         <small>
           {t(locale, 'source')}: {t(locale, 'mapUnconfigured')}
@@ -104,40 +157,51 @@ function HealthStatus({
   icon,
   stateLabel,
   detail,
+  attention = false,
 }: {
   locale: Locale;
   label: TranslationKey;
   icon: string;
   stateLabel: TranslationKey;
   detail: TranslationKey;
+  attention?: boolean;
 }) {
   return (
-    <div>
+    <div className={`map-health__status${attention ? ' map-health--abnormal' : ''}`}>
       <dt>{t(locale, label)}</dt>
       <dd>
-        <span aria-hidden="true">{icon}</span> <strong>{t(locale, stateLabel)}</strong>
+        <span className="map-health__glyph" aria-hidden="true">
+          <GlyphIcon glyph={icon} />
+        </span>{' '}
+        <strong>{t(locale, stateLabel)}</strong>
         <small>{t(locale, detail)}</small>
       </dd>
     </div>
   );
 }
-export function StatusLegend({ locale }: { locale: Locale }) {
+export function StatusLegend({ locale, heading = true }: { locale: Locale; heading?: boolean }) {
   return (
     <section className="map-legend" aria-labelledby="map-legend-heading">
-      <h3 id="map-legend-heading">{t(locale, 'mapLegend')}</h3>
+      <h3 id="map-legend-heading" className={heading ? undefined : 'visually-hidden'}>
+        {t(locale, 'mapLegend')}
+      </h3>
       <ul>
         {(['over', 'on_plan', 'under', 'no_data', 'unreliable'] as const).map((state) => {
           const p = mapStatePresentation(state);
           return (
-            <li key={state}>
-              <span aria-hidden="true">{p.icon}</span>
+            <li key={state} className={`map-legend__state map-status--${state}`}>
+              <span className="map-legend__glyph" aria-hidden="true">
+                <GlyphIcon glyph={p.icon} />
+              </span>
               <strong>{t(locale, p.label)}</strong>
               <small>{t(locale, p.value)}</small>
             </li>
           );
         })}
-        <li>
-          <span aria-hidden="true">!</span>
+        <li className="map-legend__state map-status--device_fault">
+          <span className="map-legend__glyph" aria-hidden="true">
+            <Icon name="fault" />
+          </span>
           <strong>{t(locale, 'mapDeviceFault')}</strong>
           <small>{t(locale, 'statusUnreliableValue')}</small>
         </li>
@@ -145,13 +209,14 @@ export function StatusLegend({ locale }: { locale: Locale }) {
     </section>
   );
 }
-function Geometry({
+export function Geometry({
   locale,
   response,
   selection,
   trace,
   layers,
   onSelect,
+  stationCodes = {},
 }: {
   locale: Locale;
   response: MapNetworkResponse;
@@ -159,7 +224,21 @@ function Geometry({
   trace: TraceResponse | null;
   layers: Record<string, boolean>;
   onSelect: (stationId: string, deviceId: string) => void;
+  stationCodes?: Readonly<Record<string, string>>;
 }) {
+  const svg = useRef<SVGSVGElement>(null);
+  const [viewport, setViewport] = useState({ width: 600, height: 300 });
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
+  useEffect(() => {
+    if (!svg.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry && entry.contentRect.width > 0 && entry.contentRect.height > 0)
+        setViewport({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    observer.observe(svg.current);
+    return () => observer.disconnect();
+  }, []);
   const visibleSections = response.layers.sections.filter(
     (section) => layers.sections || trace?.edges.some((edge) => edge.sectionId === section.id),
   );
@@ -182,16 +261,65 @@ function Geometry({
     maxX = xs.length > 0 ? Math.max(...xs) : 1,
     minY = ys.length > 0 ? Math.min(...ys) : 0,
     maxY = ys.length > 0 ? Math.max(...ys) : 1;
-  const point = ([x, y]: [number, number]) =>
-    `${20 + ((x - minX) / (maxX - minX || 1)) * 560},${280 - ((y - minY) / (maxY - minY || 1)) * 240}`;
+  const projectedPoint = ([x, y]: [number, number]): readonly [number, number] => [
+    20 + ((x - minX) / (maxX - minX || 1)) * 560,
+    280 - ((y - minY) / (maxY - minY || 1)) * 240,
+  ];
+  // Fit the existing projection to the viewport, without moving any feature relative
+  // to another. Screen-space symbols and labels keep their size and circular shape.
+  const point = (coordinates: [number, number]): readonly [number, number] => {
+    const [x, y] = projectedPoint(coordinates);
+    return [(x * viewport.width) / 600, (y * viewport.height) / 300];
+  };
+  const points = (coordinates: readonly [number, number][]) =>
+    coordinates
+      .map(point)
+      .map(([x, y]) => `${x},${y}`)
+      .join(' ');
+  // These ranges describe supplied coordinates, not inferred basin identities.
+  const longitudeStarts = [...xs]
+    .sort((a, b) => a - b)
+    .filter((value, index, values) => index === 0 || value - values[index - 1]! > 0.5);
+  const coordinateRanges = longitudeStarts.map((start, index) => {
+    const next = longitudeStarts[index + 1] ?? Infinity;
+    const end = Math.max(...xs.filter((value) => value >= start && value < next));
+    return { start, end, center: point([(start + end) / 2, maxY])[0] };
+  });
   return (
     <svg
+      ref={svg}
       className="map-svg"
-      viewBox="0 0 600 300"
+      viewBox={`0 0 ${viewport.width} ${viewport.height}`}
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={t(locale, 'mapGeographicAria')}
     >
       <title>{t(locale, 'mapGeographicAria')}</title>
+      <defs>
+        <pattern
+          id="map-station-hatch"
+          width="6"
+          height="6"
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <line x1="0" y1="0" x2="0" y2="6" />
+        </pattern>
+      </defs>
+      {coordinateRanges.map((range) => (
+        <text
+          key={range.start}
+          className="map-coordinate-group"
+          x={range.center}
+          y="14"
+          textAnchor="middle"
+        >
+          <tspan x={range.center}>{t(locale, 'mapCoordinateGroup')}</tspan>
+          <tspan x={range.center} dy="13">
+            {range.start.toFixed(1)}–{range.end.toFixed(1)}°
+          </tspan>
+        </text>
+      ))}
       {layers.waterways
         ? response.layers.waterways.flatMap((x) =>
             (x.geometry.type === 'LineString'
@@ -201,7 +329,7 @@ function Geometry({
               <polyline
                 key={`${x.id}-${component}`}
                 className="map-waterway"
-                points={coordinates.map(point).join(' ')}
+                points={points(coordinates)}
               />
             )),
           )
@@ -214,18 +342,24 @@ function Geometry({
               ? 'map-section map-section--trace'
               : 'map-section'
           }
-          points={x.geometry.coordinates.map(point).join(' ')}
+          points={points(x.geometry.coordinates)}
         />
       ))}
       {layers.junctions
         ? response.layers.junctions.map((x) => {
             const [cx, cy] = point(x.geometry.coordinates);
-            return <circle key={x.id} className="map-junction" cx={cx} cy={cy} r="3" />;
+            return <circle key={x.id} className="map-junction" cx={cx} cy={cy} r="1.5" />;
           })
         : null}
       {visibleStations.map((x) => {
         const [cx, cy] = point(x.geometry.coordinates);
         const selected = selection.stationId === x.id;
+        const state =
+          selected && response.panel?.stationId === x.id
+            ? response.panel.health.fault === 'reported'
+              ? 'device_fault'
+              : markerState(response.panel)
+            : null;
         const selectable = x.deviceId !== null;
         const selectStation = () => {
           if (x.deviceId) onSelect(x.id, x.deviceId);
@@ -239,6 +373,10 @@ function Geometry({
             aria-label={selectable ? `${t(locale, 'mapSelect')} ${x.id}` : undefined}
             aria-pressed={selectable ? selected : undefined}
             onClick={selectable ? selectStation : undefined}
+            onMouseEnter={() => setHovered(x.id)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setFocused(x.id)}
+            onBlur={() => setFocused(null)}
             onKeyDown={
               selectable
                 ? (event) => {
@@ -250,21 +388,87 @@ function Geometry({
                 : undefined
             }
           >
-            <title>{x.id}</title>
+            <title>
+              {state
+                ? `${x.id}: ${t(locale, state === 'device_fault' ? 'mapDeviceFault' : mapStatePresentation(state).label)}`
+                : `${x.id}: ${t(locale, 'notAvailable')}`}
+            </title>
             <circle
-              className={selected ? 'map-station map-station--selected' : 'map-station'}
+              className={`map-station${state ? ` map-status--${state}` : ''}${selected ? ' map-station--selected' : ''}`}
               cx={cx}
               cy={cy}
-              r="7"
+              r={selected ? 5 : 3}
+              style={
+                state && state !== 'reported' ? { fill: 'url(#map-station-hatch)' } : undefined
+              }
             />
-            {selected ? (
-              <text x={cx} y={Number(cy) + 14}>
-                {x.id}
-              </text>
-            ) : null}
           </g>
         );
       })}
+      {/* Draw labels last so other stations and waterways cannot cover them. */}
+      {visibleStations
+        .filter((x) => [selection.stationId, hovered, focused].includes(x.id))
+        .map((x) => {
+          const [cx, cy] = point(x.geometry.coordinates);
+          const selected = selection.stationId === x.id;
+          const state =
+            selected && response.panel?.stationId === x.id
+              ? response.panel.health.fault === 'reported'
+                ? 'device_fault'
+                : markerState(response.panel)
+              : null;
+          const status = state
+            ? t(
+                locale,
+                state === 'device_fault' ? 'mapDeviceFault' : mapStatePresentation(state).label,
+              )
+            : t(locale, 'notAvailable');
+          const code = stationCodes[x.id] ?? x.id;
+          const labelWidth = Math.min(
+            viewport.width - 16,
+            Math.max(code.length * 7.25, selected ? status.length * 7.25 + 20 : 0),
+          );
+          const labelX =
+            cx > viewport.width / 2
+              ? Math.max(labelWidth + 8, Math.min(viewport.width - 8, cx))
+              : Math.max(8, Math.min(viewport.width - labelWidth - 8, cx));
+          return (
+            <g key={x.id}>
+              <text
+                className="map-station-label"
+                x={labelX}
+                y={cy > viewport.height - 50 ? cy - 30 : cy + 18}
+                textAnchor={cx > viewport.width / 2 ? 'end' : 'start'}
+              >
+                <tspan>{code}</tspan>
+                {selected ? (
+                  <tspan x={cx > viewport.width / 2 ? labelX : labelX + 18} dy="15">
+                    {status}
+                  </tspan>
+                ) : null}
+              </text>
+              {selected ? (
+                <g
+                  transform={`translate(${cx > viewport.width / 2 ? labelX - status.length * 7.25 - 18 : labelX},${(cy > viewport.height - 50 ? cy - 30 : cy + 18) + 2})`}
+                >
+                  <Icon
+                    name={
+                      state === 'device_fault'
+                        ? 'fault'
+                        : state === 'unreliable'
+                          ? 'unreliable'
+                          : state === 'no_data'
+                            ? 'no_data'
+                            : state === 'reported'
+                              ? 'reported'
+                              : 'not_configured'
+                    }
+                  />
+                </g>
+              ) : null}
+            </g>
+          );
+        })}
     </svg>
   );
 }
@@ -282,15 +486,49 @@ function Topology({
   trace: TraceResponse | null;
 }) {
   const junctions = response.layers.junctions;
+  const topologyWidth = 820;
+  const topologyHeight = 420;
+  const longitudes = junctions.map((node) => node.geometry.coordinates[0]);
+  const latitudes = junctions.map((node) => node.geometry.coordinates[1]);
+  const minLongitude = longitudes.length > 0 ? Math.min(...longitudes) : 0;
+  const maxLongitude = longitudes.length > 0 ? Math.max(...longitudes) : 1;
+  const minLatitude = latitudes.length > 0 ? Math.min(...latitudes) : 0;
+  const maxLatitude = latitudes.length > 0 ? Math.max(...latitudes) : 1;
+  const projectTopologyPoint = ([longitude, latitude]: readonly [number, number]) =>
+    [
+      20 + ((longitude - minLongitude) / (maxLongitude - minLongitude || 1)) * 780,
+      400 - ((latitude - minLatitude) / (maxLatitude - minLatitude || 1)) * 360,
+    ] as const;
+  // This is the geographic map's extent fit in the topology viewBox. The old ordinal
+  // graph grid connected unrelated nodes into decorative diamonds.
   const positions = new Map(
-    junctions.map((node, index) => [
-      node.id,
-      [20 + (index % 25) * 32, 20 + Math.floor(index / 25) * 20] as const,
-    ]),
+    junctions.map((node) => [node.id, projectTopologyPoint(node.geometry.coordinates)]),
   );
+  const coordinateColumns = (() => {
+    const starts = [...longitudes]
+      .sort((a, b) => a - b)
+      .filter((value, index, values) => index === 0 || value - values[index - 1]! > 0.5);
+    return starts.map((start, index) => {
+      const end = starts[index + 1] ?? maxLongitude + 0.5;
+      const members = junctions.filter(
+        (node) => node.geometry.coordinates[0] >= start && node.geometry.coordinates[0] < end,
+      );
+      const center =
+        members.reduce((total, node) => total + node.geometry.coordinates[0], 0) /
+        (members.length || 1);
+      const endLongitude = Math.max(...members.map((node) => node.geometry.coordinates[0]), start);
+      return { center, startLongitude: start, endLongitude };
+    });
+  })();
   const selectedJunction = response.layers.stations.find(
     (station) => station.id === selection.stationId,
   )?.junctionId;
+  const selectedState =
+    response.panel?.stationId === selection.stationId
+      ? response.panel.health.fault === 'reported'
+        ? 'device_fault'
+        : markerState(response.panel)
+      : null;
   return (
     <div className="map-topology">
       <p>{t(locale, 'mapCurrentTopology')}</p>
@@ -300,12 +538,21 @@ function Topology({
         <>
           <svg
             className="map-topology-svg"
-            viewBox="0 0 820 420"
+            viewBox={`0 0 ${topologyWidth} ${topologyHeight}`}
             role="img"
             aria-label={t(locale, 'mapTopologyAria')}
           >
             <title>{t(locale, 'mapTopologyAria')}</title>
             <defs>
+              <pattern
+                id="map-topology-node-hatch"
+                width="6"
+                height="6"
+                patternUnits="userSpaceOnUse"
+                patternTransform="rotate(45)"
+              >
+                <line x1="0" y1="0" x2="0" y2="6" />
+              </pattern>
               <marker
                 id="map-topology-arrow"
                 viewBox="0 0 10 10"
@@ -318,13 +565,30 @@ function Topology({
                 <path d="M 0 0 L 10 5 L 0 10 z" />
               </marker>
             </defs>
+            {coordinateColumns.map((column) => {
+              const [x] = projectTopologyPoint([column.center, maxLatitude]);
+              return (
+                <text
+                  key={column.startLongitude}
+                  className="map-topology-basin-label"
+                  x={x}
+                  y="18"
+                  textAnchor="middle"
+                >
+                  {t(locale, 'mapCoordinateGroup')} {column.startLongitude.toFixed(1)}–
+                  {column.endLongitude.toFixed(1)}
+                </text>
+              );
+            })}
             {response.layers.sections.map((section) => {
+              const geometryStart = section.geometry.coordinates[0]!;
+              const geometryEnd = section.geometry.coordinates.at(-1)!;
               const from = section.upstreamJunctionId
-                ? positions.get(section.upstreamJunctionId)
-                : ([5, 210] as const);
+                ? (positions.get(section.upstreamJunctionId) ?? projectTopologyPoint(geometryStart))
+                : projectTopologyPoint(geometryStart);
               const to = section.downstreamJunctionId
-                ? positions.get(section.downstreamJunctionId)
-                : ([815, 210] as const);
+                ? (positions.get(section.downstreamJunctionId) ?? projectTopologyPoint(geometryEnd))
+                : projectTopologyPoint(geometryEnd);
               if (!from || !to) return null;
               const traced = trace?.edges.some((edge) => edge.sectionId === section.id);
               return (
@@ -338,6 +602,7 @@ function Topology({
                   x2={to?.[0]}
                   y2={to?.[1]}
                   markerEnd="url(#map-topology-arrow)"
+                  vectorEffect="non-scaling-stroke"
                 />
               );
             })}
@@ -348,21 +613,45 @@ function Topology({
               return (
                 <g key={node.id}>
                   <circle
-                    className={
-                      selected
-                        ? 'map-topology-node map-topology-node--selected'
-                        : traced
-                          ? 'map-topology-node map-topology-node--trace'
-                          : 'map-topology-node'
-                    }
+                    className={`map-topology-node${selected && selectedState ? ` map-status--${selectedState}` : ''}${selected ? ' map-topology-node--selected' : ''}${traced ? ' map-topology-node--trace' : ''}`}
                     cx={at[0]}
                     cy={at[1]}
-                    r="6"
+                    r="2.5"
+                    vectorEffect="non-scaling-stroke"
+                    style={
+                      selected && selectedState && selectedState !== 'reported'
+                        ? { fill: 'url(#map-topology-node-hatch)' }
+                        : undefined
+                    }
                   />
                   {selected || traced ? (
-                    <text x={at[0] + 7} y={at[1]}>
-                      {node.id.slice(0, 8)}
+                    <text x={at[0] + (selected ? 20 : 5)} y={at[1]}>
+                      {selected && selectedState
+                        ? t(
+                            locale,
+                            selectedState === 'device_fault'
+                              ? 'mapDeviceFault'
+                              : mapStatePresentation(selectedState).label,
+                          )
+                        : node.id.slice(0, 8)}
                     </text>
+                  ) : null}
+                  {selected ? (
+                    <g transform={`translate(${at[0] + 5},${at[1] - 10}) scale(.72)`}>
+                      <Icon
+                        name={
+                          selectedState === 'device_fault'
+                            ? 'fault'
+                            : selectedState === 'unreliable'
+                              ? 'unreliable'
+                              : selectedState === 'no_data'
+                                ? 'no_data'
+                                : selectedState === 'reported'
+                                  ? 'reported'
+                                  : 'not_configured'
+                        }
+                      />
+                    </g>
                   ) : null}
                 </g>
               );
@@ -371,7 +660,7 @@ function Topology({
           <ol aria-label={t(locale, 'mapTrace')}>
             {trace?.edges.map((edge) => (
               <li key={edge.sectionId}>
-                {edge.from ?? t(locale, 'mapBoundary')} <span aria-hidden="true">→</span>{' '}
+                {edge.from ?? t(locale, 'mapBoundary')} <GlyphIcon glyph="→" />{' '}
                 {edge.to ?? t(locale, 'mapBoundary')}{' '}
                 {edge.boundary ? `(${t(locale, 'mapBoundary')})` : ''}
               </li>
@@ -384,8 +673,7 @@ function Topology({
             <ol>
               {response.layers.sections.map((section) => (
                 <li key={section.id}>
-                  {section.upstreamJunctionId ?? t(locale, 'mapBoundary')}{' '}
-                  <span aria-hidden="true">→</span>{' '}
+                  {section.upstreamJunctionId ?? t(locale, 'mapBoundary')} <GlyphIcon glyph="→" />{' '}
                   {section.downstreamJunctionId ?? t(locale, 'mapBoundary')}{' '}
                   {section.boundary ? `(${t(locale, 'mapBoundary')})` : ''}
                 </li>
@@ -424,23 +712,17 @@ function Panel({
       <section className="map-panel map-panel--empty" aria-labelledby="map-panel-heading">
         <h3 id="map-panel-heading">{t(locale, 'mapPanel')}</h3>
         <p>{t(locale, 'mapNoSelection')}</p>
-        <div className="visual-station-showcase" style={{ marginTop: '1rem' }}>
-          <img
-            src="/assets/network-topology-3d.jpg"
-            alt="3D Digital Twin River Basin and Canal Topology"
-            className="visual-station-showcase__img"
-            style={{ height: '12rem' }}
-            loading="lazy"
-          />
-          <div className="visual-station-showcase__caption">
-            <span>5 Connected Basins • 83 Stations</span>
-            <span className="status-chip status-chip--information">3D Digital Twin</span>
-          </div>
-        </div>
       </section>
     );
   const current = markerState(panel),
-    p = mapStatePresentation(current),
+    p =
+      panel.health.fault === 'reported'
+        ? {
+            icon: '!',
+            label: 'mapDeviceFault' as TranslationKey,
+            value: 'statusUnreliableValue' as TranslationKey,
+          }
+        : mapStatePresentation(current),
     f = playbackFrame(playback, frame);
   return (
     <aside className="map-panel" aria-labelledby="map-panel-heading">
@@ -450,15 +732,16 @@ function Panel({
       <h2 id="map-panel-heading" ref={heading} tabIndex={-1}>
         {t(locale, 'mapPanel')}
       </h2>
-      <p>
-        <span aria-hidden="true">{p.icon}</span> <strong>{t(locale, p.label)}</strong> —{' '}
-        {t(locale, p.value)}
+      <p
+        className={`map-panel__status map-status--${panel.health.fault === 'reported' ? 'device_fault' : current}`}
+      >
+        <GlyphIcon glyph={p.icon} /> <strong>{t(locale, p.label)}</strong> — {t(locale, p.value)}
       </p>
       <p>
         {t(locale, 'mapResponsibleTerritory')}: {panel.responsibleTerritory.name} (
         {panel.responsibleTerritory.code})
       </p>
-      <dl className="map-panel__values">
+      <dl className="map-panel__values map-panel__ledger">
         <Quantity locale={locale} label="stage" value={panel.stage} />
         <Quantity locale={locale} label="discharge" value={panel.discharge} />
         <Quantity locale={locale} label="liveCounter" value={panel.counter} />
@@ -489,6 +772,7 @@ function Panel({
                 ? 'liveNoConnection'
                 : 'liveConnectionConditionUnknown'
           }
+          attention={false}
         />
         <HealthStatus
           locale={locale}
@@ -508,6 +792,7 @@ function Panel({
                 ? 'liveFaultNotReported'
                 : 'liveFaultConditionUnknown'
           }
+          attention={panel.health.fault === 'reported'}
         />
         <HealthStatus
           locale={locale}
@@ -535,10 +820,12 @@ function Panel({
                     ? 'statusNoObservation'
                     : 'liveConditionUnknown'
           }
+          attention={['no_data', 'unreliable', 'stale'].includes(panel.health.dataCondition)}
         />
       </dl>
       <p>
-        {t(locale, 'source')}: {panel.health.source.label}; {panel.health.source.provenance}
+        {t(locale, 'source')}:{' '}
+        {joinProvenance([panel.health.source.label, panel.health.source.provenance])}
       </p>
       <a
         className="action-link"
@@ -622,6 +909,28 @@ export function MapNetworkWorkspace({
     [frame, setFrame] = useState(0),
     [retry, setRetry] = useState(0);
   const returnFocus = useRef<string | null>(null);
+  const [stationCodes, setStationCodes] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setStationCodes({});
+    if (access !== 'ready') return;
+    const controller = new AbortController();
+    // Facets supply the authorized station directory independently of row pagination.
+    void fetch('/api/v1/live-operations?limit=1', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const parsed = liveOperationsResponseSchema.safeParse(await response.json());
+        if (parsed.success && !controller.signal.aborted)
+          setStationCodes(
+            Object.fromEntries(
+              parsed.data.facets.stations.map((station) => [station.id, station.code]),
+            ),
+          );
+      })
+      .catch(() => {
+        /* Keep the exact station ID if codes are unavailable. */
+      });
+    return () => controller.abort();
+  }, [access]);
   useEffect(() => {
     if (selection.stationId) setDetail('network');
   }, [selection.stationId]);
@@ -722,7 +1031,7 @@ export function MapNetworkWorkspace({
             <>
               <p>{t(locale, 'mapDetail')}</p>
               <p>
-                {response.scenario.provenance};{' '}
+                {stripTerminalPunctuation(response.scenario.provenance)};{' '}
                 <MapTime locale={locale} value={response.referenceAt} />
               </p>
             </>
@@ -759,9 +1068,10 @@ export function MapNetworkWorkspace({
             trace={trace}
             layers={visibleLayers}
             onSelect={select}
+            stationCodes={stationCodes}
           />
         </section>
-        <aside className="map-sidebar" aria-label={t(locale, 'mapHeading')}>
+        <aside className="map-sidebar" aria-label={t(locale, 'mapHeading')} tabIndex={0}>
           <Panel
             locale={locale}
             response={response}
@@ -772,10 +1082,16 @@ export function MapNetworkWorkspace({
             frame={frame}
             onFrame={setFrame}
           />
-          <details className="map-sidebar__details" open>
-            <summary>{t(locale, 'mapLayers')}</summary>
+          <details
+            className="map-sidebar__details map-conventional-signs"
+            aria-labelledby="map-conventional-signs-heading"
+            open
+          >
+            <summary id="map-conventional-signs-heading">
+              {t(locale, 'mapLayers')} — {t(locale, 'mapLegend')}
+            </summary>
             <fieldset className="map-layers">
-              <legend className="visually-hidden">{t(locale, 'mapLayers')}</legend>
+              <legend>{t(locale, 'mapLayers')}</legend>
               {(Object.keys(layers) as (keyof typeof layers)[]).map((x) => (
                 <label key={x}>
                   <input
@@ -788,6 +1104,7 @@ export function MapNetworkWorkspace({
                 </label>
               ))}
             </fieldset>
+            <StatusLegend locale={locale} heading={false} />
           </details>
           <details className="map-sidebar__details">
             <summary>{t(locale, 'mapSemanticList')}</summary>
@@ -807,10 +1124,6 @@ export function MapNetworkWorkspace({
                 </li>
               ))}
             </ol>
-          </details>
-          <details className="map-sidebar__details">
-            <summary>{t(locale, 'mapLegend')}</summary>
-            <StatusLegend locale={locale} />
           </details>
           <details className="map-sidebar__details">
             <summary>{t(locale, 'mapOverview')}</summary>

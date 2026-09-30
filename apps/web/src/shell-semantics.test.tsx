@@ -22,6 +22,9 @@ test('rendered shell exposes compact keyboard navigation, locale control, and cu
       onThemeChange={() => undefined}
       session={null}
       theme="light"
+      syntheticDisclosure={
+        <SyntheticDisclosure dismissed={false} locale="en" onDismiss={() => undefined} />
+      }
     />,
   );
   assert.match(
@@ -34,7 +37,7 @@ test('rendered shell exposes compact keyboard navigation, locale control, and cu
   assert.match(markup, /<option value="uz">Uzbek<\/option>/);
   assert.match(
     markup,
-    /class="eyebrow topbar__area-label">Current work area<\/span><strong class="topbar__area-name">Dashboard<\/strong>/,
+    /class="visually-hidden topbar__area-label">Current work area<\/span><strong class="topbar__area-name">Dashboard<\/strong>/,
   );
   assert.match(markup, /aria-label="Change color theme"[^>]*title="Change color theme"/);
   assert.match(
@@ -48,6 +51,10 @@ test('rendered shell exposes compact keyboard navigation, locale control, and cu
   );
   assert.match(markup, /href="#alarms"[^>]*>[\s\S]*?Alarms and incidents<\/span><\/a>/);
   assert.match(markup, /class="synthetic-badge"/);
+  assert.match(
+    markup,
+    /<header class="topbar">[\s\S]*<section class="synthetic-notice" role="status">[\s\S]*<\/section><\/header>/,
+  );
 });
 
 test('shell dialog triggers advertise dialog behavior before their focus-managed popovers open', () => {
@@ -75,10 +82,13 @@ test('full synthetic disclosure is visible until dismissed and retains safety me
   );
   assert.match(visible, /Synthetic demonstration data/);
   assert.match(visible, /Dismiss synthetic-data notice/);
-  assert.equal(
-    renderToStaticMarkup(<SyntheticDisclosure dismissed locale="en" onDismiss={() => undefined} />),
-    '',
+  const collapsed = renderToStaticMarkup(
+    <SyntheticDisclosure dismissed locale="en" onDismiss={() => undefined} />,
   );
+  assert.match(collapsed, /<details class="synthetic-notice synthetic-notice--collapsed">/);
+  assert.doesNotMatch(collapsed, /<details[^>]+open/);
+  assert.match(collapsed, /Synthetic demonstration data/);
+  assert.match(collapsed, /Operational readings/);
 });
 
 test('status vocabulary renders distinct text, icon, and explicit synthetic value samples', () => {
@@ -95,7 +105,7 @@ test('status vocabulary renders distinct text, icon, and explicit synthetic valu
       new RegExp(`data-status="${status}"[^>]*>[\\s\\S]*?<strong>${label}</strong>`),
     );
   }
-  assert.equal((markup.match(/aria-hidden="true"/g) ?? []).length, 5);
+  assert.equal((markup.match(/class="register-icon"/g) ?? []).length, 5);
   assert.match(markup, /Synthetic display examples only/);
   assert.match(markup, /No observation available/);
   assert.match(markup, /Not suitable for operational use/);

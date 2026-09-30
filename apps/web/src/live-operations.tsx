@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   liveOperationsInspectorSchema,
   liveOperationsResponseSchema,
@@ -10,7 +11,6 @@ import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
 
 import {
   formatLiveAge,
-  formatLiveTimestamp,
   inspectorHeadingId,
   inspectorTrendRows,
   liveAttentionPresentation,
@@ -26,10 +26,18 @@ import {
   type LiveFilters,
   type StreamState,
 } from './live-operations-model.js';
-import { formatDecimal, formatMeasurementValue, presentationTimestamp } from './format.js';
+import {
+  formatDecimal,
+  formatFixedDecimal,
+  formatMeasurementValue,
+  measurementUnitLabel,
+  presentationTimestamp,
+} from './format.js';
 import { FilterPanel } from './filter-panel.js';
+import { LiveTrendChart } from './live-trend-chart.js';
 import { StatusChip } from './status-chip.js';
 import { WorkspaceHeader } from './workspace-header.js';
+import { joinProvenance } from './provenance-text.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable';
@@ -117,40 +125,45 @@ function Quantity({
   quantity: LiveOperationsResponse['rows'][number]['quantities']['stage'];
 }) {
   const presentation = liveDataStatePresentation(quantity.dataState);
-  const detail = [
+  const detail = joinProvenance([
     t(locale, qualityKey(quantity.quality)),
     quantity.qualityReason,
     quantity.source.label,
     t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource'),
-  ]
-    .filter(Boolean)
-    .join('; ');
-  const unit = quantity.unit === 'm3/s' ? 'm³/s' : quantity.unit === 'm3' ? 'm³' : 'm';
+  ]);
+  const unit = measurementUnitLabel(quantity.unit);
   return (
     <div className={`live-quantity live-quantity--${quantity.dataState}`}>
-      <StatusChip
-        detail={detail}
-        icon={presentation.icon}
-        label={t(locale, presentation.label)}
-        tone={quantity.dataState === 'reported' ? 'positive' : 'attention'}
-      />
-      <span className="visually-hidden">
-        <span aria-hidden="true">{presentation.icon}</span>
-        {t(locale, presentation.label)}
-      </span>
-      <strong>
+      <strong
+        title={
+          quantity.value === null ? undefined : `${t(locale, 'liveRaw')}: ${quantity.value} ${unit}`
+        }
+      >
         {quantity.value === null
           ? '—'
           : formatMeasurementValue(locale, quantity.value, quantity.unit)}
         {quantity.value === null ? '' : ` ${unit}`}
       </strong>
+      <StatusChip
+        detail={detail}
+        icon={presentation.icon}
+        label={t(locale, presentation.label)}
+        tone={quantity.dataState === 'reported' ? 'positive' : 'attention'}
+        hatch={quantity.dataState !== 'reported'}
+      />
+      <span className="visually-hidden">
+        <span aria-hidden="true">{presentation.icon}</span>
+        {t(locale, presentation.label)}
+      </span>
       <small className="visually-hidden">{t(locale, qualityKey(quantity.quality))}</small>
       {quantity.qualityReason ? (
         <small className="visually-hidden">{quantity.qualityReason}</small>
       ) : null}
       <small className="visually-hidden">
-        {quantity.source.label};{' '}
-        {t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}
+        {joinProvenance([
+          quantity.source.label,
+          t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource'),
+        ])}
       </small>
     </div>
   );
@@ -166,6 +179,214 @@ function GovernedPlaceholder({ locale, reason }: { locale: Locale; reason: strin
         tone="attention"
       />
       <span className="visually-hidden">{reason}</span>
+    </div>
+  );
+}
+
+type TrendPoint = LiveOperationsInspector['trend'][number];
+
+function TrendReading({
+  locale,
+  point,
+}: {
+  locale: Locale;
+  point: readonly TrendPoint[] | undefined;
+}) {
+  if (!point?.length)
+    return <span className="live-trend-reading live-trend-reading--absent">—</span>;
+  return (
+    <>
+      {point.map((entry, index) => (
+        <TrendReadingItem key={`${entry.at}-${index}`} locale={locale} point={entry} />
+      ))}
+    </>
+  );
+}
+
+function TrendReadingItem({ locale, point }: { locale: Locale; point: TrendPoint }) {
+  const unit = measurementUnitLabel(point.unit);
+  const display = (kind: 'raw' | 'validated') => {
+    const raw = point[kind];
+    return raw === null ? '—' : `${formatMeasurementValue(locale, raw, point.unit)} ${unit}`;
+  };
+  return (
+    <span className={`live-trend-reading${point.gap ? ' live-trend-reading--gap' : ''}`}>
+      <span title={point.raw === null ? undefined : `${point.raw} ${unit}`}>
+        <small>{t(locale, 'liveRaw')}</small> {display('raw')}
+      </span>
+      <span title={point.validated === null ? undefined : `${point.validated} ${unit}`}>
+        <small>{t(locale, 'liveValidated')}</small> {display('validated')}
+      </span>
+    </span>
+  );
+}
+
+function pivotTrend(points: readonly TrendPoint[]) {
+  const rows = new Map<string, Partial<Record<TrendPoint['kind'], TrendPoint[]>>>();
+  for (const point of points) {
+    const row = rows.get(point.at) ?? {};
+    row[point.kind] = [...(row[point.kind] ?? []), point];
+    rows.set(point.at, row);
+  }
+  return [...rows.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+function RevisionLedger({
+  locale,
+  revisions,
+}: {
+  locale: Locale;
+  revisions: LiveOperationsInspector['revisions'];
+}) {
+  const groups = new Map<string, LiveOperationsInspector['revisions'][number][]>();
+  for (const revision of revisions) {
+    const key = revision.lineageId ?? `${revision.unit}-${revision.observedAt}`;
+    groups.set(key, [...(groups.get(key) ?? []), revision]);
+  }
+  if (!revisions.length) return <p className="metric-unavailable">—</p>;
+  return (
+    <div className="live-revision-ledger">
+      {[...groups.entries()].map(([lineage, entries]) => {
+        const ordered = [...entries].sort((a, b) => a.revision - b.revision);
+        const original = ordered[0]!;
+        const corrected = ordered.at(-1)!;
+        const unit = measurementUnitLabel(corrected.unit);
+        return (
+          <article key={`${lineage}-${corrected.revision}`}>
+            <div className="live-revision-ledger__values">
+              {ordered.length > 1 ? (
+                <p>
+                  <strong>{t(locale, 'liveOriginal')}</strong>{' '}
+                  <del
+                    title={`${t(locale, 'liveRaw')}: ${original.value} ${measurementUnitLabel(original.unit)}`}
+                  >
+                    {formatMeasurementValue(locale, original.value, original.unit)}{' '}
+                    {measurementUnitLabel(original.unit)}
+                  </del>
+                </p>
+              ) : null}
+              <p className="live-revision-ledger__corrected">
+                <strong>
+                  {ordered.length > 1 ? t(locale, 'liveCorrected') : t(locale, 'liveRevision')}
+                </strong>{' '}
+                <ins title={`${t(locale, 'liveRaw')}: ${corrected.value} ${unit}`}>
+                  {formatMeasurementValue(locale, corrected.value, corrected.unit)} {unit}
+                </ins>
+              </p>
+            </div>
+            <dl>
+              <div>
+                <dt>{t(locale, 'liveWorkflow')}</dt>
+                <dd>{corrected.workflow}</dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'dataQuality')}</dt>
+                <dd>{t(locale, qualityKey(corrected.quality))}</dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'liveReason')}</dt>
+                <dd>{corrected.reason ?? original.reason ?? '—'}</dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'liveActor')}</dt>
+                <dd>{t(locale, 'notAvailable')}</dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'source')}</dt>
+                <dd>
+                  {joinProvenance([
+                    corrected.source.label,
+                    t(
+                      locale,
+                      corrected.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource',
+                    ),
+                  ])}
+                </dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'liveTrendAt')}</dt>
+                <dd>
+                  <PresentationTime locale={locale} value={corrected.observedAt} />
+                </dd>
+              </div>
+              <div>
+                <dt>{t(locale, 'liveIngestedAt')}</dt>
+                <dd>
+                  <PresentationTime locale={locale} value={corrected.ingestedAt} />
+                </dd>
+              </div>
+            </dl>
+            <ol className="live-revision-ledger__history">
+              {ordered.map((revision) => (
+                <li key={`${revision.observationId ?? 'synthetic'}-${revision.revision}`}>
+                  <strong>
+                    {t(locale, 'liveRevision')} {revision.revision}
+                  </strong>{' '}
+                  <span
+                    title={`${t(locale, 'liveRaw')}: ${revision.value} ${measurementUnitLabel(revision.unit)}`}
+                  >
+                    {formatMeasurementValue(locale, revision.value, revision.unit)}{' '}
+                    {measurementUnitLabel(revision.unit)}
+                  </span>
+                  <dl>
+                    <div>
+                      <dt>{t(locale, 'liveWorkflow')}</dt>
+                      <dd>{revision.workflow}</dd>
+                    </div>
+                    <div>
+                      <dt>{t(locale, 'dataQuality')}</dt>
+                      <dd>{t(locale, qualityKey(revision.quality))}</dd>
+                    </div>
+                    <div>
+                      <dt>{t(locale, 'liveReason')}</dt>
+                      <dd>{revision.reason ?? '—'}</dd>
+                    </div>
+                    <div>
+                      <dt>{t(locale, 'source')}</dt>
+                      <dd>
+                        {joinProvenance([
+                          revision.source.label,
+                          revision.source.provenance,
+                          t(
+                            locale,
+                            revision.source.official
+                              ? 'liveOfficialSource'
+                              : 'liveNonOfficialSource',
+                          ),
+                        ])}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t(locale, 'liveTrendAt')}</dt>
+                      <dd>
+                        <PresentationTime locale={locale} value={revision.observedAt} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t(locale, 'liveIngestedAt')}</dt>
+                      <dd>
+                        <PresentationTime locale={locale} value={revision.ingestedAt} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Observation ID</dt>
+                      <dd>
+                        <code>{revision.observationId ?? '—'}</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Lineage ID</dt>
+                      <dd>
+                        <code>{revision.lineageId ?? '—'}</code>
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ol>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -213,27 +434,6 @@ function MaintenanceHistory({
       <section aria-labelledby="live-maintenance-heading">
         <h3 id="live-maintenance-heading">{t(locale, 'liveMaintenanceHistory')}</h3>
         <GovernedPlaceholder locale={locale} reason={maintenance.reason} />
-        <ol className="maintenance-record-list" style={{ marginTop: '0.75rem' }}>
-          <li>
-            <article>
-              <h4>Preventive Calibration — Completed</h4>
-              <dl className="live-inspector__details">
-                <div>
-                  <dt>{t(locale, 'maintenanceType')}</dt>
-                  <dd>{t(locale, 'maintenanceInspection')}</dd>
-                </div>
-                <div>
-                  <dt>{t(locale, 'maintenanceStatus')}</dt>
-                  <dd>Verified &amp; Operational</dd>
-                </div>
-                <div>
-                  <dt>{t(locale, 'maintenanceAuditEvidence')}</dt>
-                  <dd className="stable-identifier">maint_demo_001</dd>
-                </div>
-              </dl>
-            </article>
-          </li>
-        </ol>
       </section>
     );
   return (
@@ -376,7 +576,6 @@ function LiveStatusCompact({
               : 'liveUnknown';
   const connectionIcon =
     health.connection === 'communicating' ? '↔' : health.connection === 'offline' ? '⊘' : '?';
-  const faultIcon = health.fault === 'reported' ? '!' : health.fault === 'none' ? '✓' : '?';
   const conditionIcon =
     health.dataCondition === 'current'
       ? '✓'
@@ -393,13 +592,121 @@ function LiveStatusCompact({
 
   return (
     <div className="live-status-compact">
-      <StatusChip
-        detail={summary}
-        icon={`${attention.icon} ${connectionIcon} ${faultIcon} ${conditionIcon}`}
-        label={t(locale, attention.label)}
-        tone={row.attention.state === 'reported' ? 'positive' : 'attention'}
-      />
+      <div className="live-status-compact__line">
+        <span>{t(locale, 'liveWaterLabel')}:</span>
+        <StatusChip
+          detail={summary}
+          icon={attention.icon}
+          label={t(locale, attention.label)}
+          tone={row.attention.state === 'reported' ? 'positive' : 'attention'}
+          hatch={row.attention.state === 'no_data' || row.attention.state === 'unreliable'}
+        />
+      </div>
+      <div className="live-status-compact__line">
+        <span>{t(locale, 'liveDevice')}:</span>
+        {health.fault === 'reported' ? (
+          <StatusChip icon="!" label={t(locale, 'deviceFault')} tone="critical" hatch />
+        ) : health.dataCondition !== 'current' ? (
+          <StatusChip
+            icon={conditionIcon}
+            label={t(locale, conditionLabel)}
+            tone="attention"
+            hatch={
+              health.dataCondition === 'stale' ||
+              health.dataCondition === 'unreliable' ||
+              health.dataCondition === 'no_data'
+            }
+          />
+        ) : (
+          <StatusChip
+            icon={connectionIcon}
+            label={t(locale, connectionLabel)}
+            tone={health.connection === 'communicating' ? 'positive' : 'attention'}
+          />
+        )}
+      </div>
       <span className="visually-hidden">{summary}</span>
+    </div>
+  );
+}
+
+function MobileStationSummary({
+  locale,
+  row,
+  onSelect,
+}: {
+  locale: Locale;
+  row: LiveOperationsResponse['rows'][number];
+  onSelect: (deviceId: string) => void;
+}) {
+  const attention = liveAttentionPresentation(row.attention.state);
+  const deviceAbnormal =
+    row.health.fault === 'reported'
+      ? { icon: '!', label: 'deviceFault' as TranslationKey, hatch: true }
+      : row.health.dataCondition === 'stale'
+        ? { icon: '◷', label: 'liveDataStale' as TranslationKey, hatch: true }
+        : row.health.dataCondition === 'unreliable'
+          ? { icon: '!', label: 'statusUnreliable' as TranslationKey, hatch: true }
+          : row.health.dataCondition === 'no_data'
+            ? { icon: '—', label: 'noData' as TranslationKey, hatch: true }
+            : null;
+  const quantities = [
+    row.quantities.stage,
+    row.quantities.discharge,
+    row.quantities.accumulatedCounter,
+  ].filter((quantity) => quantity.value !== null);
+  const unavailable = [
+    row.governed.plan.state === 'unconfigured' ? t(locale, 'livePlan') : null,
+    row.governed.intervalVariance.state === 'unconfigured' ? t(locale, 'liveVariance') : null,
+    row.health.ageMicroseconds === null ? t(locale, 'liveDataAge') : null,
+  ].filter((value): value is string => value !== null);
+  return (
+    <div className="live-mobile-summary">
+      <div className="live-mobile-summary__station">
+        <a
+          id={`live-device-mobile-${row.deviceId}`}
+          href={`#operations?deviceId=${row.deviceId}`}
+          onClick={() => onSelect(row.deviceId)}
+          aria-label={`${t(locale, 'liveSelectDevice')}: ${row.station.name}`}
+        >
+          <strong>{row.station.code}</strong>
+        </a>
+        <StatusChip
+          icon={deviceAbnormal?.icon ?? attention.icon}
+          label={t(locale, deviceAbnormal?.label ?? attention.label)}
+          tone={deviceAbnormal || row.attention.state !== 'reported' ? 'attention' : 'positive'}
+          hatch={
+            deviceAbnormal?.hatch ??
+            (row.attention.state === 'no_data' || row.attention.state === 'unreliable')
+          }
+        />
+      </div>
+      {quantities.length ? (
+        <p className="live-mobile-summary__values">
+          {quantities.map((quantity) => (
+            <span
+              key={quantity.kind}
+              className={`live-mobile-summary__value live-mobile-summary__value--${quantity.dataState}`}
+            >
+              {formatMeasurementValue(locale, quantity.value!, quantity.unit)}{' '}
+              {measurementUnitLabel(quantity.unit)}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      <p className="live-mobile-summary__unavailable">
+        {unavailable.length ? (
+          <>
+            {unavailable.join(', ')}: {t(locale, 'notAvailable')}
+          </>
+        ) : null}
+        {unavailable.length && row.health.ageMicroseconds !== null ? ' · ' : null}
+        {row.health.ageMicroseconds !== null ? (
+          <>
+            {t(locale, 'liveDataAge')}: {formatLiveAge(row.health.ageMicroseconds, locale)}
+          </>
+        ) : null}
+      </p>
     </div>
   );
 }
@@ -443,12 +750,14 @@ function FilterForm({
   filters,
   onChange,
   onClear,
+  trailingControls,
 }: {
   locale: Locale;
   response: LiveOperationsResponse;
   filters: LiveFilters;
   onChange: (filters: LiveFilters) => void;
   onClear: () => void;
+  trailingControls?: ReactNode;
 }) {
   const [stationQuery, setStationQuery] = useState('');
   const [stationActiveIndex, setStationActiveIndex] = useState(-1);
@@ -517,6 +826,7 @@ function FilterForm({
       aria-label={t(locale, 'liveFilters')}
     >
       <FilterPanel
+        trailingControls={trailingControls}
         filtersLabel={t(locale, 'liveFilters')}
         clearLabel={t(locale, 'liveClearFilters')}
         onClear={onClear}
@@ -532,6 +842,7 @@ function FilterForm({
               <input
                 id={`live-station-search-${stationListId}`}
                 role="combobox"
+                placeholder={t(locale, 'filtersSearchStations')}
                 aria-autocomplete="list"
                 aria-controls={stationListId}
                 aria-expanded={Boolean(stationQuery)}
@@ -687,10 +998,12 @@ function LiveTable({
   locale,
   response,
   onSelect,
+  toolbarTarget,
 }: {
   locale: Locale;
   response: LiveOperationsResponse;
   onSelect: (deviceId: string) => void;
+  toolbarTarget?: HTMLElement | null;
 }) {
   type ColumnKey =
     | 'station'
@@ -714,7 +1027,7 @@ function LiveTable({
     { key: 'waterway', label: 'liveWaterwaySection' },
     { key: 'stage', label: 'stage' },
     { key: 'discharge', label: 'discharge' },
-    { key: 'counter', label: 'liveCounter' },
+    { key: 'counter', label: 'volume' },
     { key: 'plan', label: 'livePlan' },
     { key: 'variance', label: 'liveVariance' },
     { key: 'quality', label: 'dataQuality' },
@@ -729,82 +1042,105 @@ function LiveTable({
     'station',
     'stage',
     'discharge',
+    'counter',
     'plan',
     'variance',
     'status',
-    'dataAge',
-    'alarm',
   ];
   const [visible, setVisible] = useState<ReadonlySet<ColumnKey>>(() => new Set(essential));
   const [columnsOpen, setColumnsOpen] = useState(false);
   const toggleColumn = (key: ColumnKey) =>
     setVisible((current) => {
+      if (key === 'status') return current;
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
   const shown = (key: ColumnKey) => visible.has(key);
+  const toolbar = (
+    <div className="live-table-panel__toolbar">
+      <div
+        className="live-columns-menu"
+        onKeyDown={(event) => event.key === 'Escape' && setColumnsOpen(false)}
+      >
+        <button
+          className="action-button"
+          type="button"
+          aria-expanded={columnsOpen}
+          onClick={() => setColumnsOpen((value) => !value)}
+        >
+          {t(locale, 'columns')}
+        </button>
+        {columnsOpen ? (
+          <div className="live-columns-menu__panel" role="group" aria-label={t(locale, 'columns')}>
+            {columns.map((column) => (
+              <label key={column.key}>
+                <input
+                  type="checkbox"
+                  checked={shown(column.key)}
+                  disabled={column.key === 'status'}
+                  onChange={() => toggleColumn(column.key)}
+                />
+                {t(locale, column.label)}
+              </label>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
   return (
     <section className="live-table-panel" aria-label={t(locale, 'liveRows')}>
-      <div className="live-table-panel__toolbar">
-        <div
-          className="live-columns-menu"
-          onKeyDown={(event) => event.key === 'Escape' && setColumnsOpen(false)}
-        >
-          <button
-            className="action-button"
-            type="button"
-            aria-expanded={columnsOpen}
-            onClick={() => setColumnsOpen((value) => !value)}
-          >
-            {t(locale, 'columns')}
-          </button>
-          {columnsOpen ? (
-            <div
-              className="live-columns-menu__panel"
-              role="group"
-              aria-label={t(locale, 'columns')}
-            >
-              {columns.map((column) => (
-                <label key={column.key}>
-                  <input
-                    type="checkbox"
-                    checked={shown(column.key)}
-                    onChange={() => toggleColumn(column.key)}
-                  />
-                  {t(locale, column.label)}
-                </label>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
+      {toolbarTarget ? createPortal(toolbar, toolbarTarget) : toolbar}
       <div className="table-scroll live-table-scroll" tabIndex={0}>
         <table className="live-table">
           <caption>{`${t(locale, 'liveRows')}: ${response.rows.length} / ${response.scope.deviceDenominator}`}</caption>
+          <colgroup>
+            {columns
+              .filter((column) => shown(column.key))
+              .map((column) => (
+                <col
+                  key={column.key}
+                  className={`live-table-column live-table-column--${column.key}`}
+                />
+              ))}
+          </colgroup>
           <thead>
             <tr>
               {columns
                 .filter((column) => shown(column.key))
                 .map((column) => (
-                  <th key={column.key} scope="col">
+                  <th
+                    key={column.key}
+                    scope="col"
+                    className={`${['stage', 'discharge', 'counter'].includes(column.key) ? 'live-table__measurement ' : ''}live-table__column--${column.key}`}
+                  >
                     {t(locale, column.label)}
+                    {column.key === 'stage'
+                      ? ' (m)'
+                      : column.key === 'discharge'
+                        ? ' (m³/s)'
+                        : column.key === 'counter'
+                          ? ' (m³)'
+                          : ''}
                   </th>
                 ))}
             </tr>
           </thead>
           <tbody>
             {response.rows.map((row) => (
-              <tr key={row.deviceId}>
+              <tr
+                key={row.deviceId}
+                data-unreliable={
+                  row.health.fault === 'reported' ||
+                  row.health.dataCondition === 'unreliable' ||
+                  row.attention.state === 'unreliable' ||
+                  undefined
+                }
+              >
                 {shown('station') ? (
                   <td data-label={t(locale, 'liveStation')} className="live-table__station">
-                    <strong className="live-table__station-code" title={row.station.code}>
-                      {row.station.code}
-                    </strong>
-                    <span className="live-table__station-name" title={row.station.name}>
-                      {row.station.name}
-                    </span>
                     <a
                       id={`live-device-${row.deviceId}`}
                       className="live-table__device-link"
@@ -813,8 +1149,15 @@ function LiveTable({
                       aria-label={`${t(locale, 'liveSelectDevice')}: ${row.device.name} (${row.device.code}), ${row.station.name}`}
                       title={`${row.device.name} (${row.device.code}); ${row.territory.name}`}
                     >
-                      {row.device.code}
+                      <strong className="live-table__station-code" title={row.station.code}>
+                        {row.station.code}
+                      </strong>
+                      <span className="live-table__station-name" title={row.station.name}>
+                        {row.station.name}
+                      </span>
+                      <span className="live-table__device-code">{row.device.code}</span>
                     </a>
+                    <MobileStationSummary locale={locale} row={row} onSelect={onSelect} />
                   </td>
                 ) : null}
                 {shown('device') ? (
@@ -836,27 +1179,36 @@ function LiveTable({
                   </td>
                 ) : null}
                 {shown('stage') ? (
-                  <td data-label={t(locale, 'stage')}>
+                  <td data-label={`${t(locale, 'stage')} (m)`} className="live-table__measurement">
                     <Quantity locale={locale} quantity={row.quantities.stage} />
                   </td>
                 ) : null}
                 {shown('discharge') ? (
-                  <td data-label={t(locale, 'discharge')}>
+                  <td
+                    data-label={`${t(locale, 'discharge')} (m³/s)`}
+                    className="live-table__measurement"
+                  >
                     <Quantity locale={locale} quantity={row.quantities.discharge} />
                   </td>
                 ) : null}
                 {shown('counter') ? (
-                  <td data-label={t(locale, 'liveCounter')}>
+                  <td
+                    data-label={`${t(locale, 'volume')} (m³)`}
+                    className="live-table__measurement"
+                  >
                     <Quantity locale={locale} quantity={row.quantities.accumulatedCounter} />
                   </td>
                 ) : null}
                 {shown('plan') ? (
-                  <td data-label={t(locale, 'livePlan')}>
+                  <td data-label={t(locale, 'livePlan')} className="live-table__column--plan">
                     <GovernedPlaceholder locale={locale} reason={row.governed.plan.reason} />
                   </td>
                 ) : null}
                 {shown('variance') ? (
-                  <td data-label={t(locale, 'liveVariance')}>
+                  <td
+                    data-label={t(locale, 'liveVariance')}
+                    className="live-table__column--variance"
+                  >
                     <GovernedPlaceholder
                       locale={locale}
                       reason={row.governed.intervalVariance.reason}
@@ -865,11 +1217,22 @@ function LiveTable({
                 ) : null}
                 {shown('quality') ? (
                   <td data-label={t(locale, 'dataQuality')}>
-                    <StatusChip label={t(locale, qualityKey(row.quantities.discharge.quality))} />
+                    <StatusChip
+                      icon={
+                        { valid: '✓', invalid: '×', suspect: '!', estimated: '≈', unknown: '?' }[
+                          row.quantities.discharge.quality
+                        ]
+                      }
+                      label={t(locale, qualityKey(row.quantities.discharge.quality))}
+                      tone={row.quantities.discharge.quality === 'valid' ? 'positive' : 'attention'}
+                    />
                   </td>
                 ) : null}
                 {shown('status') ? (
-                  <td data-label={t(locale, 'liveWaterStatus')}>
+                  <td
+                    data-label={t(locale, 'liveWaterStatus')}
+                    className="live-table__column--status"
+                  >
                     <LiveStatusCompact locale={locale} row={row} />
                   </td>
                 ) : null}
@@ -902,10 +1265,26 @@ function LiveTable({
                 ) : null}
                 {shown('powerSignal') ? (
                   <td data-label={t(locale, 'livePowerSignal')}>
-                    {row.health.power.state === 'measured' ? `${row.health.power.value} V` : '—'}
-                    <small>
+                    <span
+                      title={
+                        row.health.power.state === 'measured'
+                          ? `${row.health.power.value} V`
+                          : undefined
+                      }
+                    >
+                      {row.health.power.state === 'measured'
+                        ? `${formatFixedDecimal(locale, row.health.power.value, 1)} V`
+                        : '—'}
+                    </span>
+                    <small
+                      title={
+                        row.health.signal.state === 'measured'
+                          ? `${row.health.signal.value} dBm`
+                          : undefined
+                      }
+                    >
                       {row.health.signal.state === 'measured'
-                        ? `${row.health.signal.value} dBm`
+                        ? `${formatFixedDecimal(locale, row.health.signal.value, 1)} dBm`
                         : '—'}
                     </small>
                   </td>
@@ -949,10 +1328,10 @@ export function LiveOperationsInspector({
       <button className="action-button" type="button" onClick={onClose}>
         {t(locale, 'liveCloseInspector')}
       </button>
-      <p className="eyebrow">{t(locale, 'liveSyntheticSource')}</p>
       <h2 id={inspectorHeadingId(row.deviceId)} ref={headingRef} tabIndex={-1}>
         {t(locale, 'liveInspector')}: {rowLabel(row)}
       </h2>
+      <p className="live-provenance-stamp">{t(locale, 'liveSyntheticSource')}</p>
       <p>
         {t(locale, 'provenance')}: {row.provenance}
       </p>
@@ -967,7 +1346,7 @@ export function LiveOperationsInspector({
           </div>
           <div>
             <dt>{t(locale, 'liveInstallation')}</dt>
-            <dd>{row.device.installationId}</dd>
+            <dd className="stable-identifier">{row.device.installationId}</dd>
           </div>
           <div>
             <dt>{t(locale, 'liveProtocol')}</dt>
@@ -1020,15 +1399,32 @@ export function LiveOperationsInspector({
           <div>
             <dt>{t(locale, 'livePowerSignal')}</dt>
             <dd>
-              {row.health.power.state === 'measured' ? `${row.health.power.value} V` : '—'} /{' '}
-              {row.health.signal.state === 'measured' ? `${row.health.signal.value} dBm` : '—'}
+              <span
+                title={
+                  row.health.power.state === 'measured' ? `${row.health.power.value} V` : undefined
+                }
+              >
+                {row.health.power.state === 'measured'
+                  ? `${formatFixedDecimal(locale, row.health.power.value, 1)} V`
+                  : '—'}
+              </span>{' '}
+              /{' '}
+              <span
+                title={
+                  row.health.signal.state === 'measured'
+                    ? `${row.health.signal.value} dBm`
+                    : undefined
+                }
+              >
+                {row.health.signal.state === 'measured'
+                  ? `${formatFixedDecimal(locale, row.health.signal.value, 1)} dBm`
+                  : '—'}
+              </span>
             </dd>
           </div>
           <div>
             <dt>{t(locale, 'source')}</dt>
-            <dd>
-              {row.health.source.label}; {row.health.source.provenance}
-            </dd>
+            <dd>{joinProvenance([row.health.source.label, row.health.source.provenance])}</dd>
           </div>
         </dl>
         <DeviceHealthStatus locale={locale} health={row.health} />
@@ -1038,7 +1434,19 @@ export function LiveOperationsInspector({
             (quantity) => (
               <div key={quantity.kind}>
                 <dt>{quantity.kind}</dt>
-                <dd>{`${t(locale, 'source')}: ${quantity.source.label}; ${t(locale, quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}; ${t(locale, 'liveMethod')}: ${quantity.measurementMethod ?? '—'}; ${t(locale, 'liveCalibrationReference')}: ${quantity.calibrationRef ?? t(locale, 'liveNotConfigured')}; ${t(locale, 'liveRatingReference')}: ${quantity.ratingCurveRef ?? t(locale, 'liveNotConfigured')}; ${t(locale, 'liveUncertainty')}: ${quantity.uncertainty ?? '—'}`}</dd>
+                <dd>
+                  {joinProvenance([
+                    `${t(locale, 'source')}: ${quantity.source.label}`,
+                    t(
+                      locale,
+                      quantity.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource',
+                    ),
+                    `${t(locale, 'liveMethod')}: ${quantity.measurementMethod ?? '—'}`,
+                    `${t(locale, 'liveCalibrationReference')}: ${quantity.calibrationRef ?? t(locale, 'liveNotConfigured')}`,
+                    `${t(locale, 'liveRatingReference')}: ${quantity.ratingCurveRef ?? t(locale, 'liveNotConfigured')}`,
+                    `${t(locale, 'liveUncertainty')}: ${quantity.uncertainty ?? '—'}`,
+                  ])}
+                </dd>
               </div>
             ),
           )}
@@ -1047,42 +1455,58 @@ export function LiveOperationsInspector({
       <section aria-labelledby="live-trend-heading">
         <h3 id="live-trend-heading">{t(locale, 'liveTrend')}</h3>
         <p>{t(locale, 'liveTrendDetail')}</p>
-        <div className="live-trend-strip" role="img" aria-label={t(locale, 'liveTrendDetail')}>
-          {inspectorTrendRows(inspector).map((point) => (
-            <span
-              className={point.gap ? 'live-trend-strip__gap' : 'live-trend-strip__point'}
-              key={`${point.at}-${point.kind}`}
-              title={`${formatLiveTimestamp(point.at)} ${point.gap ? t(locale, 'liveGap') : point.kind}`}
-            >
-              {point.gap ? '—' : '●'}
-            </span>
-          ))}
-        </div>
+        <LiveTrendChart
+          locale={locale}
+          referenceAt={inspector.referenceAt}
+          trend={inspectorTrendRows(inspector)}
+          ariaLabel={t(locale, 'liveTrendDetail')}
+          dataCondition={row.health.dataCondition}
+          current={row.quantities}
+        />
         <div className="table-scroll">
-          <table>
+          <table className="live-trend-ledger">
+            <caption>
+              <span>{t(locale, 'liveTrendDetail')}</span>
+              <span>
+                {t(locale, 'liveRaw')} / {t(locale, 'liveValidated')}
+              </span>
+            </caption>
             <thead>
               <tr>
                 <th>{t(locale, 'liveTrendAt')}</th>
-                <th>{t(locale, 'liveMeasurement')}</th>
-                <th>{t(locale, 'liveRaw')}</th>
-                <th>{t(locale, 'liveValidated')}</th>
+                <th>{t(locale, 'stage')} (m)</th>
+                <th>{t(locale, 'discharge')} (mÂ³/s)</th>
+                <th>{t(locale, 'volume')} (mÂ³)</th>
                 <th>{t(locale, 'liveGap')}</th>
               </tr>
             </thead>
             <tbody>
-              {inspectorTrendRows(inspector).map((point) => (
-                <tr key={`${point.at}-${point.kind}`}>
+              {pivotTrend(inspectorTrendRows(inspector)).map(([at, points]) => (
+                <tr
+                  key={at}
+                  className={
+                    Object.values(points).some((entries) => entries?.some((point) => point.gap))
+                      ? 'live-trend-ledger__gap'
+                      : undefined
+                  }
+                >
                   <td>
-                    <PresentationTime locale={locale} value={point.at} />
-                  </td>
-                  <td>{point.kind}</td>
-                  <td>
-                    {point.raw ?? '—'} {point.raw === null ? '' : point.unit}
+                    <PresentationTime locale={locale} value={at} />
                   </td>
                   <td>
-                    {point.validated ?? '—'} {point.validated === null ? '' : point.unit}
+                    <TrendReading locale={locale} point={points.stage} />
                   </td>
-                  <td>{point.gap ? t(locale, 'liveGap') : '—'}</td>
+                  <td>
+                    <TrendReading locale={locale} point={points.discharge} />
+                  </td>
+                  <td>
+                    <TrendReading locale={locale} point={points.accumulated_volume} />
+                  </td>
+                  <td>
+                    {Object.values(points).some((entries) => entries?.some((point) => point.gap))
+                      ? t(locale, 'liveGap')
+                      : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1091,16 +1515,7 @@ export function LiveOperationsInspector({
       </section>
       <section aria-labelledby="live-revisions-heading">
         <h3 id="live-revisions-heading">{t(locale, 'liveRevision')}</h3>
-        <ul>
-          {inspector.revisions.map((revision) => (
-            <li key={`${revision.lineageId ?? 'synthetic'}-${revision.revision}`}>
-              {`${t(locale, 'liveRevision')} ${revision.revision}; ${formatDecimal(locale, revision.value)} ${revision.unit === 'm3/s' ? 'm³/s' : revision.unit === 'm3' ? 'm³' : 'm'}; ${t(locale, 'liveWorkflow')}: ${revision.workflow}; ${t(locale, 'dataQuality')}: ${t(locale, qualityKey(revision.quality))}; `}
-              <PresentationTime locale={locale} value={revision.observedAt} /> /{' '}
-              <PresentationTime locale={locale} value={revision.ingestedAt} />
-              {`; ${t(locale, 'source')}: ${revision.source.label}; ${t(locale, revision.source.official ? 'liveOfficialSource' : 'liveNonOfficialSource')}${revision.reason ? `; ${t(locale, 'liveReason')}: ${revision.reason}` : ''}`}
-            </li>
-          ))}
-        </ul>
+        <RevisionLedger locale={locale} revisions={inspector.revisions} />
       </section>
       <section aria-labelledby="live-placeholders-heading">
         <h3 id="live-placeholders-heading">{t(locale, 'liveHealthHistory')}</h3>
@@ -1123,6 +1538,8 @@ export function LiveOperationsContent({
   onClearFilters,
   onSelect,
   connectionIndicator,
+  inspector,
+  onCloseInspector,
 }: {
   locale: Locale;
   response: LiveOperationsResponse;
@@ -1131,7 +1548,10 @@ export function LiveOperationsContent({
   onClearFilters: () => void;
   onSelect: (deviceId: string) => void;
   connectionIndicator?: ReactNode;
+  inspector?: LiveOperationsInspector | null;
+  onCloseInspector?: () => void;
 }) {
+  const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null);
   return (
     <>
       <WorkspaceHeader
@@ -1162,8 +1582,29 @@ export function LiveOperationsContent({
         filters={filters}
         onChange={onFiltersChange}
         onClear={onClearFilters}
+        trailingControls={<div className="live-columns-slot" ref={setToolbarTarget} />}
       />
-      <LiveTable locale={locale} response={response} onSelect={onSelect} />
+      <div
+        className={
+          inspector
+            ? 'live-operations__register live-operations__register--selected'
+            : 'live-operations__register'
+        }
+      >
+        <LiveTable
+          locale={locale}
+          response={response}
+          onSelect={onSelect}
+          toolbarTarget={toolbarTarget}
+        />
+        {inspector && onCloseInspector ? (
+          <LiveOperationsInspector
+            locale={locale}
+            inspector={inspector}
+            onClose={onCloseInspector}
+          />
+        ) : null}
+      </div>
     </>
   );
 }
@@ -1188,7 +1629,11 @@ export function LiveOperationsWorkspace({
 
   useEffect(() => {
     if (!selectedDeviceId && returnFocus.current) {
-      document.getElementById(returnFocus.current)?.focus();
+      const desktopLink = document.getElementById(returnFocus.current);
+      const mobileLink = document.getElementById(
+        returnFocus.current.replace('live-device-', 'live-device-mobile-'),
+      );
+      (desktopLink?.getClientRects().length ? desktopLink : mobileLink)?.focus();
       returnFocus.current = null;
     }
   }, [selectedDeviceId]);
@@ -1328,6 +1773,8 @@ export function LiveOperationsWorkspace({
               onClearFilters={() => setFilters(emptyFilters)}
               onSelect={select}
               connectionIndicator={connectionIndicator}
+              inspector={inspector && selectedDeviceId ? inspector : null}
+              onCloseInspector={() => onDeviceChange(null)}
             />
             {streamReset ? (
               <p className="supporting-text" role="status">
@@ -1362,7 +1809,7 @@ export function LiveOperationsWorkspace({
                     {t(locale, 'livePreviousPage')}
                   </button>
                   <button
-                    className="action-button"
+                    className="action-button action-button--primary"
                     type="button"
                     disabled={!result.nextCursor}
                     onClick={() => {
@@ -1373,13 +1820,6 @@ export function LiveOperationsWorkspace({
                     {t(locale, 'liveNextPage')}
                   </button>
                 </nav>
-                {inspector && selectedDeviceId ? (
-                  <LiveOperationsInspector
-                    locale={locale}
-                    inspector={inspector}
-                    onClose={() => onDeviceChange(null)}
-                  />
-                ) : null}
               </>
             )}
           </>

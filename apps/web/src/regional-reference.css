@@ -14,7 +14,7 @@
   padding: 1rem;
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: var(--r);
+  border-radius: 0;
   justify-content: space-between;
   margin-bottom: 1rem;
 }
@@ -29,7 +29,7 @@
 }
 .regional-view-tabs a {
   padding: 0.6rem 0.85rem;
-  border-radius: var(--r);
+  border-radius: 0;
   border: 1px solid var(--border);
 }
 .regional-view-tabs a[aria-current] {
@@ -47,7 +47,7 @@
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: 0;
   padding: 0.5rem 0.65rem;
 }
 .regional-workspace button {
@@ -77,7 +77,7 @@
   margin-top: 0.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: 0;
   overflow: hidden;
 }
 .regional-map:fullscreen {
@@ -174,7 +174,7 @@
   overflow: auto;
   max-height: 68vh;
   border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: 0;
   background: var(--surface);
 }
 .regional-table-scroll table {
@@ -219,7 +219,7 @@
   padding: 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: 0;
   font-size: 0.85rem;
 }
 .regional-inspector h3 {
@@ -248,8 +248,8 @@
 }
 .regional-caution {
   padding: 0.75rem;
-  border-left: 3px solid var(--warning);
-  background: var(--warning-soft);
+  border: 3px double var(--danger, var(--border));
+  background: var(--surface);
 }
 .regional-fingerprint {
   overflow-wrap: anywhere;
@@ -285,5 +285,169 @@
   }
   .regional-view-tabs {
     font-size: 0.8rem;
+  }
+}
+
+/* Limnigraph Register chrome. The source image remains unfiltered. */
+.regional-entry {
+  margin-bottom: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border: 3px double var(--border);
+  border-radius: 0;
+}
+.regional-view-tabs {
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 3px double var(--border);
+}
+.regional-view-tabs a {
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0.5rem 0.7rem;
+}
+.regional-view-tabs a[aria-current] {
+  background: var(--ink, var(--text));
+  color: var(--surface);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.regional-workspace button,
+.regional-workspace select,
+.regional-workspace input {
+  min-height: 2.5rem;
+  border-color: var(--border);
+  border-radius: 0;
+  background: var(--surface);
+}
+.regional-workspace button:hover:not(:disabled),
+.regional-workspace button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent-strong);
+  outline-offset: -1px;
+}
+.regional-workspace button:focus-visible,
+.regional-workspace select:focus-visible,
+.regional-workspace input:focus-visible,
+.regional-view-tabs a:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.regional-source-label,
+.regional-provenance {
+  border: 3px double var(--border);
+}
+.regional-source-label {
+  padding: 0.2rem 0.4rem;
+  color: var(--text);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.regional-map,
+.regional-table-scroll,
+.regional-inspector {
+  border-radius: 0;
+  box-shadow: none;
+}
+.regional-map-toolbar {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 3px double var(--border);
+}
+.regional-map-toolbar label,
+.regional-filter-bar label {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.regional-zoom {
+  gap: 0;
+  border: 1px solid var(--border);
+}
+.regional-zoom button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+}
+.regional-zoom output {
+  padding: 0.5rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+}
+.regional-map-scroll {
+  background: var(--canvas);
+}
+.regional-map-caption {
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.regional-provenance {
+  margin: 0.55rem 0;
+  padding: 0.5rem 0.7rem;
+}
+.regional-provenance summary {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.regional-filter-bar {
+  padding-bottom: 0.5rem;
+  border-bottom: 3px double var(--border);
+}
+.regional-table-scroll th,
+.regional-table-scroll td {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.regional-table-scroll thead th {
+  border-bottom: 3px double var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.regional-table-scroll button {
+  min-height: 0;
+  padding: 0.25rem 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--text);
+}
+.regional-row-selected {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent-strong);
+  outline-offset: -1px;
+}
+.regional-inspector {
+  padding: 0.75rem;
+  border: 3px double var(--border);
+}
+.regional-record-detail dl > div {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.regional-record-detail dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.regional-caution {
+  padding: 0.65rem;
+  border: 3px double var(--danger, var(--border));
+  background: var(--surface);
+}
+.regional-fingerprint {
+  font-family: var(--font-mono, monospace);
+}
+@media (max-width: 480px) {
+  .regional-map-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .regional-zoom {
+    align-self: flex-start;
   }
 }

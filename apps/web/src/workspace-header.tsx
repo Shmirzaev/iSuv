@@ -25,7 +25,7 @@ export function WorkspaceHeader({
   return (
     <header className="workspace-header">
       <div className="workspace-header__title">
-        <h2 id={headingId}>{heading}</h2>
+        <h1 id={headingId}>{heading}</h1>
         {detail ? <p>{detail}</p> : null}
       </div>
       {children ? <div className="workspace-header__actions">{children}</div> : null}

@@ -158,6 +158,13 @@ test('queue and panel keep automatic, human, evidence, quality, unit, and metric
     assert.match(panel, /10 µs/);
     assert.match(panel, /Synthetic quality unavailable/);
     assert.ok(panel.includes(translations[locale].alarmCapabilityExistingIncident));
+    assert.ok(queue.includes('alarm-center-register'));
+    assert.ok(queue.includes('alarm-center-table__lifecycle'));
+    assert.ok(queue.includes('alarm-center-table__age'));
+    assert.ok(queue.includes(translations[locale].liveColumnStation));
+    assert.ok(queue.includes(translations[locale].notAvailable));
+    assert.ok(panel.includes('alarm-center-timeline--ledger'));
+    assert.ok(panel.includes('alarm-center-timeline__sequence'));
     if (locale !== 'en')
       assert.equal(panel.includes('An incident already exists for this alarm.'), false);
   }
@@ -188,6 +195,9 @@ test('renderer retains focus management, native filters, capability-gated mutati
     'setRefresh((value) => value + 1)',
     'alarm-center-table__chip',
     'alarm-center-table__row',
+    'alarm-center-ledger-form',
+    'action-button--primary',
+    'alarm-center-timeline--ledger',
   ])
     assert.ok(source.includes(marker), marker);
   assert.equal(source.includes('/clear'), false);

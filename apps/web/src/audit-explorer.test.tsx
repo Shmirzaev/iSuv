@@ -4,7 +4,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { AuditEvent } from '@isuv/contracts';
 import { translations } from '@isuv/i18n';
-import { AuditEventDetail, AuditFiltersForm } from './audit-explorer.js';
+import { AuditEventDetail, AuditFiltersForm, EventsTable } from './audit-explorer.js';
 import { defaultAuditFilters } from './audit-explorer-model.js';
 
 const id = 'a6000000-0000-4000-8000-000000000001';
@@ -43,6 +43,53 @@ test('audit detail separates escaped immutable old and new state and provides a 
   assert.ok(markup.includes(`href="#audit?eventId=${id}"`));
   assert.match(markup, /&lt;untrusted&gt;/);
   assert.doesNotMatch(markup, /operate valve|control gate|send command/i);
+});
+
+test('audit ledger keeps UTC and local timestamps and defers before/after evidence to its explicit record', () => {
+  const summary = {
+    ...event,
+    oldState: undefined,
+    newState: undefined,
+  };
+  const { oldState: _oldState, newState: _newState, ...listEvent } = summary;
+  const markup = renderToStaticMarkup(
+    <EventsTable events={[listEvent]} locale="en" onSelect={() => undefined} selectedId={null} />,
+  );
+  assert.match(markup, /class="audit-ledger"/);
+  assert.match(markup, /UTC time: 2026-08-24T00:00:00.000Z/);
+  assert.match(markup, /Local time \(UTC\+05:00\)/);
+  assert.match(markup, /Aug 24, 2026/);
+  assert.match(markup, /Before/);
+  assert.match(markup, /After/);
+  assert.match(markup, /data-label="Before"/);
+  assert.match(markup, /data-label="After"/);
+  assert.equal((markup.match(/class="audit-ledger__state-evidence"/g) ?? []).length, 2);
+  assert.match(markup, /Open evidence/);
+});
+
+test('correction evidence marks an available original and revision without inventing either side', () => {
+  const markup = renderToStaticMarkup(
+    <AuditEventDetail
+      event={{ ...event, action: 'observation.corrected' }}
+      locale="en"
+      onClose={() => undefined}
+      state="ready"
+    />,
+  );
+  assert.match(markup, /audit-state-evidence--revision/);
+  assert.match(markup, /audit-state--original/);
+  assert.match(markup, /audit-state--revision/);
+  assert.match(markup, /<del><pre>/);
+  assert.match(markup, /<ins><pre>/);
+  const absent = renderToStaticMarkup(
+    <AuditEventDetail
+      event={{ ...event, action: 'observation.corrected', oldState: null }}
+      locale="en"
+      onClose={() => undefined}
+      state="ready"
+    />,
+  );
+  assert.doesNotMatch(absent, /audit-state--original|audit-state--revision/);
 });
 
 test('audit filters are collapsed by default, keep exact identifier controls, and stay localized', async () => {

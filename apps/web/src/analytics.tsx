@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { analyticsResponseSchema, type AnalyticsResponse } from '@isuv/contracts';
 import { translate, type Locale, type TranslationKey } from '@isuv/i18n';
-import { formatExactRational } from './dashboard-model.js';
+import { formatRationalFixed } from './dashboard-model.js';
 import { GroupedBarChart, SignedBarChart, StackedBarChart, type ChartDatum } from './charts.js';
 import {
   analyticsConditionPresentation,
@@ -20,11 +20,32 @@ import {
   type AnalyticsFilters,
 } from './analytics-model.js';
 import { StatusChip } from './status-chip.js';
-import { formatNumber } from './format.js';
+import { formatNumber, presentationTimeZone } from './format.js';
+import { GlyphIcon } from './icons.js';
 
 type WorkspaceState =
   'loading' | 'ready' | 'empty' | 'unauthenticated' | 'forbidden' | 'unavailable' | 'degraded';
 const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
+
+function utcOffset(at: string): string {
+  const offset = new Intl.DateTimeFormat('en', {
+    timeZone: presentationTimeZone,
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(new Date(at))
+    .find((part) => part.type === 'timeZoneName')?.value;
+  return (offset ?? 'UTC').replace('GMT', 'UTC');
+}
+
+function SelectedWindow({ locale, response }: { locale: Locale; response: AnalyticsResponse }) {
+  const { start, end } = response.windows.selected;
+  return (
+    <p className="analytics-chart-context">
+      <strong>{t(locale, 'analyticsWindow')}:</strong> {formatAnalyticsTimestamp(start, locale)} —{' '}
+      {formatAnalyticsTimestamp(end, locale)}; {response.presentationTimeZone} {utcOffset(end)}
+    </p>
+  );
+}
 
 function M3({
   locale,
@@ -34,11 +55,17 @@ function M3({
   value: { numerator: string; denominator: string } | null;
 }) {
   return value ? (
-    <data value={`${value.numerator}/${value.denominator}`}>
-      {formatExactRational(value, locale)} m³
+    <data
+      aria-label={`${value.numerator}/${value.denominator} m³`}
+      title={`${value.numerator}/${value.denominator} m³`}
+      value={`${value.numerator}/${value.denominator}`}
+    >
+      {formatRationalFixed(value, 0, locale)} m³
     </data>
   ) : (
-    <span className="metric-unavailable">—</span>
+    <span className="metric-unavailable analytics-unavailable" title={t(locale, 'notAvailable')}>
+      <GlyphIcon glyph="-" /> {t(locale, 'notAvailable')}
+    </span>
   );
 }
 
@@ -93,7 +120,7 @@ function Notice({
   return (
     <section className={`status-notice status-notice--${tone}`} aria-live="polite">
       <span className="status-notice__icon" aria-hidden="true">
-        {icon}
+        <GlyphIcon glyph={icon} />
       </span>
       <div>
         <h2>{t(locale, title)}</h2>
@@ -110,14 +137,26 @@ function Notice({
 
 function Status({ locale, icon, label }: { locale: Locale; icon: string; label: TranslationKey }) {
   const tone =
-    label === 'analyticsOver'
-      ? 'attention'
-      : label === 'analyticsUnder'
+    label === 'analyticsAssessed' ||
+    label === 'analyticsWithin' ||
+    label === 'analyticsBalanceComputed'
+      ? 'positive'
+      : label === 'analyticsOver' ||
+          label === 'analyticsUnder' ||
+          label === 'analyticsUnassessable' ||
+          label === 'analyticsNotConfigured' ||
+          label === 'analyticsBalanceDeferred' ||
+          label === 'analyticsCadenceUnconfigured'
         ? 'attention'
-        : label === 'analyticsAssessed' || label === 'analyticsWithin'
-          ? 'positive'
-          : 'neutral';
-  return <StatusChip icon={icon} label={t(locale, label)} tone={tone} />;
+        : 'neutral';
+  return (
+    <StatusChip
+      hatch={label === 'analyticsUnassessable'}
+      icon={<GlyphIcon glyph={icon} />}
+      label={t(locale, label)}
+      tone={tone}
+    />
+  );
 }
 
 function Filters({
@@ -184,9 +223,9 @@ function Filters({
 function Metadata({ locale, response }: { locale: Locale; response: AnalyticsResponse }) {
   return (
     <>
-      <header className="panel analytics-intro">
+      <header className="analytics-intro analytics-title-block">
         <div>
-          <h2 id="analytics-heading">{t(locale, 'analyticsHeading')}</h2>
+          <h1 id="analytics-heading">{t(locale, 'analyticsHeading')}</h1>
           <p>{t(locale, 'analyticsDetail')}</p>
           <p>
             <strong>{t(locale, 'analyticsNoForecast')}</strong>
@@ -281,31 +320,40 @@ function Delivery({ locale, response }: { locale: Locale; response: AnalyticsRes
         ? { icon: '⚙', label: 'analyticsNotConfigured' as const }
         : { icon: '⊘', label: 'analyticsUnassessable' as const };
   return (
-    <section className="panel analytics-section" aria-labelledby="analytics-delivery">
+    <section className="analytics-section" aria-labelledby="analytics-delivery">
       <h2 id="analytics-delivery">{t(locale, 'analyticsDelivery')}</h2>
       <p>{t(locale, 'analyticsDeliveryDetail')}</p>
       <Status locale={locale} {...state} />
       <p className="supporting-text">{d.exclusionNote}</p>
-      <div className="metric-grid">
-        <article className="metric-card">
-          <h3>{t(locale, 'analyticsPlanned')}</h3>
-          <M3 locale={locale} value={d.plannedM3} />
-        </article>
-        <article className="metric-card">
-          <h3>{t(locale, 'analyticsActual')}</h3>
-          <M3 locale={locale} value={d.actualM3} />
-        </article>
-        <article className="metric-card">
-          <h3>{t(locale, 'analyticsSignedVariance')}</h3>
-          <M3 locale={locale} value={d.signedVarianceM3} />
-        </article>
-        <article className="metric-card">
-          <h3>{t(locale, 'analyticsAbsoluteVariance')}</h3>
-          <M3 locale={locale} value={d.absoluteVarianceM3} />
-        </article>
-      </div>
+      <dl className="analytics-measures">
+        <div>
+          <dt>{t(locale, 'analyticsPlanned')}</dt>
+          <dd>
+            <M3 locale={locale} value={d.plannedM3} />
+          </dd>
+        </div>
+        <div>
+          <dt>{t(locale, 'analyticsActual')}</dt>
+          <dd>
+            <M3 locale={locale} value={d.actualM3} />
+          </dd>
+        </div>
+        <div>
+          <dt>{t(locale, 'analyticsSignedVariance')}</dt>
+          <dd>
+            <M3 locale={locale} value={d.signedVarianceM3} />
+          </dd>
+        </div>
+        <div>
+          <dt>{t(locale, 'analyticsAbsoluteVariance')}</dt>
+          <dd>
+            <M3 locale={locale} value={d.absoluteVarianceM3} />
+          </dd>
+        </div>
+      </dl>
       {chartData.length ? (
         <div className="analytics-chart-panel">
+          <SelectedWindow locale={locale} response={response} />
           <GroupedBarChart
             ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartPlannedActual')}`}
             axisUnit="m³"
@@ -321,8 +369,8 @@ function Delivery({ locale, response }: { locale: Locale; response: AnalyticsRes
         {!d.population.complete ? `⊘ ${t(locale, 'analyticsUnassessable')}` : null}
       </p>
       {d.groups.length ? (
-        <div className="table-scroll">
-          <table>
+        <div className="table-scroll analytics-register-scroll">
+          <table className="analytics-register">
             <caption>{t(locale, 'analyticsGroups')}</caption>
             <thead>
               <tr>
@@ -342,24 +390,35 @@ function Delivery({ locale, response }: { locale: Locale; response: AnalyticsRes
                 return (
                   <tr key={group.sectionId}>
                     <th scope="row">{group.sectionName}</th>
-                    <td>
+                    <td data-label={t(locale, 'analyticsCondition')}>
                       <Status locale={locale} {...present} />
                       {group.reason ? <small>{group.reason}</small> : null}
                     </td>
-                    <td>
+                    <td
+                      className="analytics-register__number"
+                      data-label={t(locale, 'analyticsPlanned')}
+                    >
                       <M3 locale={locale} value={group.plannedM3} />
                     </td>
-                    <td>
+                    <td
+                      className="analytics-register__number"
+                      data-label={t(locale, 'analyticsActual')}
+                    >
                       <M3 locale={locale} value={group.actualM3} />
                     </td>
-                    <td>
+                    <td
+                      className="analytics-register__number"
+                      data-label={t(locale, 'analyticsSignedVariance')}
+                    >
                       <M3 locale={locale} value={group.signedVarianceM3} />
                     </td>
-                    <td>{t(locale, analyticsMethodKey(group.method))}</td>
-                    <td>
+                    <td data-label={t(locale, 'analyticsMethod')}>
+                      {t(locale, analyticsMethodKey(group.method))}
+                    </td>
+                    <td data-label={t(locale, 'openMap')}>
                       {group.mapTarget ? <a href={group.mapTarget}>{t(locale, 'openMap')}</a> : '—'}
                     </td>
-                    <td>
+                    <td data-label={t(locale, 'openLiveOperations')}>
                       {group.liveTarget ? (
                         <a href={group.liveTarget}>{t(locale, 'openLiveOperations')}</a>
                       ) : (
@@ -399,13 +458,23 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
       locale,
     ),
   );
+  const allVariancesZero =
+    chartData.length > 0 &&
+    chartData.every((datum) =>
+      datum.series.every((series) => series.value !== null && series.value === 0),
+    );
   return (
-    <section className="panel analytics-section" aria-labelledby="analytics-matrix">
+    <section className="analytics-section" aria-labelledby="analytics-matrix">
       <h2 id="analytics-matrix">{t(locale, 'analyticsMatrix')}</h2>
       <p>{t(locale, 'analyticsMatrixDetail')}</p>
-      {chartData.length ? (
+      {chartData.length && allVariancesZero ? (
+        <p className="analytics-zero-variance" role="note">
+          {t(locale, 'analyticsAllVariancesZero')}
+        </p>
+      ) : chartData.length ? (
         <section aria-labelledby="analytics-variance-chart" className="analytics-chart-panel">
           <h3 id="analytics-variance-chart">{t(locale, 'analyticsChartSignedVariance')}</h3>
+          <SelectedWindow locale={locale} response={response} />
           <SignedBarChart
             ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartSignedVariance')}`}
             axisUnit="m³"
@@ -415,8 +484,8 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
           />
         </section>
       ) : null}
-      <div className="table-scroll">
-        <table>
+      <div className="table-scroll analytics-register-scroll">
+        <table className="analytics-register">
           <caption>{t(locale, 'analyticsMatrix')}</caption>
           <thead>
             <tr>
@@ -439,14 +508,28 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
                       label={label}
                     />
                   </th>
-                  <td>{formatNumber(locale, row.count)}</td>
-                  <td>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsCount')}
+                  >
+                    {formatNumber(locale, row.count)}
+                  </td>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsPlanned')}
+                  >
                     <M3 locale={locale} value={row.plannedM3} />
                   </td>
-                  <td>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsActual')}
+                  >
                     <M3 locale={locale} value={row.actualM3} />
                   </td>
-                  <td>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsAbsoluteVariance')}
+                  >
                     <M3 locale={locale} value={row.absoluteVarianceM3} />
                   </td>
                 </tr>
@@ -456,7 +539,7 @@ function Matrix({ locale, response }: { locale: Locale; response: AnalyticsRespo
               <th scope="row">
                 <Status locale={locale} {...analyticsConditionPresentation('unassessable')} />
               </th>
-              <td colSpan={4}>
+              <td colSpan={4} data-label={t(locale, 'analyticsCount')}>
                 {formatNumber(locale, response.deviationMatrix.unassessable.count)}
               </td>
             </tr>
@@ -479,7 +562,7 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
     ['analyticsResidual', b.residualM3],
   ];
   return (
-    <section className="panel analytics-section" aria-labelledby="analytics-balance">
+    <section className="analytics-section" aria-labelledby="analytics-balance">
       <h2 id="analytics-balance">{t(locale, 'analyticsBalance')}</h2>
       <p>{t(locale, 'analyticsBalanceDetail')}</p>
       <Status
@@ -492,7 +575,7 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
           {t(locale, analyticsBalanceDeferKey(b.deferReason) ?? 'analyticsUnassessable')}
         </p>
       ) : null}
-      <dl className="analytics-balance-terms">
+      <dl className="analytics-measures analytics-balance-terms">
         {rows.map(([label, value]) => (
           <div key={label}>
             <dt>{t(locale, label)}</dt>
@@ -503,13 +586,15 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
         ))}
       </dl>
       <p>
-        <strong>{t(locale, 'provenance')}:</strong> {b.provenance};{' '}
+        <strong>{t(locale, 'provenance')}:</strong> {b.provenance}
+      </p>
+      <p>
         <strong>{t(locale, 'analyticsMethodVersion')}:</strong>{' '}
         {b.versionId ?? t(locale, 'analyticsNotConfigured')}
       </p>
       {b.components.length ? (
-        <div className="table-scroll">
-          <table>
+        <div className="table-scroll analytics-register-scroll">
+          <table className="analytics-register">
             <caption>{t(locale, 'analyticsSourceIntervals')}</caption>
             <thead>
               <tr>
@@ -523,8 +608,15 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
               {b.components.map((component) => (
                 <tr key={`${component.stationId}:${component.role}`}>
                   <th scope="row">{t(locale, analyticsBalanceRoleKey(component.role))}</th>
-                  <td>{t(locale, analyticsMethodKey(component.method))}</td>
-                  <td>{formatMicros(component.travelTimeMicroseconds, locale)}</td>
+                  <td data-label={t(locale, 'analyticsMethod')}>
+                    {t(locale, analyticsMethodKey(component.method))}
+                  </td>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsTravelTime')}
+                  >
+                    {formatMicros(component.travelTimeMicroseconds, locale)}
+                  </td>
                   <td>{`${formatAnalyticsTimestamp(component.sourceInterval.start, locale)} — ${formatAnalyticsTimestamp(component.sourceInterval.end, locale)}`}</td>
                 </tr>
               ))}
@@ -539,6 +631,21 @@ function Balance({ locale, response }: { locale: Locale; response: AnalyticsResp
 function Coverage({ locale, response }: { locale: Locale; response: AnalyticsResponse }) {
   const q = response.qualityCoverage;
   const a = response.availability;
+  const availabilityRows = [
+    {
+      label: t(locale, 'analyticsCommunicating'),
+      count: a.communicating,
+      glyph: '✓',
+      abnormal: false,
+    },
+    { label: t(locale, 'analyticsOffline'), count: a.offline, glyph: '!', abnormal: true },
+    {
+      label: t(locale, 'analyticsUnknownAvailability'),
+      count: a.unknown,
+      glyph: '⊘',
+      abnormal: true,
+    },
+  ];
   const qualityChartData: readonly ChartDatum[] = [
     {
       id: 'quality-coverage',
@@ -579,15 +686,53 @@ function Coverage({ locale, response }: { locale: Locale; response: AnalyticsRes
   ];
   return (
     <section className="analytics-coverage" aria-label={t(locale, 'analyticsQuality')}>
-      <article className="panel">
+      <article className="analytics-section">
         <h2>{t(locale, 'analyticsQuality')}</h2>
         <p>{t(locale, 'analyticsQualityDetail')}</p>
         <div className="analytics-chart-panel">
+          <SelectedWindow locale={locale} response={response} />
           <StackedBarChart
             ariaLabel={`${t(locale, 'analyticsChartsSummary')}: ${t(locale, 'analyticsChartQualityCoverage')}`}
+            axisUnit={t(locale, 'analyticsCount')}
             caption={t(locale, 'analyticsChartQualityCoverage')}
             data={qualityChartData}
           />
+        </div>
+        <div className="table-scroll analytics-register-scroll">
+          <table className="analytics-register">
+            <caption>{t(locale, 'analyticsChartQualityCoverage')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t(locale, 'analyticsCondition')}</th>
+                <th scope="col">{t(locale, 'analyticsCount')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {qualityChartData[0]!.series.map((series) => (
+                <tr
+                  className={
+                    series.id === 'unreliable' || series.id === 'no-data'
+                      ? 'analytics-register__abnormal'
+                      : undefined
+                  }
+                  key={series.id}
+                >
+                  <th scope="row">
+                    <GlyphIcon
+                      glyph={series.id === 'valid' ? '✓' : series.id === 'no-data' ? '⊘' : '!'}
+                    />{' '}
+                    {series.label}
+                  </th>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsCount')}
+                  >
+                    {series.valueText}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <p>{`${t(locale, 'analyticsCount')}: ${formatNumber(locale, q.denominator)}; ${t(locale, 'analyticsCompleteValid')}: ${formatNumber(locale, q.completeValid)}; ${t(locale, 'analyticsEstimatedExcluded')}: ${formatNumber(locale, q.estimatedExcluded)}; ${t(locale, 'analyticsUnreliable')}: ${formatNumber(locale, q.unreliable)}; ${t(locale, 'analyticsNoData')}: ${formatNumber(locale, q.noData)}; ${t(locale, 'analyticsNotConfigured')}: ${formatNumber(locale, q.unconfigured)}`}</p>
         <Status
@@ -605,10 +750,39 @@ function Coverage({ locale, response }: { locale: Locale; response: AnalyticsRes
           <strong>{t(locale, 'provenance')}:</strong> {q.provenance.label}
         </p>
       </article>
-      <article className="panel">
+      <article className="analytics-section">
         <h2>{t(locale, 'analyticsAvailability')}</h2>
         <p>{t(locale, 'analyticsAvailabilityDetail')}</p>
         <p>{`${t(locale, 'analyticsCount')}: ${formatNumber(locale, a.denominator)}; ${t(locale, 'analyticsCommunicating')}: ${formatNumber(locale, a.communicating)}; ${t(locale, 'analyticsOffline')}: ${formatNumber(locale, a.offline)}; ${t(locale, 'analyticsUnknownAvailability')}: ${formatNumber(locale, a.unknown)}`}</p>
+        <div className="table-scroll analytics-register-scroll">
+          <table className="analytics-register">
+            <caption>{t(locale, 'analyticsAvailability')}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t(locale, 'analyticsCondition')}</th>
+                <th scope="col">{t(locale, 'analyticsCount')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {availabilityRows.map((row) => (
+                <tr
+                  className={row.abnormal ? 'analytics-register__abnormal' : undefined}
+                  key={row.label}
+                >
+                  <th scope="row">
+                    <GlyphIcon glyph={row.glyph} /> {row.label}
+                  </th>
+                  <td
+                    className="analytics-register__number"
+                    data-label={t(locale, 'analyticsCount')}
+                  >
+                    {formatNumber(locale, row.count)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <Status locale={locale} icon="⚙" label="analyticsCadenceUnconfigured" />
         <p className="metric-card__reason">{t(locale, analyticsAvailabilityReasonKey(a.reason))}</p>
         <p>
@@ -740,7 +914,7 @@ export function AnalyticsReadout({
       <Filters locale={locale} filters={filters} response={response} onChange={onChange} />
       {state === 'empty' ? (
         <section className="status-notice status-notice--information" aria-live="polite">
-          <span aria-hidden="true">—</span>
+          <GlyphIcon glyph="—" />
           <div>
             <h2>{t(locale, 'analyticsNoGroups')}</h2>
           </div>

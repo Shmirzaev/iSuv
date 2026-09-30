@@ -1,7 +1,7 @@
 .regional-atlas {
   margin-top: 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--surface);
 }
@@ -237,7 +237,7 @@
   min-height: 44px;
   cursor: pointer;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0;
   list-style: none;
 }
 .atlas-layer-menu[open] > summary {
@@ -252,8 +252,8 @@
   padding: 0.7rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 26px #183a3426;
+  border-radius: 0;
+  box-shadow: none;
 }
 .atlas-layer-menu label {
   white-space: nowrap;
@@ -270,7 +270,7 @@
   color: #273f36;
   background: #fffffff0;
   border: 1px solid #b9c9ba;
-  border-radius: 7px;
+  border-radius: 0;
   font-size: 0.75rem;
   padding: 0.45rem 0.7rem;
   max-width: calc(100% - 100px);
@@ -295,7 +295,7 @@
   pointer-events: none;
   width: 42px;
   height: 42px;
-  border-radius: 50%;
+  border-radius: 0;
   border: 1px solid #cad5ca;
   background: #ffffffdd;
   padding-top: 0.25rem;
@@ -311,7 +311,7 @@
   width: 44px;
   height: 44px;
   background: var(--surface);
-  box-shadow: 0 2px 8px #16382320;
+  box-shadow: none;
   font-size: 1.2rem;
 }
 .atlas-waterway-card {
@@ -321,9 +321,9 @@
   width: min(300px, calc(100% - 6rem));
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--surface);
-  box-shadow: 0 8px 30px #17332624;
+  box-shadow: none;
   font-size: 0.8rem;
 }
 .atlas-waterway-card h3 {
@@ -369,7 +369,7 @@
   white-space: nowrap;
   font-size: 0.75rem;
   padding: 0.25rem 0.65rem;
-  border-radius: 20px;
+  border-radius: 0;
 }
 .atlas-feature-bar button[aria-pressed='true'] {
   background: var(--accent-soft);
@@ -446,5 +446,203 @@
   }
   .atlas-feature-bar span {
     min-width: 4.5rem;
+  }
+}
+
+/* Chrome only: SVG geography, paths, labels and glyphs above remain source artwork. */
+.regional-atlas {
+  margin-top: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.atlas-topbar {
+  padding: 0.55rem 0.7rem;
+  border-bottom: 3px double var(--border);
+}
+.atlas-breadcrumbs {
+  gap: 0;
+}
+.atlas-breadcrumbs button {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+}
+.atlas-breadcrumbs [aria-current] {
+  background: var(--ink, var(--text));
+  color: var(--surface);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.atlas-options {
+  font-size: 0.74rem;
+}
+.atlas-options label {
+  min-height: 2.25rem;
+  padding: 0 0.35rem;
+  border-left: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.atlas-options input {
+  accent-color: var(--accent-strong);
+}
+.atlas-layer-menu > summary {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.atlas-layer-menu[open] > summary {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent-strong);
+  outline-offset: -1px;
+}
+.atlas-layer-menu > div {
+  top: calc(100% + 1px);
+  padding: 0.6rem;
+  border: 3px double var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.atlas-place-search {
+  min-height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.atlas-place-search:focus-visible,
+.atlas-layer-menu > summary:focus-visible,
+.atlas-breadcrumbs button:focus-visible,
+.atlas-zoom button:focus-visible,
+.atlas-feature-bar button:focus-visible,
+.atlas-waterway-card button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+.atlas-map-hint,
+.atlas-reference-badge {
+  border: 3px double var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+}
+.atlas-reference-badge {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.72rem;
+}
+.atlas-map-legend {
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+.atlas-compass {
+  width: auto;
+  height: auto;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.atlas-zoom {
+  gap: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.atlas-zoom button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+  color: var(--text);
+}
+.atlas-waterway-card {
+  padding: 0.75rem;
+  border: 3px double var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  box-shadow: none;
+}
+.atlas-waterway-card > span {
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.atlas-waterway-card .atlas-card-close {
+  background: transparent;
+  color: var(--text);
+}
+.atlas-waterway-card button:not(.atlas-card-close) {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--ink, var(--text));
+  color: var(--surface);
+}
+.atlas-feature-bar {
+  padding: 0.5rem 0.7rem;
+  border-top: 3px double var(--border);
+}
+.atlas-feature-bar span {
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.atlas-feature-bar button {
+  min-height: 2.25rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+}
+.atlas-feature-bar button[aria-pressed='true'] {
+  border-color: var(--text);
+  background: var(--ink, var(--text));
+  color: var(--surface);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.atlas-help {
+  margin: 0.35rem 0.7rem 0.6rem;
+  color: var(--text-secondary);
+}
+.atlas-source-gallery > summary {
+  margin-top: 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 3px double var(--border);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.regional-atlas:fullscreen {
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 600px) {
+  .atlas-topbar {
+    padding: 0.4rem;
+  }
+  .atlas-options label {
+    border-left: 0;
+  }
+  .atlas-layer-menu > div {
+    right: 0;
   }
 }

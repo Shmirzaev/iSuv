@@ -151,9 +151,9 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /synthetic comparison set/);
   for (const label of ['Today', 'Week', 'Month', 'Season', 'Year'])
     assert.match(markup, new RegExp(`>${label}</button>`));
-  assert.match(markup, /12\.5<\/?span[^>]*> m³\/s/);
-  assert.match(markup, /<data value="1200\/1">1,200<\/data>/);
-  assert.match(markup, /<data value="100\/2">50<\/data> %/);
+  assert.match(markup, /<data[^>]*title="12\.5"[^>]*value="12\.5">12\.50<\/data> m³\/s/);
+  assert.match(markup, /<data[^>]*title="1200\/1"[^>]*value="1200\/1">1,200<\/data>/);
+  assert.match(markup, /<data[^>]*title="100\/2"[^>]*value="100\/2">50\.0<\/data> %/);
   assert.match(markup, /Scenario classified/);
   assert.match(markup, /Unconfigured/);
   assert.match(markup, /Source: <\/strong>Synthetic scenario fixture/);
@@ -175,7 +175,7 @@ test('dashboard exposes synthetic provenance, all periods, units, statuses, and 
   assert.match(markup, /href="#operations\?deviceId=c2000000/);
 });
 
-test('dashboard defaults to a plain-language guided overview while retaining advanced access', () => {
+test('dashboard defaults to a ledger register with a plain-language guide and detailed access', () => {
   const markup = renderToStaticMarkup(
     <DashboardWorkspace
       locale="en"
@@ -191,23 +191,33 @@ test('dashboard defaults to a plain-language guided overview while retaining adv
     markup,
     /<li><div><strong>Check urgent alarms<\/strong><\/div><p>Start with critical alarms that may need acknowledgement or assignment\.<\/p><\/li>/,
   );
+  assert.match(markup, /class="dashboard-register"/);
   assert.match(markup, /Operational overview/);
   assert.match(markup, /Stations needing attention[^]*?>2</);
   assert.match(markup, /Devices needing attention[^]*?>3</);
   assert.match(markup, /Delivery versus plan/);
+  assert.match(markup, /href="#alarms"/);
+  assert.match(markup, />Measure</);
+  assert.match(markup, />Quality \/ confidence</);
+  assert.match(markup, /System confidence[^]*?Not available/);
   assert.match(markup, /Largest delivery differences/);
   assert.match(markup, /Over plan/);
-  assert.match(markup, /href="#alarms"/);
   assert.match(markup, /aria-pressed="true"[^>]*>Simple<\/button>/);
   assert.match(markup, /aria-pressed="false"[^>]*>Detailed<\/button>/);
   assert.match(markup, /<details class="workspace-header__provenance">/);
   assert.match(markup, /Scenario identifier/);
+  assert.doesNotMatch(markup, /Automated Hydro Operations/);
   assert.doesNotMatch(markup, /Exact duration \(microseconds\)/);
 });
 
 test('delivery versus plan renders a signed actual-minus-planned under-plan variance', () => {
   const underPlanDashboard: DashboardResponse = {
     ...dashboard,
+    kpis: {
+      ...dashboard.kpis,
+      deliveredVolume: metric({ numerator: '408200', denominator: '1', unit: 'm3' }),
+      plannedVolume: metric({ numerator: '418000', denominator: '1', unit: 'm3' }),
+    },
     comparison: {
       state: 'scenario_classified',
       actualM3: { numerator: '408200', denominator: '1', unit: 'm3' },
@@ -228,14 +238,32 @@ test('delivery versus plan renders a signed actual-minus-planned under-plan vari
     />,
   );
 
-  assert.match(
-    markup,
-    /<dt>Variance<\/dt><dd><span aria-hidden="true">↓<\/span> <span><data value="-9800\/1">-9,800<\/data> m³<\/span><\/dd>/,
+  assert.match(markup, /title="-9800\/1"[^>]*value="-9800\/1">-9,800<\/data> m³/);
+  assert.match(markup, /title="-980000\/418000"[^>]*>-2\.3<\/data> %/);
+  assert.doesNotMatch(markup, /title="0\/1"[^>]*>0<\/data>/);
+});
+
+test('ledger variance keeps unequal rational denominators exact', () => {
+  const fractional: DashboardResponse = {
+    ...dashboard,
+    kpis: {
+      ...dashboard.kpis,
+      deliveredVolume: metric({ numerator: '5', denominator: '2', unit: 'm3' }),
+      plannedVolume: metric({ numerator: '4', denominator: '3', unit: 'm3' }),
+    },
+  };
+  const markup = renderToStaticMarkup(
+    <DashboardWorkspace
+      locale="en"
+      onPeriodChange={() => undefined}
+      onRetry={() => undefined}
+      period="today"
+      response={fractional}
+      state="ready"
+    />,
   );
-  assert.doesNotMatch(
-    markup,
-    /<dt>Variance<\/dt><dd><span aria-hidden="true">↑<\/span> <span><data value="0\/1">0<\/data>/,
-  );
+  assert.match(markup, /title="7\/6"[^>]*>1<\/data> m³/);
+  assert.match(markup, /title="2100\/24"[^>]*>\+87\.5<\/data> %/);
 });
 
 test('unavailable and unauthenticated dashboard views do not render values as normal data', () => {
@@ -263,6 +291,33 @@ test('unavailable and unauthenticated dashboard views do not render values as no
     />,
   );
   assert.match(unauthenticated, /Sign-in required for dashboard/);
+});
+
+test('unavailable dashboard quantities omit units in both register and comparison', () => {
+  const missing: DashboardResponse = {
+    ...dashboard,
+    kpis: { ...dashboard.kpis, deliveredVolume: metric(null), plannedVolume: metric(null) },
+    comparison: {
+      ...dashboard.comparison,
+      state: 'unassessable',
+      actualM3: null,
+      plannedM3: null,
+      priorActualM3: null,
+      reason: 'No assessable synthetic evidence.',
+    },
+  };
+  const markup = renderToStaticMarkup(
+    <DashboardWorkspace
+      locale="en"
+      onPeriodChange={() => undefined}
+      onRetry={() => undefined}
+      period="today"
+      response={missing}
+      state="ready"
+    />,
+  );
+  assert.match(markup, /Not available/);
+  assert.doesNotMatch(markup, /Not available(?:<!-- -->)?\s*(?:m³|m3|%)/);
 });
 
 test('a response for another period is unavailable rather than presented under the selected control', () => {

@@ -125,6 +125,12 @@ test('frozen report detail discloses immutable metadata, caveats and status with
     /control gate|send notification|create work order|operate pump|operate valve/i,
   );
   assert.match(markup, new RegExp(`href="#reports\\?reportId=${id}"`));
+  assert.match(markup, /reports-ledger-detail/);
+  assert.match(markup, /reports-title-block/);
+  assert.match(markup, /reports-stamp--approval/);
+  assert.match(markup, /reports-stamp--snapshot/);
+  assert.match(markup, /reports-stamp--provenance/);
+  assert.match(markup, /reports-register-table/);
 });
 
 test('native radio-card generation controls keep incident identifier exclusive to per-incident reports', () => {
@@ -139,11 +145,14 @@ test('native radio-card generation controls keep incident identifier exclusive t
     />,
   );
   assert.match(standard, /reports-template-card/);
+  assert.match(standard, /reports-template-tabs/);
+  assert.match(standard, /reports-template-tab/);
   assert.match(standard, /role="radiogroup"/);
   assert.match(standard, /type="radio"/);
   assert.match(standard, /name="reports-kind"/);
   assert.match(standard, /checked=""/);
   assert.match(standard, /id="reports-generate"/);
+  assert.match(standard, /action-button--primary/);
   assert.doesNotMatch(standard, /id="reports-incident-id"/);
   for (const template of [
     'Daily situation',
@@ -185,6 +194,29 @@ test('report provenance is available in closed disclosures and timestamps retain
     /<time dateTime="2026-08-24T00:00:00.000Z" title="2026-08-24T00:00:00.000000Z"/,
   );
   assert.match(markup, /status-chip/);
+  assert.match(markup, /data-label="Field"/);
+  assert.match(markup, /data-label="Frozen value"/);
+  assert.match(markup, /class="reports-payload__value">water_balance/);
+  assert.match(markup, /Approver: not available in this immutable snapshot/);
+  assert.match(markup, /UTC\+05:00/);
+});
+
+test('report quality treats every unassessed evidence state as an explicit abnormal condition', () => {
+  const renderQuality = (qualityState: ReportSnapshot['qualityState']) =>
+    renderToStaticMarkup(
+      <ReportSnapshotDetail
+        exportMessage={null}
+        exportState="idle"
+        locale="en"
+        onClose={() => undefined}
+        onExport={() => undefined}
+        report={{ ...report, qualityState }}
+      />,
+    );
+
+  assert.match(renderQuality('assessed'), /status-chip--positive/);
+  for (const qualityState of ['deferred', 'unassessable', 'unconfigured'] as const)
+    assert.match(renderQuality(qualityState), /status-chip--attention/);
 });
 
 test('loading and unavailable reports never render stale report values', () => {

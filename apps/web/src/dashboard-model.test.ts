@@ -11,6 +11,7 @@ import {
   formatDashboardTimestamp,
   formatExactDurationMicroseconds,
   formatExactRational,
+  formatRationalFixed,
   periodKey,
 } from './dashboard-model.js';
 
@@ -49,4 +50,18 @@ test('exact volume and percentage values are not rounded through Number', () => 
     formatExactDurationMicroseconds('900719925474099312345678'),
     '900,719,925,474,099,312,345,678',
   );
+});
+
+test('dashboard display rounding uses exact rational arithmetic', () => {
+  assert.equal(formatRationalFixed({ numerator: '-980000', denominator: '418000' }, 1), '-2.3');
+  assert.equal(formatRationalFixed({ numerator: '1', denominator: '3' }, 1), '0.3');
+  assert.equal(formatRationalFixed({ numerator: '5', denominator: '2' }, 0), '3');
+  assert.equal(formatRationalFixed({ numerator: '0', denominator: '7' }, 1), '0.0');
+  assert.equal(formatRationalFixed({ numerator: '0', denominator: '7' }, 1, 'en', true), '0');
+  assert.equal(formatRationalFixed({ numerator: '1', denominator: '3' }, 1, 'en', true), '+0.3');
+  assert.equal(
+    formatRationalFixed({ numerator: '-980000', denominator: '418000' }, 1, 'en', true),
+    '-2.3',
+  );
+  assert.equal(formatRationalFixed({ numerator: '1', denominator: '-3' }, 1, 'en', true), '-0.3');
 });

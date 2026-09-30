@@ -36,15 +36,22 @@ const t = (locale: Locale, key: TranslationKey) => translate(locale, key);
 
 function ReportTime({ locale, value }: { locale: Locale; value: string }) {
   const timestamp = presentationTimestamp(locale, value);
+  const offset = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Tashkent',
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(new Date(value))
+    .find((part) => part.type === 'timeZoneName')
+    ?.value.replace('GMT', 'UTC');
   return (
     <time dateTime={timestamp.dateTime} title={timestamp.title}>
-      {timestamp.value}
+      {timestamp.value} ({offset ?? 'UTC'})
     </time>
   );
 }
 
 function reportQualityTone(value: ReportSummary['qualityState']): StatusChipTone {
-  return value === 'assessed' ? 'positive' : value === 'deferred' ? 'attention' : 'neutral';
+  return value === 'assessed' ? 'positive' : 'attention';
 }
 
 function ReportQualityChip({
@@ -61,6 +68,7 @@ function ReportQualityChip({
       icon={reportQualityIcon(qualityState)}
       label={label}
       tone={reportQualityTone(qualityState)}
+      hatch={qualityState === 'unassessable'}
     />
   );
 }
@@ -164,6 +172,19 @@ function displayUnit(value: string): string {
   return value === 'm3' ? 'm³' : value === 'm3/s' ? 'm³/s' : value;
 }
 
+function isFrozenNumeric(value: string): boolean {
+  return /^[+-]?(?:\d+|\d+\.\d+)(?:\/[+-]?(?:\d+|\d+\.\d+))?$/.test(value);
+}
+
+function metadataValueClass(label: TranslationKey, value: string | number): string | undefined {
+  return typeof value === 'number' ||
+    label === 'reportsTerritory' ||
+    label === 'reportsGenerator' ||
+    label === 'reportsFingerprint'
+    ? 'tabular-value'
+    : undefined;
+}
+
 export function ReportTemplateForm({
   locale,
   filters,
@@ -180,7 +201,7 @@ export function ReportTemplateForm({
   const incident = filters.kind === 'incident';
   return (
     <form
-      className="reports-template-form"
+      className="reports-template-form reports-register-form"
       onSubmit={(event) => {
         event.preventDefault();
         onGenerate();
@@ -189,7 +210,7 @@ export function ReportTemplateForm({
       <fieldset disabled={busy}>
         <legend>{t(locale, 'reportsTemplates')}</legend>
         <p>{t(locale, 'reportsTemplatesDetail')}</p>
-        <div className="reports-template-cards" role="radiogroup">
+        <div className="reports-template-cards reports-template-tabs" role="radiogroup">
           {reportKinds.map((kind) => {
             const selected = filters.kind === kind;
             return (
@@ -197,8 +218,8 @@ export function ReportTemplateForm({
                 aria-label={t(locale, reportKindKey(kind))}
                 className={
                   selected
-                    ? 'reports-template-card reports-template-card--selected'
-                    : 'reports-template-card'
+                    ? 'reports-template-card reports-template-tab reports-template-card--selected'
+                    : 'reports-template-card reports-template-tab'
                 }
                 key={kind}
               >
@@ -262,7 +283,7 @@ export function ReportTemplateForm({
           )}
         </div>
         <button
-          className="action-button"
+          className="action-button action-button--primary"
           disabled={busy || (incident && !filters.incidentId)}
           id="reports-generate"
           type="submit"
@@ -286,10 +307,10 @@ function SnapshotList({
   onSelect: (report: ReportSummary, focusId: string) => void;
 }) {
   return (
-    <section className="panel reports-list" aria-labelledby="reports-list-heading">
+    <section className="reports-list reports-ledger-section" aria-labelledby="reports-list-heading">
       <h2 id="reports-list-heading">{t(locale, 'reportsList')}</h2>
-      <div className="reports-table-scroll">
-        <table>
+      <div className="reports-table-scroll reports-ledger-scroll">
+        <table className="reports-register-table">
           <caption className="visually-hidden">{t(locale, 'reportsList')}</caption>
           <thead>
             <tr>
@@ -348,12 +369,35 @@ function SnapshotMetadata({ locale, report }: { locale: Locale; report: ReportSn
     ['reportsFingerprint', report.fingerprint],
   ];
   return (
-    <>
-      <dl className="reports-metadata">
+    <section className="reports-title-block" aria-label={t(locale, 'reportsDetailHeading')}>
+      <div className="reports-stamp-row" aria-label={t(locale, 'reportsProvenance')}>
+        <p className="reports-stamp reports-stamp--approval">
+          <span aria-hidden="true">!</span>
+          <span>
+            <strong>{t(locale, 'reportsApproval')}</strong>
+            {t(locale, 'reportsApprovalGeneratedNotApproved')}
+          </span>
+        </p>
+        <p className="reports-stamp reports-stamp--snapshot">
+          <span aria-hidden="true">&#9671;</span>
+          <span>
+            <strong>{t(locale, 'reportsSourceSnapshot')}</strong>
+            {t(locale, 'reportsSourceRevisionPolicy')}: {report.sourceSnapshot.sourceRevisionPolicy}
+          </span>
+        </p>
+        <p className="reports-stamp reports-stamp--provenance">
+          <span aria-hidden="true">&#9670;</span>
+          <span>
+            <strong>{t(locale, 'reportsProvenance')}</strong>
+            {report.provenance.label}
+          </span>
+        </p>
+      </div>
+      <dl className="reports-metadata reports-title-block__facts">
         {fields.map(([label, value]) => (
           <div key={label}>
             <dt>{t(locale, label)}</dt>
-            <dd className={typeof value === 'number' ? 'tabular-value' : undefined}>
+            <dd className={metadataValueClass(label, value)}>
               {label === 'reportsReferenceAt' ||
               label === 'reportsKnownAt' ||
               label === 'reportsGeneratedAt' ? (
@@ -371,16 +415,20 @@ function SnapshotMetadata({ locale, report }: { locale: Locale; report: ReportSn
           </dd>
         </div>
       </dl>
-      <section className="reports-source" aria-labelledby="reports-source-heading">
+      <p className="reports-title-block__approver">{t(locale, 'reportsApproverUnavailable')}</p>
+      <section
+        className="reports-source reports-title-block__snapshot"
+        aria-labelledby="reports-source-heading"
+      >
         <h3 id="reports-source-heading">{t(locale, 'reportsSourceSnapshot')}</h3>
         <dl className="reports-metadata">
           <div>
             <dt>{t(locale, 'reportsScenario')}</dt>
-            <dd>{report.sourceSnapshot.analyticsScenarioId}</dd>
+            <dd className="tabular-value">{report.sourceSnapshot.analyticsScenarioId}</dd>
           </div>
           <div>
             <dt>{t(locale, 'reportsScenarioVersion')}</dt>
-            <dd>{report.sourceSnapshot.analyticsScenarioVersion}</dd>
+            <dd className="tabular-value">{report.sourceSnapshot.analyticsScenarioVersion}</dd>
           </div>
           <div>
             <dt>{t(locale, 'reportsSourceRevisionPolicy')}</dt>
@@ -388,7 +436,7 @@ function SnapshotMetadata({ locale, report }: { locale: Locale; report: ReportSn
           </div>
         </dl>
       </section>
-    </>
+    </section>
   );
 }
 
@@ -402,8 +450,8 @@ function FrozenPayload({ locale, report }: { locale: Locale; report: ReportSnaps
     <section className="reports-payload" aria-labelledby="reports-payload-heading">
       <h3 id="reports-payload-heading">{t(locale, 'reportsPayload')}</h3>
       <p>{t(locale, 'reportsPayloadDetail')}</p>
-      <div className="reports-table-scroll">
-        <table>
+      <div className="reports-table-scroll reports-ledger-scroll">
+        <table className="reports-register-table reports-payload__table">
           <caption>{t(locale, 'reportsPayload')}</caption>
           <thead>
             <tr>
@@ -414,8 +462,19 @@ function FrozenPayload({ locale, report }: { locale: Locale; report: ReportSnaps
           <tbody>
             {rows.map(([field, value], index) => (
               <tr key={`${field}-${index}`}>
-                <th scope="row">{field}</th>
-                <td>{value}</td>
+                <th data-label={t(locale, 'reportsField')} scope="row">
+                  {field}
+                </th>
+                <td
+                  data-label={t(locale, 'reportsValue')}
+                  className={
+                    isFrozenNumeric(value)
+                      ? 'reports-payload__value tabular-value'
+                      : 'reports-payload__value'
+                  }
+                >
+                  {value}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -428,8 +487,8 @@ function FrozenPayload({ locale, report }: { locale: Locale; report: ReportSnaps
           key={unit}
         >
           <h4>{`${t(locale, 'reportsPayload')} — ${displayUnit(unit)}`}</h4>
-          <div className="reports-table-scroll">
-            <table>
+          <div className="reports-table-scroll reports-ledger-scroll">
+            <table className="reports-register-table reports-payload__table">
               <caption>{`${t(locale, 'reportsPayload')} — ${displayUnit(unit)}`}</caption>
               <thead>
                 <tr>
@@ -440,8 +499,15 @@ function FrozenPayload({ locale, report }: { locale: Locale; report: ReportSnaps
               <tbody>
                 {values.map((quantity) => (
                   <tr key={quantity.path}>
-                    <th scope="row">{quantity.path}</th>
-                    <td>{quantity.value}</td>
+                    <th data-label={t(locale, 'reportsField')} scope="row">
+                      {quantity.path}
+                    </th>
+                    <td
+                      data-label={displayUnit(unit)}
+                      className="reports-payload__value tabular-value"
+                    >
+                      {quantity.value}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -470,9 +536,12 @@ export function ReportSnapshotDetail({
 }) {
   const exporting = exportState === 'csv' || exportState === 'html';
   return (
-    <article className="panel reports-detail" aria-labelledby="reports-detail-heading">
+    <article
+      className="reports-detail reports-ledger-detail"
+      aria-labelledby="reports-detail-heading"
+    >
       <header className="reports-detail__header">
-        <span className="status-chip status-chip--synthetic">
+        <span className="reports-stamp reports-stamp--synthetic">
           <span aria-hidden="true">◇</span> {t(locale, 'syntheticScenario')}
         </span>
         <h2 id="reports-detail-heading">{t(locale, 'reportsDetailHeading')}</h2>
@@ -489,11 +558,14 @@ export function ReportSnapshotDetail({
         </details>
       </header>
       <SnapshotMetadata locale={locale} report={report} />
-      <section aria-labelledby="reports-provenance-heading">
+      <section
+        className="reports-detail__provenance-record"
+        aria-labelledby="reports-provenance-heading"
+      >
         <h3 id="reports-provenance-heading">{t(locale, 'reportsProvenance')}</h3>
         <p>{report.provenance.label}</p>
       </section>
-      <section aria-labelledby="reports-caveats-heading">
+      <section className="reports-detail__caveats" aria-labelledby="reports-caveats-heading">
         <h3 id="reports-caveats-heading">{t(locale, 'reportsCaveats')}</h3>
         <ul>
           {report.caveats.map((caveat) => (
@@ -502,15 +574,25 @@ export function ReportSnapshotDetail({
         </ul>
       </section>
       <FrozenPayload locale={locale} report={report} />
-      <div className="reports-actions">
+      <div className="reports-actions reports-ledger-actions">
         <a href={reportsHash(report.id)}>{t(locale, 'reportsStableLink')}</a>
-        <button disabled={exporting} onClick={() => onExport('csv')} type="button">
+        <button
+          className="action-button"
+          disabled={exporting}
+          onClick={() => onExport('csv')}
+          type="button"
+        >
           {exportState === 'csv' ? t(locale, 'reportsExporting') : t(locale, 'reportsCsv')}
         </button>
-        <button disabled={exporting} onClick={() => onExport('html')} type="button">
+        <button
+          className="action-button"
+          disabled={exporting}
+          onClick={() => onExport('html')}
+          type="button"
+        >
           {exportState === 'html' ? t(locale, 'reportsExporting') : t(locale, 'reportsPrint')}
         </button>
-        <button onClick={onClose} type="button">
+        <button className="action-button" onClick={onClose} type="button">
           {t(locale, 'reportsClose')}
         </button>
       </div>

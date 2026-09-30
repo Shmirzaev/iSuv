@@ -1,0 +1,292 @@
+/* Final register refinements for the dashboard, analytics, and incident centre. */
+.dashboard-workspace .metric-unavailable,
+.analytics-workspace .metric-unavailable,
+.alarm-center-table__unavailable {
+  background-image: none;
+  border: 0;
+  padding-inline: 0;
+}
+
+/* Tone describes urgency; only the explicit evidence flag may add a hatch. */
+.status-chip--attention,
+.status-chip--critical {
+  background-image: none;
+}
+
+/* Hatch denotes missing, unreliable, stale, fault, or unassessable evidence only. */
+.dashboard-workspace .dashboard-register__quality--unassessable,
+.dashboard-workspace
+  .coverage-state-list
+  :is(
+    .coverage-state-list__no_data,
+    .coverage-state-list__unreliable,
+    .coverage-state-list__offline,
+    .coverage-state-list__unknown
+  ),
+.analytics-workspace .analytics-register__abnormal,
+.status-chip[data-hatched] {
+  background-image: var(
+    --register-hatch,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.35' stroke-width='1'/%3E%3C/svg%3E")
+  );
+}
+
+.dashboard-workspace .dashboard-register__quality--unconfigured,
+.dashboard-workspace .coverage-state-list .coverage-state-list__unconfigured {
+  background-image: none;
+}
+
+.dashboard-workspace .dashboard-data-states dl > div {
+  background-image: none;
+}
+.dashboard-workspace .dashboard-data-states dl > :is(:nth-child(2), :nth-child(3)) {
+  background-image: var(
+    --register-hatch,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.35' stroke-width='1'/%3E%3C/svg%3E")
+  );
+}
+
+.analytics-workspace .analytics-register__abnormal :is(data, .tabular-value),
+.dashboard-register__row--unassessable :is(data, .tabular-value),
+.dashboard-workspace .dashboard-deviation--unreliable :is(data, .tabular-value),
+.alarm-center-evidence--unreliable :is(data, .tabular-value, pre) {
+  color: var(--muted);
+}
+
+/* A section has one ledger rule; charts and tables sit directly on that sheet. */
+.analytics-workspace .analytics-section,
+.analytics-workspace .analytics-coverage > .analytics-section,
+.alarm-center-queue {
+  border: 0;
+  border-top: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.65rem 0;
+}
+
+.analytics-workspace .analytics-chart-panel,
+.analytics-workspace .analytics-register-scroll,
+.analytics-workspace .analytics-coverage,
+.alarm-center-queue .alarm-center-table-scroll {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Analytics is a single ruled sheet: the title, filters, and coverage do not add cards. */
+.analytics-workspace {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.analytics-workspace > :is(.analytics-intro, .analytics-filters, .analytics-coverage),
+.analytics-workspace .analytics-filters fieldset {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.analytics-workspace .analytics-intro,
+.analytics-workspace .analytics-filters {
+  margin-block: 0;
+  padding-inline: 0;
+}
+.analytics-workspace .analytics-filters fieldset {
+  margin: 0;
+  padding: 0;
+}
+.analytics-workspace .analytics-filters__grid {
+  border-block: 1px solid var(--border);
+  padding-block: 0.45rem;
+}
+.analytics-workspace .workspace-provenance dl {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 0.5rem;
+}
+
+/* Filters remain native and keyboard-accessible, sharing the queue's ruled header. */
+.alarm-center-queue__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.alarm-center-queue__header > :first-child > :is(h3, p) {
+  margin-block: 0;
+}
+.alarm-center-queue__header .filter-panel {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.alarm-center-queue__header .filter-panel__toolbar {
+  justify-content: end;
+}
+@media (max-width: 52rem) {
+  .alarm-center-queue__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .alarm-center-queue__header .filter-panel__toolbar {
+    justify-content: start;
+  }
+}
+
+.analytics-zero-variance {
+  border-top: 3px double var(--text);
+  border-bottom: 1px solid var(--border);
+  margin: 0.75rem 0;
+  padding: 0.45rem 0;
+  font-family: var(--font-figures);
+}
+
+/* Lifecycle state is deliberately stronger while an alarm remains active. */
+.alarm-center-table__lifecycle .status-chip--critical,
+.alarm-center-table__lifecycle .status-chip--attention {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 700;
+}
+.alarm-center-table__lifecycle .status-chip--positive {
+  border-color: var(--border);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.dashboard-register__unavailable-summary {
+  display: none;
+}
+
+.register-icon {
+  display: inline-block;
+  flex: 0 0 1rem;
+  vertical-align: -0.16em;
+}
+
+@media (max-width: 36rem) {
+  .dashboard-register td[data-mobile-missing='true'] {
+    display: none;
+  }
+  .dashboard-register__unavailable-summary {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    margin: 0.2rem 0 0;
+    font-size: 0.75rem;
+  }
+}
+
+/* Audit and frozen reports are single ledger sheets: only section rules, never cards in cards. */
+.audit-workspace,
+.reports-workspace {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.audit-workspace > :is(.audit-intro, .filter-panel, .audit-list, .audit-detail),
+.reports-workspace > :is(.reports-template-form, .reports-list, .reports-detail) {
+  background: transparent;
+  border: 0;
+  border-top: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0;
+}
+
+/* The audit filter disclosure is part of its section, rather than a second frame. */
+.audit-workspace .filter-panel,
+.audit-workspace .filter-panel__content,
+.audit-workspace .audit-filters,
+.audit-workspace .audit-filters fieldset {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding-inline: 0;
+}
+
+.audit-workspace .filter-panel__content,
+.audit-workspace .audit-filters {
+  padding-block: 0.55rem 0;
+}
+
+.audit-workspace .audit-table-scroll,
+.reports-workspace .reports-table-scroll {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Metadata remains a ruled title block: perimeter rules and internal hairlines, no inset box. */
+.reports-workspace .reports-metadata {
+  background: transparent;
+  border: 0;
+  border-block: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  margin-block: 0.7rem;
+}
+
+.reports-workspace .reports-metadata > div {
+  border-top: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-inline-end: 1px solid var(--border-subtle);
+}
+
+.reports-workspace .reports-title-block,
+.reports-workspace .reports-source,
+.reports-workspace .reports-detail > section,
+.reports-workspace .reports-quantity-table {
+  background: transparent;
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.reports-workspace .reports-title-block,
+.reports-workspace .reports-source {
+  border-block: 0;
+  margin: 0;
+  padding-inline: 0;
+}
+
+.reports-workspace .reports-detail > section,
+.reports-workspace .reports-quantity-table {
+  border-top: 1px solid var(--border);
+}
+
+/* Audit evidence is a paired ledger, rather than two framed cards. */
+.audit-workspace .audit-metadata {
+  border: 0;
+  border-top: 3px double var(--text);
+  gap: 0;
+}
+
+.audit-workspace .audit-metadata > div {
+  border-top: 0;
+  border-inline-start: 0;
+}
+
+.audit-workspace .audit-state-evidence--paired {
+  border-top: 3px double var(--text);
+}
+
+.audit-workspace .audit-state {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0;
+}
+
+.audit-workspace .audit-state + .audit-state {
+  border-inline-start: 1px solid var(--border);
+  padding-inline-start: 0.75rem;
+}

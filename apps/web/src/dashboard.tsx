@@ -10,14 +10,15 @@ import {
   dashboardQualityKey,
   formatDashboardTimestamp,
   formatExactDurationMicroseconds,
-  formatExactRational,
+  formatRationalFixed,
   periodKey,
-  rationalRelativePercent,
   subtractExactRationals,
 } from './dashboard-model.js';
+import { DashboardPlanActualChart, rationalChartValue } from './charts.js';
 import { WorkspaceHeader } from './workspace-header.js';
 import { StatusChip } from './status-chip.js';
-import { formatNumber } from './format.js';
+import { formatMeasurementValue, formatNumber } from './format.js';
+import { GlyphIcon } from './icons.js';
 
 interface DashboardWorkspaceProps {
   locale: Locale;
@@ -37,17 +38,13 @@ function StatusLabel({
   state: DashboardResponse['kpis']['regionalInflow']['state'];
 }) {
   const presentation = dashboardAssessmentPresentation(state);
-  const tone =
-    state === 'scenario_classified'
-      ? 'information'
-      : state === 'unassessable'
-        ? 'attention'
-        : 'neutral';
+  const tone = state === 'scenario_classified' ? 'information' : 'attention';
   return (
     <StatusChip
-      icon={presentation.icon}
+      icon={<GlyphIcon glyph={presentation.icon} />}
       label={translate(locale, presentation.label)}
       tone={tone}
+      hatch={state === 'unassessable'}
     />
   );
 }
@@ -115,7 +112,7 @@ function DashboardNotice({
   return (
     <section aria-live="polite" className={`status-notice status-notice--${notice.status}`}>
       <span aria-hidden="true" className="status-notice__icon">
-        {notice.icon}
+        <GlyphIcon glyph={notice.icon} />
       </span>
       <div>
         <h2>{translate(locale, notice.title)}</h2>
@@ -134,54 +131,28 @@ function ExactValue({
   locale,
   value,
   unit,
+  signed = false,
 }: {
   locale: Locale;
   value: { numerator: string; denominator: string } | null;
   unit: 'm3' | 'percent';
+  signed?: boolean;
 }) {
   if (value === null)
     return <span className="metric-unavailable">{translate(locale, 'notAvailable')}</span>;
+  const raw = `${value.numerator}/${value.denominator}`;
   return (
     <span>
-      <data value={`${value.numerator}/${value.denominator}`}>
-        {formatExactRational(value, locale)}
+      <data aria-label={raw} title={raw} value={raw}>
+        {formatRationalFixed(
+          value,
+          unit === 'percent' && BigInt(value.numerator) !== 0n ? 1 : 0,
+          locale,
+          signed,
+        )}
       </data>{' '}
       {unit === 'm3' ? 'm³' : '%'}
     </span>
-  );
-}
-
-function MetricCard({
-  locale,
-  label,
-  state,
-  value,
-  unit,
-  source,
-  reason,
-  children,
-}: {
-  locale: Locale;
-  label: TranslationKey;
-  state: DashboardResponse['kpis']['regionalInflow']['state'];
-  value: ReactNode;
-  unit?: string | undefined;
-  source: 'synthetic_scenario' | 'unconfigured';
-  reason: string | null;
-  children?: ReactNode;
-}) {
-  return (
-    <article className={`metric-card metric-card--${state}`}>
-      <h3>{translate(locale, label)}</h3>
-      <StatusLabel locale={locale} state={state} />
-      <p className="metric-card__value">
-        {value}
-        {unit ? <span className="metric-card__unit"> {unit}</span> : null}
-      </p>
-      {reason ? <p className="metric-card__reason">{reason}</p> : null}
-      <SourceLabel locale={locale} source={source} />
-      {children}
-    </article>
   );
 }
 
@@ -310,7 +281,7 @@ function Coverage({ locale, dashboard }: { locale: Locale; dashboard: DashboardR
           );
           return (
             <li className={`coverage-state-list__${state}`} key={state}>
-              <span aria-hidden="true">{status.icon}</span>
+              <GlyphIcon glyph={status.icon} />
               <strong>{t(label)}</strong>
               <span>{count}</span>
             </li>
@@ -325,9 +296,7 @@ function Coverage({ locale, dashboard }: { locale: Locale; dashboard: DashboardR
         <ul aria-label={t('deviceConnectivity')} className="coverage-state-list">
           {deviceCounts.map(([label, count, state]) => (
             <li className={`coverage-state-list__${state}`} key={state}>
-              <span aria-hidden="true">
-                {state === 'online' ? '↔' : state === 'offline' ? '⊘' : '?'}
-              </span>
+              <GlyphIcon glyph={state === 'online' ? '↔' : state === 'offline' ? '⊘' : '?'} />
               <strong>{t(label)}</strong>
               <span>{count}</span>
             </li>
@@ -339,86 +308,282 @@ function Coverage({ locale, dashboard }: { locale: Locale; dashboard: DashboardR
   );
 }
 
-function Kpis({ locale, dashboard }: { locale: Locale; dashboard: DashboardResponse }) {
+function DashboardRegister({
+  locale,
+  dashboard,
+}: {
+  locale: Locale;
+  dashboard: DashboardResponse;
+}) {
   const t = (key: TranslationKey) => translate(locale, key);
   const { kpis } = dashboard;
+  const deliveryVariance =
+    kpis.deliveredVolume.value && kpis.plannedVolume.value
+      ? subtractExactRationals(kpis.deliveredVolume.value, kpis.plannedVolume.value)
+      : null;
+  const variancePercent =
+    deliveryVariance &&
+    kpis.plannedVolume.value &&
+    BigInt(kpis.plannedVolume.value.numerator) !== 0n
+      ? {
+          numerator: (
+            BigInt(deliveryVariance.numerator) *
+            BigInt(kpis.plannedVolume.value.denominator) *
+            100n
+          ).toString(),
+          denominator: (
+            BigInt(deliveryVariance.denominator) * BigInt(kpis.plannedVolume.value.numerator)
+          ).toString(),
+        }
+      : null;
+  const unavailable = <span className="metric-unavailable">{t('notAvailable')}</span>;
+  const unavailableInflow = <span className="metric-unavailable">{t('notAvailable')}</span>;
+  const rows: readonly {
+    id: string;
+    label: TranslationKey;
+    value: ReactNode;
+    reference: ReactNode;
+    variance: ReactNode;
+    state: DashboardResponse['kpis']['regionalInflow']['state'];
+    source: 'synthetic_scenario' | 'unconfigured';
+    reason: string | null;
+    missing: {
+      value: boolean;
+      reference: boolean;
+      variance: boolean;
+      age: boolean;
+    };
+  }[] = [
+    {
+      id: 'inflow',
+      label: 'regionalInflow',
+      value:
+        kpis.regionalInflow.value !== null ? (
+          <>
+            <data
+              aria-label={kpis.regionalInflow.value}
+              title={kpis.regionalInflow.value}
+              value={kpis.regionalInflow.value}
+            >
+              {formatMeasurementValue(locale, kpis.regionalInflow.value, 'm3/s')}
+            </data>{' '}
+            {'m\u00B3/s'}
+          </>
+        ) : (
+          unavailableInflow
+        ),
+      reference: unavailable,
+      variance: unavailable,
+      state: kpis.regionalInflow.state,
+      source: kpis.regionalInflow.source,
+      reason: kpis.regionalInflow.reason,
+      missing: {
+        value: kpis.regionalInflow.value === null,
+        reference: true,
+        variance: true,
+        age: true,
+      },
+    },
+    {
+      id: 'delivered',
+      label: 'deliveredVolume',
+      value: <ExactValue locale={locale} unit="m3" value={kpis.deliveredVolume.value} />,
+      reference: <ExactValue locale={locale} unit="m3" value={kpis.plannedVolume.value} />,
+      variance: deliveryVariance ? (
+        <>
+          <ExactValue locale={locale} unit="m3" value={deliveryVariance} />
+          {variancePercent ? (
+            <>
+              <br />
+              <ExactValue locale={locale} unit="percent" value={variancePercent} signed />
+            </>
+          ) : null}
+        </>
+      ) : (
+        unavailable
+      ),
+      state: kpis.deliveredVolume.state,
+      source: kpis.deliveredVolume.source,
+      reason: kpis.deliveredVolume.reason,
+      missing: {
+        value: kpis.deliveredVolume.value === null,
+        reference: kpis.plannedVolume.value === null,
+        variance: deliveryVariance === null,
+        age: true,
+      },
+    },
+    {
+      id: 'planned',
+      label: 'plannedVolume',
+      value: <ExactValue locale={locale} unit="m3" value={kpis.plannedVolume.value} />,
+      reference: unavailable,
+      variance: unavailable,
+      state: kpis.plannedVolume.state,
+      source: kpis.plannedVolume.source,
+      reason: kpis.plannedVolume.reason,
+      missing: {
+        value: kpis.plannedVolume.value === null,
+        reference: true,
+        variance: true,
+        age: true,
+      },
+    },
+    {
+      id: 'compliance',
+      label: 'compliance',
+      value: <ExactValue locale={locale} unit="percent" value={kpis.compliance.percentage} />,
+      reference: `${t('assessedStations')}: ${formatNumber(locale, kpis.compliance.assessedDenominator)}`,
+      variance: `${t('onPlanCount')}: ${formatNumber(locale, kpis.compliance.withinCount)}; ${t('overCount')}: ${formatNumber(locale, kpis.compliance.overCount)}; ${t('underCount')}: ${formatNumber(locale, kpis.compliance.underCount)}`,
+      state: kpis.compliance.state,
+      source: kpis.compliance.source,
+      reason: kpis.compliance.reason,
+      missing: {
+        value: kpis.compliance.percentage === null,
+        reference: false,
+        variance: false,
+        age: true,
+      },
+    },
+    {
+      id: 'balance',
+      label: 'unexplainedBalance',
+      value: <ExactValue locale={locale} unit="m3" value={kpis.unexplainedBalance.value} />,
+      reference: unavailable,
+      variance: unavailable,
+      state: kpis.unexplainedBalance.state,
+      source: kpis.unexplainedBalance.source,
+      reason: kpis.unexplainedBalance.reason,
+      missing: {
+        value: kpis.unexplainedBalance.value === null,
+        reference: true,
+        variance: true,
+        age: true,
+      },
+    },
+    {
+      id: 'alarms',
+      label: 'activeCriticalAlarms',
+      value:
+        kpis.activeCriticalAlarms.count === null ? (
+          unavailable
+        ) : (
+          <data value={String(kpis.activeCriticalAlarms.count)}>
+            {formatNumber(locale, kpis.activeCriticalAlarms.count)}
+          </data>
+        ),
+      reference: unavailable,
+      variance: unavailable,
+      state: kpis.activeCriticalAlarms.state,
+      source: kpis.activeCriticalAlarms.source,
+      reason: kpis.activeCriticalAlarms.reason,
+      missing: {
+        value: kpis.activeCriticalAlarms.count === null,
+        reference: true,
+        variance: true,
+        age: true,
+      },
+    },
+    {
+      id: 'reported-stations',
+      label: 'dashboardReportedStations',
+      value: unavailable,
+      reference: `${t('dashboardReportedCount')}: ${formatNumber(locale, dashboard.scope.reportedStationCount)} / ${formatNumber(locale, dashboard.scope.stationDenominator)}; ${t('deviceConnectivity')}: ${formatNumber(locale, dashboard.scope.deviceConnectivity.online)} / ${formatNumber(locale, dashboard.scope.deviceConnectivity.denominator)}`,
+      variance: unavailable,
+      state: 'unassessable',
+      source: dashboard.scope.deviceConnectivity.source,
+      reason: t('dashboardStationCoverageUnavailable'),
+      missing: { value: true, reference: false, variance: true, age: true },
+    },
+    {
+      id: 'confidence',
+      label: 'systemConfidence',
+      value: unavailable,
+      reference: unavailable,
+      variance: unavailable,
+      state: kpis.systemConfidence.state,
+      source: kpis.systemConfidence.source,
+      reason: kpis.systemConfidence.reason,
+      missing: { value: true, reference: true, variance: true, age: true },
+    },
+  ];
   return (
-    <section aria-labelledby="kpis-heading">
+    <section aria-labelledby="kpis-heading" className="dashboard-register-panel">
       <h2 id="kpis-heading">{t('dashboardKpis')}</h2>
-      <div className="metric-grid">
-        <MetricCard
-          locale={locale}
-          label="regionalInflow"
-          state={kpis.regionalInflow.state}
-          source={kpis.regionalInflow.source}
-          value={kpis.regionalInflow.value ?? t('notAvailable')}
-          unit={kpis.regionalInflow.value === null ? undefined : 'm³/s'}
-          reason={kpis.regionalInflow.reason}
-        />
-        <MetricCard
-          locale={locale}
-          label="deliveredVolume"
-          state={kpis.deliveredVolume.state}
-          source={kpis.deliveredVolume.source}
-          value={<ExactValue locale={locale} unit="m3" value={kpis.deliveredVolume.value} />}
-          reason={kpis.deliveredVolume.reason}
-        />
-        <MetricCard
-          locale={locale}
-          label="plannedVolume"
-          state={kpis.plannedVolume.state}
-          source={kpis.plannedVolume.source}
-          value={<ExactValue locale={locale} unit="m3" value={kpis.plannedVolume.value} />}
-          reason={kpis.plannedVolume.reason}
-        />
-        <MetricCard
-          locale={locale}
-          label="unexplainedBalance"
-          state={kpis.unexplainedBalance.state}
-          source={kpis.unexplainedBalance.source}
-          value={
-            kpis.unexplainedBalance.value ? (
-              <ExactValue locale={locale} unit="m3" value={kpis.unexplainedBalance.value} />
-            ) : (
-              <span>
-                <data value="0/1">0</data> m³
-              </span>
-            )
-          }
-          reason={kpis.unexplainedBalance.reason}
-        />
-        <MetricCard
-          locale={locale}
-          label="compliance"
-          state={kpis.compliance.state}
-          source={kpis.compliance.source}
-          value={<ExactValue locale={locale} unit="percent" value={kpis.compliance.percentage} />}
-          reason={kpis.compliance.reason}
-        >
-          <p className="metric-card__detail">{`${t('assessedStations')}: ${formatNumber(locale, kpis.compliance.assessedDenominator)}; ${t('onPlanCount')}: ${formatNumber(locale, kpis.compliance.withinCount)}; ${t('overCount')}: ${formatNumber(locale, kpis.compliance.overCount)}; ${t('underCount')}: ${formatNumber(locale, kpis.compliance.underCount)}`}</p>
-        </MetricCard>
-        <MetricCard
-          locale={locale}
-          label="activeCriticalAlarms"
-          state={kpis.activeCriticalAlarms.state}
-          source={kpis.activeCriticalAlarms.source}
-          value={kpis.activeCriticalAlarms.count ?? t('notAvailable')}
-          reason={kpis.activeCriticalAlarms.reason}
-        />
-        <MetricCard
-          locale={locale}
-          label="systemConfidence"
-          state={kpis.systemConfidence.state}
-          source={kpis.systemConfidence.source}
-          value={
-            kpis.systemConfidence.value ?? (
-              <span>
-                <data value="99.4">99.4</data> %
-              </span>
-            )
-          }
-          reason={kpis.systemConfidence.reason}
-        />
+      <div className="dashboard-register-scroll">
+        <table className="dashboard-register">
+          <caption className="visually-hidden">{t('dashboardKpis')}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('dashboardRegisterMeasure')}</th>
+              <th scope="col">{t('dashboardRegisterValue')}</th>
+              <th scope="col">{t('dashboardRegisterReference')}</th>
+              <th scope="col">{t('dashboardRegisterVariance')}</th>
+              <th scope="col">{t('dashboardRegisterQuality')}</th>
+              <th scope="col">{t('dashboardRegisterDataAge')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const unavailableFields = [
+                row.missing.value ? t('dashboardRegisterValue') : null,
+                row.missing.reference ? t('dashboardRegisterReference') : null,
+                row.missing.variance ? t('dashboardRegisterVariance') : null,
+                row.missing.age ? t('dashboardRegisterDataAge') : null,
+              ].filter((label): label is string => label !== null);
+              return (
+                <tr
+                  className={`dashboard-register__row dashboard-register__row--${row.state}`}
+                  key={row.id}
+                >
+                  <th data-label={t('dashboardRegisterMeasure')} scope="row">
+                    {t(row.label)}
+                    {unavailableFields.length ? (
+                      <p className="dashboard-register__unavailable-summary">
+                        {`${unavailableFields.join(', ')}: ${t('notAvailable')}`}
+                      </p>
+                    ) : null}
+                  </th>
+                  <td
+                    className="dashboard-register__value"
+                    data-label={t('dashboardRegisterValue')}
+                    data-mobile-missing={row.missing.value || undefined}
+                  >
+                    {row.value}
+                  </td>
+                  <td
+                    data-label={t('dashboardRegisterReference')}
+                    data-mobile-missing={row.missing.reference || undefined}
+                  >
+                    {row.reference}
+                  </td>
+                  <td
+                    data-label={t('dashboardRegisterVariance')}
+                    data-mobile-missing={row.missing.variance || undefined}
+                  >
+                    {row.variance}
+                  </td>
+                  <td
+                    className={`dashboard-register__quality dashboard-register__quality--${row.state}`}
+                    data-label={t('dashboardRegisterQuality')}
+                  >
+                    <StatusLabel locale={locale} state={row.state} />
+                    <SourceLabel locale={locale} source={row.source} />
+                    {row.reason ? (
+                      <span className="dashboard-register__reason">{row.reason}</span>
+                    ) : null}
+                  </td>
+                  <td
+                    className="dashboard-register__age"
+                    data-label={t('dashboardRegisterDataAge')}
+                    data-mobile-missing={row.missing.age || undefined}
+                  >
+                    {unavailable}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -453,94 +618,119 @@ function Comparison({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
           </dd>
         </div>
       </dl>
+      <DashboardPlanActualChart
+        actualLabel={t('comparisonActual')}
+        aggregateNote={t('dashboardAggregateNote')}
+        ariaLabel={t('comparison')}
+        caption={t('comparison')}
+        data={[
+          {
+            id: 'selected',
+            label: t('selectedPeriod'),
+            start: dashboard.windows.selected.start,
+            end: dashboard.windows.selected.end,
+            actual: rationalChartValue(comparison.actualM3),
+            actualText: <ExactValue locale={locale} unit="m3" value={comparison.actualM3} />,
+            planned: rationalChartValue(comparison.plannedM3),
+            plannedText: <ExactValue locale={locale} unit="m3" value={comparison.plannedM3} />,
+          },
+          {
+            id: 'prior',
+            label: t('priorPeriod'),
+            start: dashboard.windows.prior.start,
+            end: dashboard.windows.prior.end,
+            actual: rationalChartValue(comparison.priorActualM3),
+            actualText: <ExactValue locale={locale} unit="m3" value={comparison.priorActualM3} />,
+            planned: null,
+            plannedText: <span className="metric-unavailable">{t('notAvailable')}</span>,
+          },
+        ]}
+        intervalLabel={t('assessedInterval')}
+        locale={locale}
+        planLabel={t('comparisonPlanned')}
+        unitLabel={'m\u00B3'}
+        unavailableLabel={t('notAvailable')}
+      />
     </section>
   );
 }
 
-function SimpleDashboard({ locale, dashboard }: { locale: Locale; dashboard: DashboardResponse }) {
+function SimpleOverview({ locale, dashboard }: { locale: Locale; dashboard: DashboardResponse }) {
   const t = (key: TranslationKey) => translate(locale, key);
+  const topItems = dashboard.deviations.slice(0, 3);
   const stationAttention =
     dashboard.scope.dataStates.noData + dashboard.scope.dataStates.unreliable;
   const deviceAttention =
     dashboard.scope.deviceConnectivity.offline + dashboard.scope.deviceConnectivity.unknown;
-  const alarmCount = dashboard.kpis.activeCriticalAlarms.count;
-  const topItems = dashboard.deviations.slice(0, 3);
-  const largestDeviation = dashboard.deviations.reduce<
-    DashboardResponse['deviations'][number] | null
-  >(
-    (largest, item) =>
-      largest === null || rationalRelativePercent(item.absoluteM3, largest.absoluteM3) >= 100
-        ? item
-        : largest,
-    null,
-  );
-  const deliveryDelta =
+  const comparisonVariance =
     dashboard.comparison.actualM3 && dashboard.comparison.plannedM3
       ? subtractExactRationals(dashboard.comparison.actualM3, dashboard.comparison.plannedM3)
       : null;
   return (
-    <div className="simple-dashboard">
-      <section aria-label="Regional Water Platform Digital Twin" className="investor-hero-card">
-        <div className="investor-hero-card__content">
-          <span className="investor-hero-card__badge">
-            <span className="pulse-dot-green" aria-hidden="true" />
-            Live National Water Grid
-          </span>
-          <h2 className="investor-hero-card__title">
-            Automated Hydro Operations &amp; Accounting Platform
-          </h2>
-          <p className="investor-hero-card__description">
-            Next-generation decision support and telemetry intelligence for Central Asian river
-            basins. Real-time discharge monitoring, bitemporal delivery accounting, and automated
-            deficit prevention.
-          </p>
-          <div className="investor-hero-card__pillars">
-            <span className="investor-hero-card__pillar">
-              <span aria-hidden="true">💧</span> 83 Automated Hotspots
-            </span>
-            <span className="investor-hero-card__pillar">
-              <span aria-hidden="true">⚡</span> 99.4% Delivery Precision
-            </span>
-            <span className="investor-hero-card__pillar">
-              <span aria-hidden="true">🛰️</span> IoT Telemetry &amp; Solar Gate
-            </span>
-            <span className="investor-hero-card__pillar">
-              <span aria-hidden="true">📊</span> Auditable m³ Accounting
-            </span>
+    <>
+      <DashboardRegister dashboard={dashboard} locale={locale} />
+      <Comparison dashboard={dashboard} locale={locale} />
+      <section aria-labelledby="at-a-glance-heading" className="dashboard-attention-list">
+        <h2 id="at-a-glance-heading">{t('dashboardKpiTiles')}</h2>
+        <dl>
+          <div>
+            <dt>{t('activeCriticalAlarms')}</dt>
+            <dd>
+              {dashboard.kpis.activeCriticalAlarms.count === null ? (
+                <span className="metric-unavailable">{t('notAvailable')}</span>
+              ) : (
+                <data value={String(dashboard.kpis.activeCriticalAlarms.count)}>
+                  {formatNumber(locale, dashboard.kpis.activeCriticalAlarms.count)}
+                </data>
+              )}{' '}
+              <a href="#alarms">{t('dashboardOpenAlarms')}</a>
+            </dd>
           </div>
-        </div>
-        <div className="investor-hero-card__visual">
-          <img
-            src="/assets/hero-digital-twin.jpg"
-            alt="3D Digital Twin of Regional River Basin and Canal Infrastructure"
-            className="investor-hero-card__img"
-            loading="lazy"
-          />
-          <div className="investor-hero-card__overlay-badge">
-            <span className="pulse-dot-green" aria-hidden="true" />
-            <span>Digital Twin Active • 83 Hotspots</span>
+          <div>
+            <dt>{t('dashboardStationAttention')}</dt>
+            <dd>{stationAttention}</dd>
           </div>
-        </div>
+          <div>
+            <dt>{t('dashboardDeviceAttention')}</dt>
+            <dd>{deviceAttention}</dd>
+          </div>
+          <div>
+            <dt>{t('dashboardDeliverySummary')}</dt>
+            <dd>
+              <dl className="simple-delivery-values">
+                <div>
+                  <dt>{t('comparisonActual')}</dt>
+                  <dd>
+                    <ExactValue locale={locale} unit="m3" value={dashboard.comparison.actualM3} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('comparisonPlanned')}</dt>
+                  <dd>
+                    <ExactValue locale={locale} unit="m3" value={dashboard.comparison.plannedM3} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('dashboardVariance')}</dt>
+                  <dd>
+                    {comparisonVariance ? (
+                      <>
+                        <GlyphIcon glyph={BigInt(comparisonVariance.numerator) < 0n ? '↓' : '↑'} />{' '}
+                        <ExactValue locale={locale} unit="m3" value={comparisonVariance} />
+                      </>
+                    ) : (
+                      <span className="metric-unavailable">{t('notAvailable')}</span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+        </dl>
       </section>
-
-      <section aria-labelledby="guide-heading" className="simple-guide">
-        <div>
-          <p className="eyebrow">{t('dashboardSimpleIntro')}</p>
-          <h2 id="guide-heading">{t('dashboardGuideHeading')}</h2>
-          <p>{t('dashboardGuideDetail')}</p>
-          <div className="visual-station-showcase">
-            <img
-              src="/assets/smart-canal-station.jpg"
-              alt="Smart Solar-Powered Canal Telemetry Station in Uzbekistan"
-              className="visual-station-showcase__img"
-              loading="lazy"
-            />
-            <div className="visual-station-showcase__caption">
-              <span>Station OT-074 • Syrdarya Basin</span>
-              <span className="status-chip status-chip--positive">● Telemetry Online</span>
-            </div>
-          </div>
-        </div>
+      <section aria-labelledby="guide-heading" className="dashboard-guide">
+        <h2 id="guide-heading">{t('dashboardGuideHeading')}</h2>
+        <p>{t('dashboardGuideDetail')}</p>
         <ol>
           <li>
             <div>
@@ -562,161 +752,93 @@ function SimpleDashboard({ locale, dashboard }: { locale: Locale; dashboard: Das
           </li>
         </ol>
       </section>
-
-      <section aria-labelledby="at-a-glance-heading">
-        <h2 id="at-a-glance-heading">{t('dashboardKpiTiles')}</h2>
-        <div className="simple-metric-grid ops-kpi-grid">
-          <article
-            className={`simple-metric ops-kpi-tile ${alarmCount === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
-          >
-            <span aria-hidden="true" className="simple-metric__icon">
-              {alarmCount === 0 ? '✓' : '!'}
-            </span>
-            <div>
-              <h3>{t('activeCriticalAlarms')}</h3>
-              <p className="simple-metric__value">{alarmCount ?? t('notAvailable')}</p>
-              <a href="#alarms">{t('dashboardOpenAlarms')}</a>
-            </div>
-          </article>
-          <article
-            className={`simple-metric ops-kpi-tile ${stationAttention === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
-          >
-            <span aria-hidden="true" className="simple-metric__icon">
-              {stationAttention === 0 ? '✓' : '!'}
-            </span>
-            <div>
-              <h3>{t('dashboardStationAttention')}</h3>
-              <p className="simple-metric__value">{stationAttention}</p>
-              <p>{`${dashboard.scope.dataStates.noData} ${t('noDataCount')} · ${dashboard.scope.dataStates.unreliable} ${t('unreliableCount')}`}</p>
-            </div>
-          </article>
-          <article
-            className={`simple-metric ops-kpi-tile ${deviceAttention === 0 ? 'simple-metric--ok' : 'simple-metric--attention'}`}
-          >
-            <span aria-hidden="true" className="simple-metric__icon">
-              {deviceAttention === 0 ? '✓' : '!'}
-            </span>
-            <div>
-              <h3>{t('dashboardDeviceAttention')}</h3>
-              <p className="simple-metric__value">{deviceAttention}</p>
-              <p>{`${formatNumber(locale, dashboard.scope.deviceConnectivity.offline)} ${t('deviceOfflineCount')} · ${formatNumber(locale, dashboard.scope.deviceConnectivity.unknown)} ${t('deviceUnknownCount')}`}</p>
-            </div>
-          </article>
-          <article className="simple-metric ops-kpi-tile ops-kpi-tile--delivery simple-metric--information">
-            <span aria-hidden="true" className="simple-metric__icon">
-              ↔
-            </span>
-            <div className="ops-kpi-tile__body">
-              <h3>{t('dashboardDeliverySummary')}</h3>
-              <div className="liquid-wave-gauge-container">
-                <div className="liquid-wave-gauge" aria-hidden="true" title="Water Delivery Level">
-                  <div className="liquid-wave-gauge__water" />
-                  <svg
-                    className="liquid-wave-gauge__wave"
-                    viewBox="0 0 100 20"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d="M0 10 C 25 0, 25 20, 50 10 C 75 0, 75 20, 100 10 L 100 20 L 0 20 Z"
-                      fill="rgba(255,255,255,0.4)"
-                    />
-                  </svg>
-                  <span className="liquid-wave-gauge__value">98%</span>
-                </div>
-                <dl className="simple-delivery-values" style={{ flex: 1 }}>
-                  <div>
-                    <dt>{t('comparisonActual')}</dt>
-                    <dd>
-                      <ExactValue locale={locale} unit="m3" value={dashboard.comparison.actualM3} />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t('comparisonPlanned')}</dt>
-                    <dd>
-                      <ExactValue
-                        locale={locale}
-                        unit="m3"
-                        value={dashboard.comparison.plannedM3}
-                      />
-                    </dd>
-                  </div>
-                  <div className="ops-kpi-tile__delta">
-                    <dt>{t('dashboardVariance')}</dt>
-                    <dd>
-                      {deliveryDelta ? (
-                        <>
-                          <span aria-hidden="true">
-                            {BigInt(deliveryDelta.numerator) < 0n ? '↓' : '↑'}
-                          </span>{' '}
-                          <ExactValue locale={locale} unit="m3" value={deliveryDelta} />
-                        </>
-                      ) : (
-                        t('notAvailable')
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section aria-labelledby="simple-attention-heading" className="simple-attention panel">
-        <div className="simple-attention__heading">
+      <section aria-labelledby="simple-data-state-heading" className="dashboard-data-states">
+        <h2 id="simple-data-state-heading">{t('dataState')}</h2>
+        <dl>
           <div>
-            <h2 id="simple-attention-heading">{t('dashboardLargestDifferences')}</h2>
-            <p>{t('dashboardNeedsAttentionDetail')}</p>
+            <dt>
+              <GlyphIcon glyph="✓" />
+              {t('reported')}
+            </dt>
+            <dd>{formatNumber(locale, dashboard.scope.dataStates.reported)}</dd>
           </div>
-          <a className="action-link" href="#operations">
-            {t('openLiveOperations')}
-          </a>
+          <div>
+            <dt>
+              <GlyphIcon glyph="—" />
+              {t('noDataCount')}
+            </dt>
+            <dd>{formatNumber(locale, dashboard.scope.dataStates.noData)}</dd>
+          </div>
+          <div>
+            <dt>
+              <GlyphIcon glyph="!" />
+              {t('unreliableCount')}
+            </dt>
+            <dd>{formatNumber(locale, dashboard.scope.dataStates.unreliable)}</dd>
+          </div>
+          <div>
+            <dt>
+              <GlyphIcon glyph="⚙" />
+              {t('unconfiguredCount')}
+            </dt>
+            <dd>{formatNumber(locale, dashboard.scope.dataStates.unconfigured)}</dd>
+          </div>
+        </dl>
+      </section>
+      <section
+        aria-labelledby="simple-attention-heading"
+        className="deviations-panel dashboard-ranked-list"
+      >
+        <div>
+          <h2 id="simple-attention-heading">{t('dashboardLargestDifferences')}</h2>
+          <p>{t('dashboardNeedsAttentionDetail')}</p>
         </div>
         {topItems.length === 0 ? (
           <p className="metric-unavailable">{t('noDeviations')}</p>
         ) : (
-          <ol className="simple-attention-list ops-ranked-differences">
+          <ol>
             {topItems.map((item) => {
               const isUnder = BigInt(item.signedM3.numerator) < 0n;
               return (
-                <li key={item.stationId}>
-                  <div>
-                    <strong>{item.hotspotCode}</strong>
-                    <span>{item.territoryName}</span>
-                  </div>
-                  <span
-                    className={`simple-attention-list__status ${isUnder ? 'is-under' : 'is-over'}`}
-                  >
-                    <span aria-hidden="true">{isUnder ? '↓' : '↑'}</span>
-                    {t(isUnder ? 'dashboardUnderPlan' : 'dashboardOverPlan')}
+                <li
+                  className={
+                    item.dataState === 'unreliable' || item.quality === 'unreliable'
+                      ? 'dashboard-deviation--unreliable'
+                      : undefined
+                  }
+                  key={item.stationId}
+                >
+                  <strong>{item.hotspotCode}</strong>
+                  <span>{item.territoryName}</span>
+                  <span>
+                    <GlyphIcon glyph={isUnder ? '↓' : '↑'} />{' '}
+                    {isUnder ? t('dashboardUnderPlan') : t('dashboardOverPlan')}
+                    {item.dataState !== 'reported' || item.quality !== 'valid' ? (
+                      <StatusChip
+                        icon={<GlyphIcon glyph="!" />}
+                        label={t(
+                          dashboardQualityKey(
+                            item.quality !== 'valid'
+                              ? item.quality
+                              : item.dataState === 'reported'
+                                ? 'valid'
+                                : item.dataState,
+                          ),
+                        )}
+                        tone="attention"
+                      />
+                    ) : null}
                   </span>
                   <ExactValue locale={locale} unit="m3" value={item.absoluteM3} />
-                  <span
-                    aria-label={`${t('dashboardVarianceBar')}: ${formatExactRational(item.absoluteM3, locale)} m³`}
-                    className="ops-variance-bar"
-                    role="img"
-                  >
-                    <span
-                      style={{
-                        width: `${
-                          largestDeviation
-                            ? rationalRelativePercent(item.absoluteM3, largestDeviation.absoluteM3)
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </span>
-                  <div className="simple-attention-list__actions">
-                    <a href={item.liveTarget}>{t('openLiveOperations')}</a>
-                    <a href={item.mapTarget}>{t('openMap')}</a>
-                  </div>
+                  <a href={item.liveTarget}>{t('openLiveOperations')}</a>
+                  <a href={item.mapTarget}>{t('openMap')}</a>
                 </li>
               );
             })}
           </ol>
         )}
       </section>
-    </div>
+    </>
   );
 }
 
@@ -751,7 +873,14 @@ function Deviations({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
               {dashboard.deviations.map((item) => {
                 const state = dashboardDataStatePresentation(item.dataState);
                 return (
-                  <tr key={item.stationId}>
+                  <tr
+                    className={
+                      item.dataState === 'unreliable' || item.quality === 'unreliable'
+                        ? 'dashboard-deviation--unreliable'
+                        : undefined
+                    }
+                    key={item.stationId}
+                  >
                     <th data-label={t('hotspot')} scope="row">
                       {item.hotspotCode}
                     </th>
@@ -781,12 +910,21 @@ function Deviations({ locale, dashboard }: { locale: Locale; dashboard: Dashboar
                       <ExactValue locale={locale} unit="m3" value={item.absoluteM3} />
                     </td>
                     <td data-label={t('dataState')}>
-                      <span className="table-status">
-                        <span aria-hidden="true">{state.icon}</span>
-                        {t(state.label)}
-                      </span>
+                      <StatusChip
+                        icon={<GlyphIcon glyph={state.icon} />}
+                        label={t(state.label)}
+                        hatch={item.dataState === 'no_data' || item.dataState === 'unreliable'}
+                        tone={item.dataState === 'reported' ? 'positive' : 'attention'}
+                      />
                     </td>
-                    <td data-label={t('dataQuality')}>{t(dashboardQualityKey(item.quality))}</td>
+                    <td data-label={t('dataQuality')}>
+                      <StatusChip
+                        icon={<GlyphIcon glyph={item.quality === 'valid' ? '✓' : '!'} />}
+                        hatch={item.quality === 'no_data' || item.quality === 'unreliable'}
+                        label={t(dashboardQualityKey(item.quality))}
+                        tone={item.quality === 'valid' ? 'positive' : 'attention'}
+                      />
+                    </td>
                     <td data-label={t('source')}>
                       <SourceLabel locale={locale} source={item.source} />
                     </td>
@@ -869,7 +1007,9 @@ export function DashboardWorkspace({
       {displayState === 'ready' && response ? (
         <>
           {view === 'simple' ? (
-            <SimpleDashboard dashboard={response} locale={locale} />
+            <>
+              <SimpleOverview dashboard={response} locale={locale} />
+            </>
           ) : (
             <>
               <Definitions dashboard={response} locale={locale} />
@@ -898,7 +1038,7 @@ export function DashboardWorkspace({
                 </div>
               </dl>
               <Coverage dashboard={response} locale={locale} />
-              <Kpis dashboard={response} locale={locale} />
+              <DashboardRegister dashboard={response} locale={locale} />
               <Comparison dashboard={response} locale={locale} />
               <Deviations dashboard={response} locale={locale} />
             </>

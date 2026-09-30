@@ -6,6 +6,7 @@ import type {
   LiveOperationsResponse,
 } from '@isuv/contracts';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { translate } from '@isuv/i18n';
 
 import { LiveOperationsContent, LiveOperationsInspector } from './live-operations.js';
 
@@ -168,22 +169,28 @@ test('live table renders full labels, explicit units/statuses, safe placeholders
     'Plan',
     'Interval variance',
     'Water and device status',
-    'Data age',
-    'Alarm / incident',
   ])
     assert.match(markup, new RegExp(label));
   assert.match(markup, /1\.25 m<\/strong>/);
   assert.match(markup, /1\.25 m³\/s<\/strong>/);
-  assert.doesNotMatch(markup, /Accumulated counter<\/th>/);
+  assert.match(markup, /Stage \(m\)<\/th>/);
+  assert.match(markup, /Discharge \(m³\/s\)<\/th>/);
+  assert.match(markup, /Accumulated volume \(m³\)<\/th>/);
+  assert.match(markup, /1 m³<\/strong>/);
   assert.match(markup, /Not configured/);
   assert.match(markup, /Synthetic scenario \/ non-official source/);
   assert.match(markup, /href="#operations\?deviceId=c2000000/);
   assert.match(markup, /class="live-table__station-code"[^>]*>S-01<\/strong>/);
   assert.match(markup, /class="live-table__station-name"[^>]*>Synthetic Station 01<\/span>/);
-  assert.match(markup, /class="live-table__device-link"[^>]*>D-01<\/a>/);
+  assert.match(
+    markup,
+    /class="live-table__device-link"[^>]*><strong class="live-table__station-code"/,
+  );
+  assert.match(markup, /<span class="live-table__device-code">D-01<\/span><\/a>/);
   assert.match(markup, /<form[^>]+aria-label="Filters"/);
   assert.match(markup, /role="combobox"/);
   assert.match(markup, /<button[^>]*>Columns<\/button>/);
+  assert.doesNotMatch(markup, /<th[^>]*>Data age<\/th>|<th[^>]*>Alarm \/ incident<\/th>/);
   assert.match(markup, /<details class="workspace-header__provenance">/);
 });
 
@@ -251,6 +258,10 @@ test('compact water/device status retains independent health facts in accessible
   ])
     assert.match(markup, new RegExp(accessibleState));
   assert.equal((markup.match(/class="live-status-compact"/g) ?? []).length, 3);
+  assert.equal((markup.match(/class="live-status-compact__line"/g) ?? []).length, 6);
+  assert.equal((markup.match(/<span>Water:<\/span>/g) ?? []).length, 3);
+  assert.equal((markup.match(/<span>Device:<\/span>/g) ?? []).length, 3);
+  assert.doesNotMatch(markup, /✓ ↔ ✓ ✓/);
   assert.equal((markup.match(/<details class="live-health-disclosure">/g) ?? []).length, 0);
   assert.match(markup, /aria-label="Reported: Water and device status: Reported;/);
 });
@@ -363,6 +374,19 @@ test('persistent inspector gives the heading focus target, raw/validated trend t
         reason: null,
         source: canonicalSource,
       },
+      {
+        observationId: id.device,
+        lineageId: id.sensor,
+        revision: 3,
+        workflow: 'manual_correction',
+        quality: 'valid' as const,
+        value: '1.30',
+        unit: 'm' as const,
+        observedAt: '2026-08-24T07:35:56.123456Z',
+        ingestedAt: '2026-08-24T07:36:00.123456Z',
+        reason: 'Supervisor correction retained',
+        source: canonicalSource,
+      },
     ],
     healthHistory: unconfigured,
     maintenance: {
@@ -414,8 +438,13 @@ test('persistent inspector gives the heading focus target, raw/validated trend t
   assert.match(markup, /Measurement, calibration, and rating metadata/);
   assert.match(markup, /Governed canonical test/);
   assert.match(markup, /Non-official source/);
-  assert.match(markup, /Revision 1; 1\.20 m; Workflow: raw/);
-  assert.match(markup, /Revision 2; 1\.25 m; Workflow: automatically_validated/);
+  assert.match(markup, /class="live-trend-ledger"/);
+  assert.match(markup, /Stage \(m\)<\/th>/);
+  assert.match(markup, /<strong>Original<\/strong> <del[^>]*>1\.20 m<\/del>/);
+  assert.match(markup, /<strong>Corrected<\/strong> <ins[^>]*>1\.30 m<\/ins>/);
+  assert.match(markup, /Awaiting validation/);
+  assert.match(markup, /Revision 2[\s\S]*1\.25 m/);
+  assert.match(markup, /Supervisor correction retained/);
   assert.match(markup, /Not configured/);
   assert.match(markup, /Maintenance history/);
   assert.match(markup, /Calibration — Completed/);
@@ -427,6 +456,44 @@ test('persistent inspector gives the heading focus target, raw/validated trend t
   assert.match(markup, /synthetic seeded maintenance history/);
   assert.match(markup, /Synthetic, non-official maintenance record/);
   assert.doesNotMatch(markup, /work order|control device/i);
+});
+
+test('inspector trend caption separates its complete sentence from raw and validated labels', () => {
+  const inspector: LiveOperationsInspectorResponse = {
+    referenceAt: response.referenceAt,
+    knownAt: response.knownAt,
+    current: response.rows[0]!,
+    trend: [],
+    revisions: [],
+    healthHistory: unconfigured,
+    maintenance: {
+      state: 'unconfigured',
+      records: [],
+      source: 'unconfigured',
+      reason: 'Synthetic fixture.',
+    },
+    placeholders: {
+      plan: 'unconfigured',
+      intervalVariance: 'unconfigured',
+      alarms: 'unconfigured',
+      incidents: 'unconfigured',
+      firmware: 'unconfigured',
+      documents: 'unconfigured',
+    },
+  };
+  for (const locale of ['en', 'ru', 'uz'] as const) {
+    const markup = renderToStaticMarkup(
+      <LiveOperationsInspector locale={locale} inspector={inspector} onClose={() => undefined} />,
+    );
+    const caption = markup.match(/<caption>([\s\S]*?)<\/caption>/)![1]!;
+    assert.ok(caption.includes(`<span>${translate(locale, 'liveTrendDetail')}</span>`));
+    assert.ok(
+      caption.includes(
+        `<span>${translate(locale, 'liveRaw')} / ${translate(locale, 'liveValidated')}</span>`,
+      ),
+    );
+    assert.doesNotMatch(caption, /\.\.|\.;/);
+  }
 });
 
 test('unconfigured maintenance is visibly distinct from an empty synthetic history', () => {
@@ -458,4 +525,52 @@ test('unconfigured maintenance is visibly distinct from an empty synthetic histo
   assert.match(markup, /Maintenance history/);
   assert.match(markup, /No synthetic maintenance history is configured for this device\./);
   assert.match(markup, /Not configured/);
+});
+
+test('live inspector rounds display quantities while retaining exact raw evidence', () => {
+  const current = structuredClone(response.rows[0]!);
+  current.quantities.stage.value = '1.01200000000000000000';
+  current.quantities.discharge.value = '2.34500000000000000000';
+  current.quantities.accumulatedCounter.value = '9007199254740993.60';
+  current.health.power = { state: 'measured', value: '12.10000000000000000000', unit: 'V' };
+  const inspector: LiveOperationsInspectorResponse = {
+    referenceAt: response.referenceAt,
+    knownAt: response.knownAt,
+    current,
+    trend: [
+      {
+        at: response.referenceAt,
+        kind: 'stage',
+        unit: 'm',
+        raw: current.quantities.stage.value,
+        validated: '1.02500000000000000000',
+        gap: false,
+        source,
+      },
+    ],
+    revisions: [],
+    healthHistory: unconfigured,
+    maintenance: {
+      state: 'synthetic_history',
+      source: 'synthetic_scenario',
+      reason: null,
+      records: [],
+    },
+    placeholders: {
+      plan: 'unconfigured',
+      intervalVariance: 'unconfigured',
+      alarms: 'unconfigured',
+      incidents: 'unconfigured',
+      firmware: 'unconfigured',
+      documents: 'unconfigured',
+    },
+  };
+  const markup = renderToStaticMarkup(
+    <LiveOperationsInspector locale="en" inspector={inspector} onClose={() => undefined} />,
+  );
+  assert.match(markup, /title="Raw: 1\.01200000000000000000 m">1\.01 m<\/strong>/);
+  assert.match(markup, /2\.35 m³\/s<\/strong>/);
+  assert.match(markup, /9,007,199,254,740,994 m³<\/strong>/);
+  assert.match(markup, /title="12\.10000000000000000000 V">12\.1 V<\/span>/);
+  assert.match(markup, /title="1\.02500000000000000000 m">[\s\S]*1\.03 m<\/span>/);
 });

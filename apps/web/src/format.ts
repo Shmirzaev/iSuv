@@ -29,13 +29,26 @@ export function formatDecimal(locale: Locale, value: string | number | bigint): 
 
 export type MeasurementUnit = 'm' | 'm3/s' | 'm3';
 
+export function measurementUnitLabel(unit: MeasurementUnit): string {
+  return unit === 'm3/s' ? 'm³/s' : unit === 'm3' ? 'm³' : 'm';
+}
+
+/** Display precision only; callers retain the original observation as evidence. */
+export function formatFixedDecimal(
+  locale: Locale,
+  value: string | number | bigint,
+  fractionDigits: number,
+): string {
+  return formatDecimal(locale, roundDecimalString(String(value), fractionDigits));
+}
+
 /** Formats measurements without converting potentially large accounting values to Number. */
 export function formatMeasurementValue(
   locale: Locale,
   value: string | number | bigint,
   unit: MeasurementUnit,
 ): string {
-  return formatDecimal(locale, roundDecimalString(String(value), unit === 'm3' ? 0 : 2));
+  return formatFixedDecimal(locale, value, unit === 'm3' ? 0 : 2);
 }
 
 function roundDecimalString(value: string, fractionDigits: number): string {

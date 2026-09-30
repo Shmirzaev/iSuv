@@ -155,6 +155,12 @@ test('analytics has accessible semantic equivalents and never presents forecast 
   assert.match(markup, /href="#operations\?deviceId=/);
   assert.doesNotMatch(markup, /control gate|send notification|create work order/i);
   assert.match(markup, /No forecast or AI operational truth is present/);
+  assert.match(markup, /class="analytics-measures"/);
+  assert.match(markup, /class="analytics-register"/);
+  assert.match(markup, /Asia\/Tashkent UTC\+05:00/);
+  assert.match(markup, /analytics-plot__grid-minor/);
+  assert.match(markup, /analytics-register__abnormal/);
+  assert.match(markup, /Not available/);
   assert.equal(
     [...markup.matchAll(/<h[23][^>]*>Planned versus actual delivery<\/h[23]>/g)].length,
     1,
@@ -184,4 +190,28 @@ test('empty delivery retains balance, quality, and availability with localized d
   const loading = renderToStaticMarkup(<AnalyticsWorkspace access="unavailable" locale="en" />);
   assert.match(loading, /Loading analytics/);
   assert.doesNotMatch(loading, /120 m³/);
+});
+
+test('all-zero delivery variance uses a ruled note while retaining the accessible matrix table', () => {
+  const allZero = {
+    ...response,
+    delivery: {
+      ...response.delivery,
+      groups: response.delivery.groups.map((group) => ({
+        ...group,
+        signedVarianceM3: q('0'),
+      })),
+    },
+  } as AnalyticsResponse;
+  const markup = renderToStaticMarkup(
+    <AnalyticsReadout
+      filters={{ period: 'today' }}
+      locale="en"
+      onChange={() => undefined}
+      response={allZero}
+      state="ready"
+    />,
+  );
+  assert.match(markup, /All variances 0 m³/);
+  assert.match(markup, /<table class="analytics-register">/);
 });

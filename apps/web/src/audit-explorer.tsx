@@ -17,7 +17,6 @@ import {
   auditResources,
   defaultAuditFilters,
   groupedAuditActions,
-  shortIdentifier,
   type AuditFilters,
 } from './audit-explorer-model.js';
 import { presentationTimestamp } from './format.js';
@@ -33,9 +32,21 @@ const uuidPattern =
 
 function Timestamp({ locale, value }: { locale: Locale; value: string }) {
   const timestamp = presentationTimestamp(locale, value);
+  const offset = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Tashkent',
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(new Date(value))
+    .find((part) => part.type === 'timeZoneName')
+    ?.value.replace('GMT', 'UTC');
   return (
-    <time dateTime={timestamp.dateTime} title={timestamp.title}>
-      {timestamp.value}
+    <time className="audit-timestamp" dateTime={timestamp.dateTime} title={timestamp.title}>
+      <span className="audit-timestamp__utc">
+        {t(locale, 'auditUtcTime')}: {timestamp.dateTime}
+      </span>
+      <span className="audit-timestamp__local">
+        {t(locale, 'auditLocalTime')} ({offset ?? 'UTC'}): {timestamp.value}
+      </span>
     </time>
   );
 }
@@ -43,7 +54,7 @@ function Timestamp({ locale, value }: { locale: Locale; value: string }) {
 function Identifier({ value }: { value: string }) {
   return (
     <code className="stable-identifier" title={value} aria-label={value}>
-      {shortIdentifier(value)}
+      {value}
     </code>
   );
 }
@@ -246,7 +257,7 @@ export function AuditFiltersForm({
   );
 }
 
-function EventsTable({
+export function EventsTable({
   locale,
   events,
   selectedId,
@@ -267,16 +278,17 @@ function EventsTable({
         role="region"
         aria-label={t(locale, 'auditEvents')}
       >
-        <table>
+        <table className="audit-ledger">
           <caption className="visually-hidden">{t(locale, 'auditEvents')}</caption>
           <thead>
             <tr>
               <th scope="col">{t(locale, 'auditOccurredAt')}</th>
-              <th scope="col">{t(locale, 'auditAction')}</th>
-              <th scope="col">{t(locale, 'auditResource')}</th>
               <th scope="col">{t(locale, 'auditActorId')}</th>
-              <th scope="col">{t(locale, 'auditReason')}</th>
-              <th scope="col">{t(locale, 'auditOpen')}</th>
+              <th scope="col">{t(locale, 'auditAction')}</th>
+              <th scope="col">{t(locale, 'auditSubject')}</th>
+              <th scope="col">{t(locale, 'auditCorrelationId')}</th>
+              <th scope="col">{t(locale, 'auditBefore')}</th>
+              <th scope="col">{t(locale, 'auditAfter')}</th>
             </tr>
           </thead>
           <tbody>
@@ -287,18 +299,35 @@ function EventsTable({
                   <td data-label={t(locale, 'auditOccurredAt')}>
                     <Timestamp locale={locale} value={event.occurredAt} />
                   </td>
-                  <td data-label={t(locale, 'auditAction')}>
-                    {t(locale, auditActionTranslationKey(event.action))}
-                  </td>
-                  <td data-label={t(locale, 'auditResource')}>
-                    <code>{event.resource}</code>
-                  </td>
                   <td data-label={t(locale, 'auditActorId')}>
                     <Identifier value={event.actorUserId} />
                   </td>
-                  <td data-label={t(locale, 'auditReason')}>{event.reason}</td>
-                  <td data-label={t(locale, 'auditOpen')}>
+                  <td data-label={t(locale, 'auditAction')}>
+                    {t(locale, auditActionTranslationKey(event.action))}
+                  </td>
+                  <td data-label={t(locale, 'auditSubject')}>
+                    <code>{event.resource}</code>
+                    <Identifier value={event.resourceId} />
+                  </td>
+                  <td data-label={t(locale, 'auditCorrelationId')}>
+                    <code className="stable-identifier" title={event.requestId}>
+                      {event.requestId}
+                    </code>
+                  </td>
+                  <td
+                    className="audit-ledger__state-evidence"
+                    data-label={t(locale, 'auditBefore')}
+                  >
                     <button id={focusId} onClick={() => onSelect(event, focusId)} type="button">
+                      {t(locale, 'auditOpen')}
+                    </button>
+                  </td>
+                  <td className="audit-ledger__state-evidence" data-label={t(locale, 'auditAfter')}>
+                    <button
+                      id={`${focusId}-after`}
+                      onClick={() => onSelect(event, `${focusId}-after`)}
+                      type="button"
+                    >
                       {t(locale, 'auditOpen')}
                     </button>
                   </td>
@@ -316,20 +345,58 @@ function StateBlock({
   locale,
   title,
   value,
+  revision,
 }: {
   locale: Locale;
   title: TranslationKey;
   value: Record<string, unknown> | null;
+  revision?: 'original' | 'revision' | undefined;
 }) {
   return (
-    <section className="audit-state" aria-labelledby={`${title}-heading`}>
+    <section
+      className={`audit-state${revision ? ` audit-state--${revision}` : ''}`}
+      aria-labelledby={`${title}-heading`}
+    >
       <h3 id={`${title}-heading`}>{t(locale, title)}</h3>
       {value === null ? (
         <p>{t(locale, 'auditNoState')}</p>
+      ) : revision === 'original' ? (
+        <del>
+          <pre>{JSON.stringify(value, null, 2)}</pre>
+        </del>
+      ) : revision === 'revision' ? (
+        <ins>
+          <pre>{JSON.stringify(value, null, 2)}</pre>
+        </ins>
       ) : (
         <pre>{JSON.stringify(value, null, 2)}</pre>
       )}
     </section>
+  );
+}
+
+function StateEvidence({ locale, event }: { locale: Locale; event: AuditEvent }) {
+  const hasPairedState = event.oldState !== null && event.newState !== null;
+  const revision = event.action === 'observation.corrected' || event.action.includes('superseded');
+  return (
+    <div
+      className={`audit-state-evidence${hasPairedState ? ' audit-state-evidence--paired' : ''}${
+        revision ? ' audit-state-evidence--revision' : ''
+      }`}
+    >
+      <StateBlock
+        locale={locale}
+        title="auditOldState"
+        value={event.oldState}
+        revision={revision && hasPairedState ? 'original' : undefined}
+      />
+      <StateBlock
+        locale={locale}
+        title="auditNewState"
+        value={event.newState}
+        revision={revision && hasPairedState ? 'revision' : undefined}
+      />
+    </div>
   );
 }
 
@@ -400,8 +467,7 @@ export function AuditEventDetail({
           </div>
         ))}
       </dl>
-      <StateBlock locale={locale} title="auditOldState" value={event.oldState} />
-      <StateBlock locale={locale} title="auditNewState" value={event.newState} />
+      <StateEvidence locale={locale} event={event} />
       <div className="audit-actions">
         <button onClick={onClose} type="button">
           {t(locale, 'auditClose')}
@@ -543,7 +609,7 @@ export function AuditExplorerWorkspace({
   return (
     <section className="audit-workspace" aria-labelledby="audit-heading">
       <header className="panel audit-intro">
-        <h2 id="audit-heading">{t(locale, 'auditHeading')}</h2>
+        <h1 id="audit-heading">{t(locale, 'auditHeading')}</h1>
         <p>{t(locale, 'auditDetail')}</p>
         <details className="workspace-header__provenance">
           <summary>{t(locale, 'provenance')}</summary>
