@@ -5,6 +5,7 @@ import {
   RegionalReferenceWorkspace,
   ReferenceRecordDetail,
   RegionalMapWorkspace,
+  regionalMapView,
 } from './regional-reference.js';
 import { regionalReferenceData } from './regional-reference-data.js';
 import { regionalWords } from './regional-reference-i18n.js';
@@ -45,7 +46,7 @@ test('detail shows original ambiguous evidence and missing timestamp without a l
   assert.match(html, /Annual-volume scale is unconfirmed/);
 });
 
-test('bundled references remain readable without presenting unavailable operational data as authenticated', () => {
+test('default map lazy-loads supplied network without presenting operational data as authenticated', () => {
   const html = renderToStaticMarkup(
     <RegionalMapWorkspace
       access="unavailable"
@@ -54,7 +55,16 @@ test('bundled references remain readable without presenting unavailable operatio
       onSelection={() => undefined}
     />,
   );
-  assert.match(html, /Supplied reference data/);
-  assert.match(html, /regional-maps\/savay-area.webp/);
+  assert.match(html, /Andijan water network/);
+  assert.match(html, /#map\?view=reference/);
+  assert.match(html, /#map\?view=demo/);
+  assert.match(html, /role="status"/);
   assert.doesNotMatch(html, /SYN-HOTSPOT/);
+});
+
+test('map routes retain regional references and selected synthetic network deep links', () => {
+  assert.equal(regionalMapView('#map'), 'andijan');
+  assert.equal(regionalMapView('#map?view=reference'), 'reference');
+  assert.equal(regionalMapView('#map?view=demo'), 'demo');
+  assert.equal(regionalMapView('#map?stationId=station', true), 'demo');
 });

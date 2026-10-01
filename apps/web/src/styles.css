@@ -1,4 +1,5 @@
 :root {
+  --hatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.4' stroke-width='1'/%3E%3C/svg%3E");
   color-scheme: light;
   --canvas: #f1f5f3;
   --surface: #fafcfb;
@@ -1753,7 +1754,7 @@ dd,
 /* Alarm and audit registers share paper rules, with scoped evidence hatching. */
 :is(.alarm-center, .audit-workspace) {
   min-width: 0;
-  --ledger-hatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.4' stroke-width='1'/%3E%3C/svg%3E");
+
 }
 :is(.alarm-center, .audit-workspace) :is(.panel, .audit-filters, .status-notice) {
   border: 1px solid var(--border);
@@ -1808,7 +1809,7 @@ dd,
 .alarm-center-table__unavailable,
 .audit-state:has(> p),
 .audit-workspace .status-notice--unavailable {
-  background-image: var(--ledger-hatch);
+  background-image: var(--hatch);
 }
 .alarm-center-table__unavailable {
   display: inline-block;
@@ -2770,7 +2771,7 @@ dd,
 /* Command Dashboard: one register sheet, with real interval axes. */
 .dashboard-workspace {
   min-width: 0;
-  --register-hatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.35' stroke-width='1'/%3E%3C/svg%3E");
+
 }
 .dashboard-workspace
   :is(
@@ -2880,7 +2881,7 @@ dd,
 .dashboard-workspace .metric-unavailable {
   display: inline-block;
   padding: 0.15rem 0.25rem;
-  background-image: var(--register-hatch);
+  background-image: var(--hatch);
   color: var(--muted);
   font-family: inherit;
   font-size: 0.75rem;
@@ -2897,7 +2898,7 @@ dd,
     .coverage-state-list__offline,
     .coverage-state-list__unknown
   ) {
-  background-image: var(--register-hatch);
+  background-image: var(--hatch);
 }
 .dashboard-workspace :is(.period-picker, .view-picker) {
   background: var(--surface);
@@ -2982,7 +2983,7 @@ dd,
   padding: 0.5rem;
 }
 .dashboard-data-states dl > div:not(:first-child) {
-  background-image: var(--register-hatch);
+  background-image: var(--hatch);
 }
 .dashboard-data-states dd {
   font-family: var(--font-figures);
@@ -3749,7 +3750,7 @@ dd,
 
 /* Operational GIS/topology chrome only. Source atlas artwork has separate selectors. */
 .map-network {
-  --map-register-hatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M-2 2L2-2M0 8L8 0M6 10L10 6' stroke='%238fbfb0' stroke-opacity='.45' stroke-width='1'/%3E%3C/svg%3E");
+
   min-width: 0;
 }
 .map-network .workspace-header,
@@ -4036,7 +4037,7 @@ dd,
     .map-status--device_fault,
     .map-health--abnormal
   ) {
-  background-image: var(--map-register-hatch);
+  background-image: var(--hatch);
 }
 @media (max-width: 70rem) {
   .map-network .map-workspace {
@@ -4050,5 +4051,1085 @@ dd,
   }
   .map-network .map-canvas {
     height: clamp(22rem, 60vh, 36rem);
+  }
+}
+
+/* Live Operations final register density and inspector arrangement. */
+.live-operations {
+  min-width: 0;
+}
+
+.live-operations .status-chip,
+.live-operations .status-chip > span {
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.live-inspector .live-trend-strip svg {
+  min-width: 0;
+  min-height: 460px;
+  height: 460px;
+}
+.live-trend-strip__gap-bracket,
+.live-trend-strip__gap-leader {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.live-trend-ledger caption > span {
+  display: block;
+}
+.live-trend-strip__history-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.live-trend-strip__current-tick {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.live-trend-strip__snapshot-label {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}
+.live-trend-strip__current--unreliable .live-trend-strip__value {
+  fill: var(--text-secondary);
+}
+.live-table tr[data-unreliable='true'] .live-quantity strong,
+.live-table tr[data-unreliable='true'] .live-mobile-summary__value {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.live-table__device-link {
+  display: block;
+  min-height: 24px;
+  padding-block: 2px;
+  text-decoration: none;
+}
+.live-table__device-code {
+  display: block;
+  text-decoration: underline;
+}
+
+/* A wide evidence table may scroll; its caption still fits the reading pane. */
+.live-inspector .table-scroll {
+  container-type: inline-size;
+}
+.live-inspector caption {
+  width: 100cqi;
+  max-width: 100cqi;
+}
+.live-inspector :is(caption, p, dd, dt, small, h2, h3, h4) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.live-trend-strip__no-data-plate {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 1px;
+}
+.live-trend-strip .live-trend-strip__no-data {
+  stroke: none;
+}
+
+@media (min-width: 80rem) {
+  .live-operations .live-filters {
+    padding-block: 0.25rem;
+  }
+  .live-operations .filter-panel__toolbar {
+    align-items: end;
+    gap: 0.4rem;
+  }
+  .live-operations .filter-panel__search {
+    flex: 1 1 18rem;
+  }
+  .live-operations .filter-panel__search label {
+    display: grid;
+    grid-template-columns: auto minmax(13rem, 1fr);
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .live-operations .live-table-panel__toolbar {
+    height: 0;
+    margin: -2.45rem 0.25rem 0 0;
+    position: relative;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .live-operations .live-columns-menu {
+    pointer-events: auto;
+  }
+  .live-operations .live-table-panel {
+    padding-top: 0.35rem;
+  }
+  .live-operations__register--selected {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(30rem, 43%);
+    gap: 0.75rem;
+    align-items: start;
+  }
+  .live-operations__register .live-table-scroll {
+    max-height: calc(100vh - 15rem);
+    overflow: auto;
+  }
+  .live-operations__register--selected .live-inspector {
+    max-height: calc(100vh - 13rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+  }
+  .live-operations__register--selected
+    .live-inspector
+    > section[aria-labelledby='live-trend-heading'] {
+    order: 1;
+  }
+  .live-operations__register--selected
+    .live-inspector
+    > section:not([aria-labelledby='live-trend-heading']) {
+    order: 2;
+  }
+  .live-operations__register--selected .live-inspector .live-trend-strip svg {
+    min-width: 0;
+    height: 460px;
+  }
+  .live-operations__register--selected .live-table-column--plan,
+  .live-operations__register--selected .live-table__column--plan,
+  .live-operations__register--selected .live-table-column--variance,
+  .live-operations__register--selected .live-table__column--variance {
+    display: none;
+  }
+  .live-operations__register--selected .live-table .live-table__station {
+    width: 12rem;
+    min-width: 12rem;
+    max-width: 12rem;
+  }
+  .live-operations__register--selected .live-table .live-table__measurement {
+    width: 5.75rem;
+  }
+  .live-operations__register--selected .live-table__column--status {
+    min-width: 9.5rem;
+  }
+}
+
+.live-trend-ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.live-trend-ledger caption {
+  text-align: left;
+  padding: 0.35rem 0;
+  color: var(--muted);
+}
+.live-trend-ledger th {
+  border-block: 3px double var(--border-strong);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+}
+.live-trend-ledger td {
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  padding: 0.3rem;
+}
+.live-trend-ledger__gap td {
+  background-image: var(--hatch);
+}
+.live-trend-reading {
+  display: grid;
+  gap: 2px;
+}
+.live-trend-reading small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.live-trend-reading--gap {
+  background-image: var(--hatch);
+}
+
+.live-trend-strip__original-tick {
+  stroke: var(--danger);
+  stroke-width: 1.5;
+}
+.live-trend-strip__frozen {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}
+.live-trend-strip__state-tag {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.live-trend-strip
+  :is(
+    .live-trend-strip__unit,
+    .live-trend-strip__value,
+    .live-trend-strip__tick,
+    .live-trend-strip__now-label,
+    .live-trend-strip__no-data
+  ) {
+  font-size: var(--live-trend-type, 12px);
+}
+
+.live-revision-ledger {
+  display: grid;
+  gap: 0.5rem;
+}
+.live-revision-ledger article {
+  border-top: 3px double var(--border-strong);
+  padding: 0.45rem 0;
+}
+.live-revision-ledger__values {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.live-revision-ledger__corrected {
+  order: -1;
+}
+.live-revision-ledger__values p {
+  margin: 0;
+}
+.live-revision-ledger del {
+  color: var(--danger);
+  text-decoration-thickness: 1.5px;
+}
+.live-revision-ledger ins {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+}
+.live-revision-ledger dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.35rem 0.75rem;
+  margin: 0.45rem 0 0;
+}
+.live-revision-ledger dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+}
+.live-revision-ledger dd {
+  margin: 0;
+}
+.live-revision-ledger__history {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.live-revision-ledger__history li {
+  border-top: 1px solid var(--border);
+  padding-top: 0.35rem;
+}
+.live-revision-ledger__history dl {
+  margin-top: 0.25rem;
+}
+
+.live-mobile-summary {
+  display: none;
+}
+
+@media (max-width: 36rem) {
+  .live-table .live-table__station::before {
+    content: none;
+  }
+  .live-operations .live-filters :is(button, input, select) {
+    min-height: 2.75rem;
+  }
+  .live-operations .live-table td:not(.live-table__station) {
+    display: none;
+  }
+  .live-operations .live-table .live-table__station {
+    display: block;
+    padding: 0.45rem;
+    border-bottom: 0;
+  }
+  .live-operations .live-table .live-table__station > :not(.live-mobile-summary) {
+    display: none;
+  }
+  .live-mobile-summary {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .live-mobile-summary__station {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+  .live-mobile-summary__values,
+  .live-mobile-summary__unavailable {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-mobile-summary__value + .live-mobile-summary__value::before {
+    content: ' · ';
+    color: var(--muted);
+  }
+  .live-mobile-summary__value--unreliable {
+    color: var(--text-secondary);
+  }
+  .live-mobile-summary__unavailable {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+  .live-trend-ledger {
+    min-width: 42rem;
+  }
+}
+
+/* Final register refinements for the dashboard, analytics, and incident centre. */
+.dashboard-workspace .metric-unavailable,
+.analytics-workspace .metric-unavailable,
+.alarm-center-table__unavailable {
+  background-image: none;
+  border: 0;
+  padding-inline: 0;
+}
+
+/* Tone describes urgency; only the explicit evidence flag may add a hatch. */
+.status-chip--attention,
+.status-chip--critical {
+  background-image: none;
+}
+
+/* Hatch denotes missing, unreliable, stale, fault, or unassessable evidence only. */
+.dashboard-workspace .dashboard-register__quality--unassessable,
+.dashboard-workspace
+  .coverage-state-list
+  :is(
+    .coverage-state-list__no_data,
+    .coverage-state-list__unreliable,
+    .coverage-state-list__offline,
+    .coverage-state-list__unknown
+  ),
+.analytics-workspace .analytics-register__abnormal,
+.status-chip[data-hatched] {
+  background-image: var(--hatch);
+}
+
+.dashboard-workspace .dashboard-register__quality--unconfigured,
+.dashboard-workspace .coverage-state-list .coverage-state-list__unconfigured {
+  background-image: none;
+}
+
+.dashboard-workspace .dashboard-data-states dl > div {
+  background-image: none;
+}
+.dashboard-workspace .dashboard-data-states dl > :is(:nth-child(2), :nth-child(3)) {
+  background-image: var(--hatch);
+}
+
+.analytics-workspace .analytics-register__abnormal :is(data, .tabular-value),
+.dashboard-register__row--unassessable :is(data, .tabular-value),
+.dashboard-workspace .dashboard-deviation--unreliable :is(data, .tabular-value),
+.alarm-center-evidence--unreliable :is(data, .tabular-value, pre) {
+  color: var(--muted);
+}
+
+/* A section has one ledger rule; charts and tables sit directly on that sheet. */
+.analytics-workspace .analytics-section,
+.analytics-workspace .analytics-coverage > .analytics-section,
+.alarm-center-queue {
+  border: 0;
+  border-top: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.65rem 0;
+}
+
+.analytics-workspace .analytics-chart-panel,
+.analytics-workspace .analytics-register-scroll,
+.analytics-workspace .analytics-coverage,
+.alarm-center-queue .alarm-center-table-scroll {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Analytics is a single ruled sheet: the title, filters, and coverage do not add cards. */
+.analytics-workspace {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.analytics-workspace > :is(.analytics-intro, .analytics-filters, .analytics-coverage),
+.analytics-workspace .analytics-filters fieldset {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.analytics-workspace .analytics-intro,
+.analytics-workspace .analytics-filters {
+  margin-block: 0;
+  padding-inline: 0;
+}
+.analytics-workspace .analytics-filters fieldset {
+  margin: 0;
+  padding: 0;
+}
+.analytics-workspace .analytics-filters__grid {
+  border-block: 1px solid var(--border);
+  padding-block: 0.45rem;
+}
+.analytics-workspace .workspace-provenance dl {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: 0.5rem;
+}
+
+/* Filters remain native and keyboard-accessible, sharing the queue's ruled header. */
+.alarm-center-queue__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.alarm-center-queue__header > :first-child > :is(h3, p) {
+  margin-block: 0;
+}
+.alarm-center-queue__header .filter-panel {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.alarm-center-queue__header .filter-panel__toolbar {
+  justify-content: end;
+}
+@media (max-width: 52rem) {
+  .alarm-center-queue__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .alarm-center-queue__header .filter-panel__toolbar {
+    justify-content: start;
+  }
+}
+
+.analytics-zero-variance {
+  border-top: 3px double var(--text);
+  border-bottom: 1px solid var(--border);
+  margin: 0.75rem 0;
+  padding: 0.45rem 0;
+  font-family: var(--font-figures);
+}
+
+/* Lifecycle state is deliberately stronger while an alarm remains active. */
+.alarm-center-table__lifecycle .status-chip--critical,
+.alarm-center-table__lifecycle .status-chip--attention {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 700;
+}
+.alarm-center-table__lifecycle .status-chip--positive {
+  border-color: var(--border);
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.dashboard-register__unavailable-summary {
+  display: none;
+}
+
+.register-icon {
+  display: inline-block;
+  flex: 0 0 1rem;
+  vertical-align: -0.16em;
+}
+
+@media (max-width: 36rem) {
+  .dashboard-register td[data-mobile-missing='true'] {
+    display: none;
+  }
+  .dashboard-register__unavailable-summary {
+    display: block;
+    color: var(--muted);
+    font-weight: 400;
+    margin: 0.2rem 0 0;
+    font-size: 0.75rem;
+  }
+}
+
+/* Audit and frozen reports are single ledger sheets: only section rules, never cards in cards. */
+.audit-workspace,
+.reports-workspace {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.audit-workspace > :is(.audit-intro, .filter-panel, .audit-list, .audit-detail),
+.reports-workspace > :is(.reports-template-form, .reports-list, .reports-detail) {
+  background: transparent;
+  border: 0;
+  border-top: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0;
+}
+
+/* The audit filter disclosure is part of its section, rather than a second frame. */
+.audit-workspace .filter-panel,
+.audit-workspace .filter-panel__content,
+.audit-workspace .audit-filters,
+.audit-workspace .audit-filters fieldset {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding-inline: 0;
+}
+
+.audit-workspace .filter-panel__content,
+.audit-workspace .audit-filters {
+  padding-block: 0.55rem 0;
+}
+
+.audit-workspace .audit-table-scroll,
+.reports-workspace .reports-table-scroll {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Metadata remains a ruled title block: perimeter rules and internal hairlines, no inset box. */
+.reports-workspace .reports-metadata {
+  background: transparent;
+  border: 0;
+  border-block: 3px double var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  margin-block: 0.7rem;
+}
+
+.reports-workspace .reports-metadata > div {
+  border-top: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-inline-end: 1px solid var(--border-subtle);
+}
+
+.reports-workspace .reports-title-block,
+.reports-workspace .reports-source,
+.reports-workspace .reports-detail > section,
+.reports-workspace .reports-quantity-table {
+  background: transparent;
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.reports-workspace .reports-title-block,
+.reports-workspace .reports-source {
+  border-block: 0;
+  margin: 0;
+  padding-inline: 0;
+}
+
+.reports-workspace .reports-detail > section,
+.reports-workspace .reports-quantity-table {
+  border-top: 1px solid var(--border);
+}
+
+/* Audit evidence is a paired ledger, rather than two framed cards. */
+.audit-workspace .audit-metadata {
+  border: 0;
+  border-top: 3px double var(--text);
+  gap: 0;
+}
+
+.audit-workspace .audit-metadata > div {
+  border-top: 0;
+  border-inline-start: 0;
+}
+
+.audit-workspace .audit-state-evidence--paired {
+  border-top: 3px double var(--text);
+}
+
+.audit-workspace .audit-state {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0;
+}
+
+.audit-workspace .audit-state + .audit-state {
+  border-inline-start: 1px solid var(--border);
+  padding-inline-start: 0.75rem;
+}
+
+/* Final register hierarchy and shared interaction surfaces. No source-artwork selectors. */
+
+.register-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  vertical-align: -3px;
+  color: inherit;
+}
+.application-shell .workspace-header h1,
+.application-shell .audit-workspace > header h1,
+.application-shell .analytics-title-block h1 {
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 600;
+  margin: 0;
+}
+.application-shell
+  :is(
+    .live-inspector,
+    .dashboard-workspace,
+    .alarm-workspace,
+    .alarm-center,
+    .analytics-workspace,
+    .reports-workspace,
+    .audit-workspace
+  )
+  h2 {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 600;
+  border-top: 2px solid var(--text);
+  padding-top: 0.5rem;
+}
+.application-shell table th {
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+.topbar {
+  min-height: 3rem;
+  padding-block: 0.3rem;
+  gap: 0.35rem 0.6rem;
+}
+.topbar__actions {
+  margin-left: auto;
+}
+.topbar > .synthetic-notice {
+  padding: 0.35rem 0.5rem;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.synthetic-notice p {
+  margin: 0.2rem 0 0;
+}
+.topbar > .synthetic-notice--collapsed {
+  display: block;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 0;
+}
+.synthetic-notice--collapsed summary {
+  cursor: pointer;
+  min-height: 24px;
+  line-height: 24px;
+  font-size: 11px;
+}
+.synthetic-notice--collapsed p {
+  padding: 0.35rem;
+}
+.synthetic-notice > .register-icon,
+.synthetic-badge > .register-icon {
+  color: var(--danger);
+}
+.topbar .synthetic-badge {
+  font-size: 11px;
+}
+@media (min-width: 80rem) {
+  .topbar > .synthetic-notice:not(.synthetic-notice--collapsed) > div :is(strong, p) {
+    display: inline;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+  .topbar > .synthetic-notice:not(.synthetic-notice--collapsed) p {
+    margin-left: 0.5rem;
+  }
+  .application-shell main:has(.live-operations) {
+    padding-top: 0.5rem;
+  }
+  .live-operations .workspace-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.75rem;
+    padding: 0.25rem 0.6rem;
+    margin-bottom: 0;
+  }
+  .live-operations .workspace-header__title {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .live-operations .workspace-header__actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .live-operations .workspace-header__provenance {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    padding: 0;
+    text-align: right;
+  }
+  .live-operations .workspace-header__provenance[open] {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    text-align: left;
+  }
+  .live-operations .live-filters {
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+  .live-operations__register--selected {
+    grid-template-columns: minmax(0, 1fr) minmax(28rem, 40%);
+  }
+  .live-operations__register--selected .live-table-scroll .live-table {
+    min-width: 46rem;
+    width: 100%;
+  }
+  .live-operations__register--selected .live-table td {
+    padding-block: 1px;
+  }
+  .live-operations__register--selected .live-table-column--station {
+    width: 32%;
+  }
+  .live-operations__register--selected .live-table-column--stage,
+  .live-operations__register--selected .live-table-column--discharge {
+    width: 13%;
+  }
+  .live-operations__register--selected .live-table-column--counter {
+    width: 19%;
+  }
+  .live-operations__register--selected .live-table-column--status {
+    width: 23%;
+  }
+  .live-operations__register--selected .live-table__column--status {
+    min-width: 0;
+  }
+  .live-operations__register--selected .live-quantity > .status-chip {
+    font-size: 11px;
+    letter-spacing: 0;
+    padding-inline: 2px;
+  }
+  .live-operations__register--selected .live-quantity strong {
+    padding-inline: 0;
+    white-space: nowrap;
+    line-height: 1.25;
+  }
+  .live-operations__register--selected .live-status-compact {
+    gap: 0;
+  }
+  .live-operations__register--selected .live-status-compact__line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .live-operations__register--selected .live-status-compact__line > span:first-child {
+    font-size: 10px;
+    line-height: 1;
+  }
+  .live-operations__register--selected .live-status-compact .status-chip {
+    min-width: 0;
+    padding: 0;
+  }
+  .live-operations__register--selected .live-status-compact .status-chip > span:last-child {
+    min-width: 0;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+  .live-operations__register--selected .live-table .live-table__station {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .live-operations__register--selected .live-table .live-table__measurement {
+    width: auto;
+  }
+  .live-operations__register--selected .live-inspector {
+    margin: 0;
+    padding: 0.6rem;
+  }
+  .live-operations__register--selected .live-inspector > button {
+    align-self: flex-end;
+    padding-block: 0.2rem;
+    min-height: 28px;
+  }
+  .live-operations__register--selected .live-inspector > h2 {
+    font-size: 15px;
+    margin: 0.25rem 0;
+    padding-top: 0.3rem;
+  }
+  .live-operations__register--selected .live-inspector > p {
+    font-size: 12px;
+    margin: 0.2rem 0;
+    line-height: 1.3;
+  }
+  .live-operations__register--selected .live-inspector > section {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+  }
+  .live-operations__register--selected .live-inspector h3 {
+    margin: 0.2rem 0;
+  }
+  .live-operations__register--selected [aria-labelledby='live-trend-heading'] > p {
+    font-size: 12px;
+    margin: 0.25rem 0;
+  }
+}
+.live-operations .live-columns-slot .live-table-panel__toolbar {
+  position: static;
+  height: auto;
+  margin: 0;
+  pointer-events: auto;
+}
+.live-operations .live-columns-slot {
+  flex: 0 0 auto;
+}
+:is(.live-operations, .dashboard-workspace, .alarm-center)
+  :is(button, select, input, summary, a[href]) {
+  min-width: 24px;
+  min-height: 24px;
+}
+:is(.live-operations, .dashboard-workspace, .alarm-center) a[href]:not(.live-table__device-link) {
+  display: inline-flex;
+  align-items: center;
+}
+:is(.live-operations, .dashboard-workspace, .alarm-center)
+  input:is([type='checkbox'], [type='radio']) {
+  width: 24px;
+  height: 24px;
+}
+.status-chip {
+  gap: 0.25rem;
+}
+.status-chip:not([data-hatched='true']) {
+  background-image: none;
+}
+.status-chip[data-hatched='true'] {
+  background-image: var(--hatch);
+}
+.alarm-center .alarm-center-unconfigured,
+.alarm-center .status-chip:not([data-hatched='true']),
+.analytics-workspace .metric-unavailable {
+  background-image: none;
+}
+.analytics-workspace .metric-unavailable {
+  border: 0;
+  padding: 0;
+}
+.live-quantity--unreliable strong,
+.map-quantity--unreliable .map-quantity__reading {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+.map-network :is(.map-unconfigured, .map-status--over, .map-status--under) {
+  background-image: none;
+}
+.map-network .map-sidebar {
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-width: auto;
+  scrollbar-gutter: stable;
+}
+.map-network .map-sidebar:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -3px;
+}
+.map-network .map-sidebar :is(p, dd, small) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+@media (max-width: 70rem) {
+  .map-network .map-sidebar {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+}
+@media (max-width: 36rem) {
+  .application-shell
+    :is(
+      button,
+      select,
+      summary,
+      input:not([type='checkbox']):not([type='radio']):not([type='range'])
+    ) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .application-shell :is(.topbar a, .primary-navigation a, .regional-toolbar a, .action-link) {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .application-shell :is(.dashboard-workspace, .live-operations, .regional-entry) a {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .synthetic-notice--collapsed summary {
+    line-height: 1.3;
+    padding-block: 0.55rem;
+  }
+  .topbar {
+    padding: 0.35rem 0.75rem;
+  }
+  .topbar__actions {
+    gap: 0.25rem;
+  }
+  .topbar .synthetic-badge {
+    font-size: 10px;
+  }
+  .application-shell .workspace-header h1 {
+    font-size: 24px;
+  }
+}
+
+/* Final topology polish: source coordinates, ruled groups, and survey-weight linework. */
+.map-network .map-topology-svg {
+  min-width: 0;
+}
+
+.map-network .map-topology-edge {
+  stroke: var(--text);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-network .map-topology-edge--trace {
+  stroke: var(--accent);
+  stroke-width: 1px;
+}
+
+.map-network .map-svg :is(.map-section, .map-waterway) {
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-network .map-topology-node {
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-network .map-topology-basin-label {
+  fill: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-network .map-coordinate-group {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Reference-map ledger chrome; map content and source styles remain untouched. */
+.andijan-map-overview > span > b,
+.andijan-map-selected dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.andijan-map-overview > span > b {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Keep mandatory water/device evidence visible while other columns scroll. */
+.live-table-scroll__hint {
+  display: none;
+}
+@media (min-width: 36.01rem) {
+  .live-table-panel {
+    container-type: inline-size;
+    container-name: live-register;
+  }
+  .live-table caption {
+    position: sticky;
+    left: 0;
+    width: 100cqi;
+    max-width: 100cqi;
+    box-sizing: border-box;
+  }
+  @container live-register (max-width: 68rem) {
+    .live-table-scroll__hint {
+      display: inline-block;
+      margin-inline-start: 0.75rem;
+      padding-inline-start: 0.75rem;
+      border-inline-start: 3px double var(--border-strong);
+      font-size: var(--text-xs);
+      color: var(--text);
+    }
+  }
+  .live-operations .live-table-scroll {
+    container-type: inline-size;
+    overflow-x: scroll;
+    scrollbar-width: auto;
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--text-secondary) var(--raised);
+    border-bottom: 3px double var(--border-strong);
+  }
+  .live-table-scroll::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  .live-table-scroll::-webkit-scrollbar-track {
+    background: var(--raised);
+  }
+  .live-table-scroll::-webkit-scrollbar-thumb {
+    background: var(--text-secondary);
+    border: 2px solid var(--raised);
+  }
+  .live-table .live-table__column--status {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--surface);
+    border-inline-start: 3px double var(--border-strong);
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+  .live-table thead .live-table__column--status {
+    z-index: 4;
+    background: var(--raised);
+  }
+  .live-table .live-status-compact__line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-table .live-status-compact .status-chip,
+  .live-table .live-status-compact .status-chip > span {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+}
+@media (min-width: 80rem) {
+  .live-operations__register--selected .live-table-scroll .live-table {
+    min-width: 52rem;
+  }
+  .live-operations__register--selected .live-table-column--status {
+    width: 12rem;
   }
 }

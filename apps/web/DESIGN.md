@@ -211,7 +211,7 @@ Flat. There are no shadows: the `--shadow-sm`, `--shadow`, `--shadow-md` and `--
 
 Square. Corners are 0 (`--r-sm`, `--r-lg`, `--r-xl`), with a single 2px exception (`--r`) on text inputs. Borders are 1px Rule for controls, 1px Hairline for quiet dividers, 2px ink for section tops and focus, 3px double for heads, sheet boundaries, stamps and popovers. Icons are 16px, 1.5 stroke, square caps and mitre joins, one pen weight, drawn from a single path table.
 
-The hatch is the one recurring fill: a 45-degree diagonal line pattern in Millimetre Grid at 35 to 45 percent opacity (8px tile in chips and cells; a 7px tile at full ink-grey stroke inside the strip chart). It marks absent or untrustworthy evidence and only that.
+The hatch is the one recurring fill: the shared `--hatch` token in `styles.css`, a 45-degree diagonal line pattern in Millimetre Grid at 40 percent opacity (8px tile in chips and cells; a separate 7px SVG pattern at full ink-grey stroke inside the strip chart). It marks absent or untrustworthy evidence and only that. Workspace refinements live in `styles.css`, in their original cascade order.
 
 ### Named Rules
 **The Hatch-Means-Abnormal-Evidence Rule.** Hatch is reserved for NO DATA, UNRELIABLE, FAULT, STALE and UNASSESSABLE. A chip is hatched only through an explicit `data-hatched` evidence flag; tone (attention or critical) alone never adds hatch. Normal or merely "not configured" states stay plain.
@@ -246,6 +246,9 @@ An SVG recorder chart on Sheet paper with a Graphite 1px frame: minor grid at 0.
 ### Correction ledger
 Revisions are entries separated by 3px double rules: the struck original in Correction Red with a 1.5px strike, the revised value inked above in bold ink, and a definition grid of who, when and why.
 
+### Andijan map chrome
+The Andijan reference map uses a ruled sidebar, label-left/value-right statistics and selected-feature ledgers, square layer and base-map controls, stamp-box provenance notices, and paper-and-ink Leaflet control, tooltip and popup frames. The Leaflet canvas, source geometry, layer colours and line styles, overlays and map content are excluded from the design system and retain their supplied appearance and behaviour.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -267,8 +270,6 @@ Revisions are entries separated by 3px double rules: the struck original in Corr
 - **Don't** describe or present synthetic data as real government telemetry.
 
 ### Not canonized (defects and drift carried by the build)
-- The three appended layers `finish.css`, `live-finish.css` and `workspace-finish.css` override `styles.css` and should be folded into it; several tokens (for example the hatch) are defined three times (`--ledger-hatch`, `--register-hatch`, `--finish-hatch`, `--map-register-hatch`) with slightly different opacity and stroke colours (`#6f8d85` in the chip/cell variant vs `#8fbfb0`).
-- The Live Operations status column clips when the inspector pane is open (the status text is compressed to 10 to 11px with `keep-all` wrapping).
 - Bahnschrift is Windows-only; fonts are system stacks and self-hosting font files is an open follow-up.
 - The synthetic network geometry renders as crossing diamond lattices because of the data, not by design.
 - Compatibility tokens (`--shadow*`, `--r*`) still exist and some base rules (hover `translateX`, `translateY`, `rgba(255,255,255,.05)` hover) survive in `styles.css` beneath the overrides; they are not part of the system.

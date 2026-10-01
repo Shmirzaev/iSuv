@@ -30,14 +30,12 @@ import { RegionalMapWorkspace, RegionalReferenceLink } from './regional-referenc
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
 import { initialLocale, translate, type Locale } from '@isuv/i18n';
 import { ShellChrome, SyntheticDisclosure, type Theme } from './shell-semantics.js';
+import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import './regional-reference.css';
 import './regional-atlas.css';
 import './andijan-source-map.css';
-import './live-finish.css';
-import './workspace-finish.css';
-import './finish.css';
-import './map-polish.css';
+import './andijan-map.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';

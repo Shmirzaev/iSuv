@@ -45,7 +45,7 @@ test('actual detailed Andijan PDF preserves source detail and supports district,
   page.on('pageerror', (error) => errors.push(error.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   const asset = page.waitForResponse('**/regional-maps/andijan-detailed.svg');
-  await page.goto('/#map');
+  await page.goto('/#map?view=reference');
   expect((await asset).status()).toBe(200);
   await expect(page.getByRole('heading', { name: 'Explore Andijan', exact: true })).toBeVisible();
   const map = page.locator('.source-map-canvas > svg');
@@ -122,7 +122,7 @@ test('original Andijan irrigation and Savay maps connect to the unchanged source
   page,
 }, info) => {
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto('/#map');
+  await page.goto('/#map?view=reference');
   const map = page.locator('.source-map-canvas > svg');
   await page
     .getByRole('combobox', { name: 'Map view', exact: true })
@@ -220,7 +220,7 @@ test('responsive localized map is usable without operations API and a missing ma
     }),
   );
   await page.route('**/regional-maps/andijan-detailed.svg', (route) => route.abort());
-  await page.goto('/#map');
+  await page.goto('/#map?view=reference');
   await expect(
     page.getByRole('alert').filter({ hasText: 'The source map could not load.' }),
   ).toBeVisible();
@@ -288,7 +288,7 @@ test('touch users can zoom the PDF, explore Savay and reach its records without 
     }),
   );
   await page.addInitScript(() => localStorage.setItem('isuv.locale', 'en'));
-  await page.goto('/#map');
+  await page.goto('/#map?view=reference');
   const map = page.locator('.source-map-canvas > svg');
   await expect(page.locator('.source-map-loading')).toHaveCount(0);
   const initial = (await map.getAttribute('viewBox'))!;

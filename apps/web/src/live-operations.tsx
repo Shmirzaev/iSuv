@@ -1095,7 +1095,10 @@ function LiveTable({
       {toolbarTarget ? createPortal(toolbar, toolbarTarget) : toolbar}
       <div className="table-scroll live-table-scroll" tabIndex={0}>
         <table className="live-table">
-          <caption>{`${t(locale, 'liveRows')}: ${response.rows.length} / ${response.scope.deviceDenominator}`}</caption>
+          <caption>
+            {`${t(locale, 'liveRows')}: ${response.rows.length} / ${response.scope.deviceDenominator}`}
+            <span className="live-table-scroll__hint">{t(locale, 'liveScrollColumns')}</span>
+          </caption>
           <colgroup>
             {columns
               .filter((column) => shown(column.key))

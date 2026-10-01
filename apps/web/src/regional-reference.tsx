@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
-import type { Locale } from '@isuv/i18n';
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentProps } from 'react';
+import { andijanMapWords, type Locale } from '@isuv/i18n';
 import { MapNetworkWorkspace } from './map-network.js';
 import {
   filterReferenceRecords,
@@ -9,6 +9,14 @@ import {
 import { regionalWords, type RegionalWord } from './regional-reference-i18n.js';
 import { AndijanSourceMap } from './andijan-source-map.js';
 import { atlasWords } from './regional-atlas-i18n.js';
+
+const AndijanWaterMap = lazy(() => import('./andijan-map.js'));
+
+export function regionalMapView(hash: string, hasSelection = false) {
+  if (hasSelection || /[?&]view=demo(?:&|$)/.test(hash)) return 'demo';
+  if (/[?&]view=reference(?:&|$)/.test(hash)) return 'reference';
+  return 'andijan';
+}
 
 const maps: { id: string; label: RegionalWord; source: string }[] = [
   { id: 'savay-area', label: 'savayMap', source: 'Savay project-area image' },
@@ -456,14 +464,14 @@ export function RegionalReferenceWorkspace({ locale }: { locale: Locale }) {
 
 export function RegionalMapWorkspace(props: ComponentProps<typeof MapNetworkWorkspace>) {
   const w = regionalWords[props.locale];
-  const hashMode = () =>
-    typeof window !== 'undefined' && /[?&]view=demo(?:&|$)/.test(window.location.hash);
-  const [demo, setDemo] = useState(() =>
-    Boolean(props.selection.stationId || props.selection.deviceId || hashMode()),
-  );
+  const readView = () =>
+    regionalMapView(
+      typeof window !== 'undefined' ? window.location.hash : '',
+      Boolean(props.selection.stationId || props.selection.deviceId),
+    );
+  const [view, setView] = useState(readView);
   useEffect(() => {
-    const changed = () =>
-      setDemo(Boolean(props.selection.stationId || props.selection.deviceId || hashMode()));
+    const changed = () => setView(readView());
     changed();
     window.addEventListener('hashchange', changed);
     return () => window.removeEventListener('hashchange', changed);
@@ -471,18 +479,29 @@ export function RegionalMapWorkspace(props: ComponentProps<typeof MapNetworkWork
   return (
     <>
       <nav className="regional-view-tabs" aria-label={w.maps}>
-        <a href="#map" aria-current={!demo ? 'page' : undefined} onClick={() => setDemo(false)}>
+        <a
+          href="#map"
+          aria-current={view === 'andijan' ? 'page' : undefined}
+          onClick={() => setView('andijan')}
+        >
+          {andijanMapWords[props.locale].tab}
+        </a>
+        <a
+          href="#map?view=reference"
+          aria-current={view === 'reference' ? 'page' : undefined}
+          onClick={() => setView('reference')}
+        >
           {w.reference}
         </a>
         <a
           href="#map?view=demo"
-          aria-current={demo ? 'page' : undefined}
-          onClick={() => setDemo(true)}
+          aria-current={view === 'demo' ? 'page' : undefined}
+          onClick={() => setView('demo')}
         >
           {w.demo}
         </a>
       </nav>
-      {demo ? (
+      {view === 'demo' ? (
         <MapNetworkWorkspace
           {...props}
           onSelection={(selection) => {
@@ -492,8 +511,12 @@ export function RegionalMapWorkspace(props: ComponentProps<typeof MapNetworkWork
             }
           }}
         />
-      ) : (
+      ) : view === 'reference' ? (
         <RegionalReferenceWorkspace locale={props.locale} />
+      ) : (
+        <Suspense fallback={<p role="status">{andijanMapWords[props.locale].loading}</p>}>
+          <AndijanWaterMap locale={props.locale} />
+        </Suspense>
       )}
     </>
   );

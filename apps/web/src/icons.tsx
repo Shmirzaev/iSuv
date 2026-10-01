@@ -25,6 +25,10 @@ const paths = {
   close: 'M3 3l10 10 M13 3L3 13',
   identity: 'M5 5a3 3 0 1 0 6 0 3 3 0 1 0-6 0 M2 14v-2l3-2h6l3 2v2',
   theme: 'M8 2a6 6 0 1 0 0 12V2 M8 2a6 6 0 0 1 0 12',
+  fit_area: 'M2 6V2h4 M10 2h4v4 M14 10v4h-4 M6 14H2v-4 M5 8h6 M8 5v6',
+  layers: 'M2 5l6-3 6 3-6 3z M2 8l6 3 6-3 M2 11l6 3 6-3',
+  search: 'M10 10l4 4 M11 6a5 5 0 1 0-10 0 5 5 0 0 0 10 0',
+  clear: 'M3 3l10 10 M13 3L3 13',
   synthetic: 'M8 2l6 6-6 6-6-6z M8 5v4 M8 11v.1',
 } as const;
 

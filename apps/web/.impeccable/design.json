@@ -363,7 +363,7 @@
       }
     ],
     "hatch": {
-      "definition": "Chips, cells and workspace bands: 8px SVG tile, path M-2 2L2-2 M0 8L8 0 M6 10L10 6, stroke #8fbfb0, stroke-opacity .35 to .45, 1px. Strip chart: 7px pattern rotated 45deg, 0.8 stroke in --border-strong.",
+      "definition": "One --hatch token in styles.css for chips, cells and workspace bands: 8px SVG tile, path M-2 2L2-2 M0 8L8 0 M6 10L10 6, stroke #8fbfb0, stroke-opacity .4, 1px. Workspace refinements are folded into styles.css in their original cascade order. Strip chart: separate 7px SVG pattern rotated 45deg, 0.8 stroke in --border-strong.",
       "reservedFor": [
         "NO DATA",
         "UNRELIABLE",

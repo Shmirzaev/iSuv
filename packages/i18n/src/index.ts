@@ -1,6 +1,16 @@
 export const locales = ['uz', 'ru', 'en'] as const;
 export type Locale = (typeof locales)[number];
 
+export {
+  andijanMapWords,
+  andijanMapLayerLabels,
+  andijanMapPointLabels,
+  type AndijanMapWord,
+  type AndijanMapWords,
+  type AndijanMapLayerId,
+  type AndijanMapPointId,
+} from './andijan-map.js';
+
 const alarmCenterEnglish = {
   alarmCenterHeading: 'Alarm and incident center',
   alarmCenterDetail:
@@ -1888,6 +1898,7 @@ const english = {
   liveFault: 'Device fault',
   liveAttentionFilter: 'Attention state',
   liveRows: 'Devices shown',
+  liveScrollColumns: 'Scroll columns horizontally',
   liveNextPage: 'Next page',
   livePreviousPage: 'Previous page',
   liveSelectDevice: 'Inspect device',
@@ -2283,6 +2294,7 @@ const russian: Translation = {
   liveFault: 'Неисправность устройства',
   liveAttentionFilter: 'Состояние внимания',
   liveRows: 'Показано устройств',
+  liveScrollColumns: 'Прокручивайте столбцы по горизонтали',
   liveNextPage: 'Следующая страница',
   livePreviousPage: 'Предыдущая страница',
   liveSelectDevice: 'Проверить устройство',
@@ -2680,6 +2692,7 @@ const uzbek: Translation = {
   liveFault: 'Qurilma nosozligi',
   liveAttentionFilter: 'Diqqat holati',
   liveRows: 'Ko‘rsatilgan qurilmalar',
+  liveScrollColumns: 'Ustunlarni gorizontal aylantiring',
   liveNextPage: 'Keyingi sahifa',
   livePreviousPage: 'Oldingi sahifa',
   liveSelectDevice: 'Qurilmani ko‘rish',
