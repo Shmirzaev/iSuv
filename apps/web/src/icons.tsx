@@ -8,6 +8,8 @@ const paths = {
   analytics: 'M2 2v12h12 M5 10V7 M9 10V4 M13 10V2',
   reports: 'M3 2h7l3 3v9H3z M10 2v3h3 M5 8h6 M5 11h6',
   audit: 'M3 2h10v12H3z M5 5h6 M5 8h3 M5 11h6',
+  project: 'M3 14V2h10l-2 3 2 3H3',
+  roadmap: 'M2 11h4v3H2z M10 2h4v3h-4z M4 11V7h8V5',
   reported: 'M3 8l3 3 7-7',
   valid: 'M3 8l3 3 7-7',
   no_data: 'M2 2h12v12H2z M5 8h6',

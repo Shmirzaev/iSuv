@@ -25,6 +25,7 @@ import { AlarmIncidentCenterWorkspace } from './alarm-incident-center.js';
 import { AnalyticsWorkspace } from './analytics.js';
 import { ReportsWorkspace } from './reports.js';
 import { AuditExplorerWorkspace } from './audit-explorer.js';
+import { ProjectOverviewPage, ProjectRoadmapPage } from './project-pages.js';
 import { alarmCenterHash, alarmCenterSelectionFromHash } from './alarm-incident-center-model.js';
 import { RegionalMapWorkspace, RegionalReferenceLink } from './regional-reference.js';
 import { mapHash, mapSelectionFromHash } from './map-network-model.js';
@@ -36,6 +37,7 @@ import './regional-reference.css';
 import './regional-atlas.css';
 import './andijan-source-map.css';
 import './andijan-map.css';
+import './project-pages.css';
 
 const initialArea: ApplicationArea = 'dashboard';
 const localeStorageKey = 'isuv.locale';
@@ -67,9 +69,17 @@ if (typeof document !== 'undefined')
 
 function areaFromHash(hash: string): ApplicationArea {
   const area = hash.replace(/^#/, '').split('?')[0] ?? '';
-  return ['dashboard', 'operations', 'map', 'alarms', 'analytics', 'reports', 'audit'].includes(
-    area,
-  )
+  return [
+    'dashboard',
+    'operations',
+    'map',
+    'alarms',
+    'analytics',
+    'reports',
+    'audit',
+    'project',
+    'roadmap',
+  ].includes(area)
     ? (area as ApplicationArea)
     : initialArea;
 }
@@ -101,6 +111,7 @@ export function App() {
   >({ kind: 'loading' });
   const [dashboardRetry, setDashboardRetry] = useState(0);
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  const isProjectPage = area === 'project' || area === 'roadmap';
 
   useEffect(() => {
     applyDocumentLocale(document.documentElement, locale);
@@ -121,6 +132,7 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
+    if (isProjectPage) return;
     const controller = new AbortController();
     async function loadSession() {
       try {
@@ -148,7 +160,7 @@ export function App() {
     }
     void loadSession();
     return () => controller.abort();
-  }, []);
+  }, [isProjectPage]);
 
   useEffect(() => {
     if (area !== 'dashboard') return;
@@ -229,16 +241,22 @@ export function App() {
         session={session}
         theme={theme}
         syntheticDisclosure={
-          <SyntheticDisclosure
-            dismissed={syntheticDismissed}
-            locale={locale}
-            onDismiss={() => setSyntheticDismissed(true)}
-          />
+          isProjectPage ? null : (
+            <SyntheticDisclosure
+              dismissed={syntheticDismissed}
+              locale={locale}
+              onDismiss={() => setSyntheticDismissed(true)}
+            />
+          )
         }
       />
       <main id={skipTargetId} tabIndex={-1}>
         {area === 'dashboard' ? <RegionalReferenceLink locale={locale} /> : null}
-        {area === 'dashboard' ? (
+        {area === 'project' ? (
+          <ProjectOverviewPage locale={locale} />
+        ) : area === 'roadmap' ? (
+          <ProjectRoadmapPage locale={locale} />
+        ) : area === 'dashboard' ? (
           <DashboardWorkspace
             locale={locale}
             onPeriodChange={setDashboardPeriod}

@@ -11,6 +11,8 @@ export {
   type AndijanMapPointId,
 } from './andijan-map.js';
 
+export { projectPageWords, type ProjectPageWord, type ProjectPageWords } from './project-pages.js';
+
 const alarmCenterEnglish = {
   alarmCenterHeading: 'Alarm and incident center',
   alarmCenterDetail:
@@ -1666,6 +1668,8 @@ const english = {
     'Operational readings, devices, plans, and alarms are synthetic examples. The regional map includes separately labeled maps and spreadsheet records supplied by the user.',
   navigation: 'Primary navigation',
   navDashboard: 'Dashboard',
+  navProject: 'Project',
+  navRoadmap: 'Roadmap',
   navOperations: 'Live operations',
   navMap: 'Map and network',
   navAlarms: 'Alarms and incidents',
@@ -2064,6 +2068,8 @@ const russian: Translation = {
     'Операционные показания, устройства, планы и тревоги являются синтетическими примерами. На карте региона отдельно обозначены предоставленные пользователем карты и записи Excel.',
   navigation: 'Основная навигация',
   navDashboard: 'Панель управления',
+  navProject: 'Проект',
+  navRoadmap: 'Дорожная карта',
   navOperations: 'Оперативный мониторинг',
   navMap: 'Карта и сеть',
   navAlarms: 'Тревоги и инциденты',
@@ -2463,6 +2469,8 @@ const uzbek: Translation = {
     'Operatsion o‘lchovlar, qurilmalar, rejalar va ogohlantirishlar sun’iy namunalar. Hudud xaritasida foydalanuvchi taqdim etgan xaritalar va Excel yozuvlari alohida belgilangan.',
   navigation: 'Asosiy navigatsiya',
   navDashboard: 'Boshqaruv paneli',
+  navProject: 'Loyiha',
+  navRoadmap: 'Yo‘l xaritasi',
   navOperations: 'Jonli operatsiyalar',
   navMap: 'Xarita va tarmoq',
   navAlarms: 'Ogohlantirishlar va hodisalar',

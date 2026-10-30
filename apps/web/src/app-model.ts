@@ -9,7 +9,15 @@ export function applyDocumentLocale(root: { lang: string }, locale: Locale): voi
 }
 
 export type ApplicationArea =
-  'dashboard' | 'operations' | 'map' | 'alarms' | 'analytics' | 'reports' | 'audit';
+  | 'dashboard'
+  | 'operations'
+  | 'map'
+  | 'alarms'
+  | 'analytics'
+  | 'reports'
+  | 'audit'
+  | 'project'
+  | 'roadmap';
 
 export interface NavigationItem {
   area: ApplicationArea;
@@ -25,6 +33,8 @@ export const navigationItems: readonly NavigationItem[] = [
   { area: 'analytics', label: 'navAnalytics', href: '#analytics' },
   { area: 'reports', label: 'navReports', href: '#reports' },
   { area: 'audit', label: 'navAudit', href: '#audit' },
+  { area: 'project', label: 'navProject', href: '#project' },
+  { area: 'roadmap', label: 'navRoadmap', href: '#roadmap' },
 ];
 
 export function areaLabel(area: ApplicationArea): TranslationKey {
