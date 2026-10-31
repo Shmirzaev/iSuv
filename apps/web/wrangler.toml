@@ -1,0 +1,8 @@
+# Cloudflare Pages: static web shell at isuv.simart.uz. Functions in ./functions
+# proxy /api/* and /health/* to the read-only API service.
+name = "isuv"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+ISUV_API_ORIGIN = "https://isuv-synthetic-demo.onrender.com"
